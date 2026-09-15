@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Мой словарь • English Tutor</title>
+  
+  <!-- Telegram WebApp SDK -->
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+
+  <!-- Styles -->
+  <link rel="stylesheet" href="/static/style.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📖</text></svg>">
+</head>
+<body>
+
+  <div class="container">
+    <!-- Header -->
+    <header class="app-header">
+      <div class="user-profile">
+        <div class="user-avatar" id="user-avatar">?</div>
+        <div class="user-meta">
+          <h2 id="user-name">Мой словарь</h2>
+          <div class="username" id="user-handle">@username</div>
+        </div>
+      </div>
+      <div class="header-badges">
+        <div class="badge badge-streak" id="user-streak">🔥 0 дн.</div>
+      </div>
+    </header>
+
+    <!-- Stats Grid -->
+    <section class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-value" id="stat-total">0</div>
+        <div class="stat-label">Всего слов</div>
+      </div>
+      <div class="stat-card due">
+        <div class="stat-value" id="stat-due">0</div>
+        <div class="stat-label">Повторить</div>
+      </div>
+      <div class="stat-card learning">
+        <div class="stat-value" id="stat-learning">0</div>
+        <div class="stat-label">Изучаются</div>
+      </div>
+      <div class="stat-card mastered">
+        <div class="stat-value" id="stat-mastered">0</div>
+        <div class="stat-label">Выучено</div>
+      </div>
+    </section>
+
+    <!-- Search and Filters Panel -->
+    <section class="controls-panel">
+      <div class="search-box">
+        <svg class="search-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="11" cy="11" r="8"></circle>
+          <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+        </svg>
+        <input type="text" id="search-input" placeholder="Поиск по слову, переводу, транскрипции..." autocomplete="off">
+        <button class="search-clear" id="search-clear" title="Очистить">✕</button>
+      </div>
+
+      <div class="filters-row">
+        <div class="filter-chips">
+          <button class="chip active" data-filter="all">Все</button>
+          <button class="chip" data-filter="due">⏰ Пора повторить</button>
+          <button class="chip" data-filter="learning">⏳ В процессе</button>
+          <button class="chip" data-filter="mastered">⭐ Выучено</button>
+        </div>
+
+        <select class="sort-select" id="sort-select">
+          <option value="next_review">🕒 По дате повторения</option>
+          <option value="alpha">🔤 По алфавиту (A-Z)</option>
+          <option value="created_at">📅 Сначала новые</option>
+          <option value="interval">📈 По уровню прочности</option>
+        </select>
+      </div>
+    </section>
+
+    <!-- Loading Spinner -->
+    <div class="spinner-container" id="loading-spinner" style="display: none;">
+      <div class="spinner"></div>
+    </div>
+
+    <!-- Empty State -->
+    <div class="empty-state" id="empty-state" style="display: none;">
+      <div class="empty-state-icon">📭</div>
+      <h3>Слова не найдены</h3>
+      <p>Отправьте любое английское слово боту в Telegram, чтобы добавить его в свой персональный словарь!</p>
+    </div>
+
+    <!-- Words Grid -->
+    <main class="words-container" id="words-container">
+      <!-- Word cards injected by app.js -->
+    </main>
+  </div>
+
+  <!-- Bottom Action Button -->
+  <div class="bottom-bar">
+    <a href="#" class="btn-primary" id="train-btn">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
+      </svg>
+      Тренироваться в боте
+    </a>
+  </div>
+
+  <!-- Desktop Fallback Modal -->
+  <div class="auth-overlay" id="auth-modal" style="display: none;">
+    <div class="auth-modal">
+      <h2>📖 Персональный словарь</h2>
+      <p>Этот личный кабинет привязан к вашему Telegram-аккаунту. Чтобы войти, откройте словарь через меню или команду <b>/words</b> в Telegram-боте.</p>
+      <a href="https://t.me/" class="btn-primary" id="open-tg-bot-link" target="_blank" style="margin-top: 10px;">
+        Открыть бота в Telegram
+      </a>
+    </div>
+  </div>
+
+  <!-- Scripts -->
+  <script src="/static/app.js"></script>
+</body>
+</html>
