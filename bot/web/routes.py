@@ -6,7 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from pydantic import BaseModel, Field
 
 from bot.core.config import settings
-from bot.core.database import get_database
+from bot.core.database import get_database, get_users_collection, get_words_collection
 from bot.models.user import User
 from bot.models.word import Word
 from bot.web.auth import create_access_token, get_current_user, validate_telegram_init_data
@@ -119,63 +119,18 @@ async def get_me(current_user: User = Depends(get_current_user)) -> dict[str, An
 @router.get("/stats", response_model=StatsResponse)
 async def get_stats(current_user: User = Depends(get_current_user)) -> StatsResponse:
     """Returns word and learning statistics for the current user."""
-    db = get_database()
+    words_col = get_words_collection()
     user_id = current_user.id
     now = datetime.now(timezone.utc)
 
-    # Aggregations for statistics
-    pipeline = [
-        {"$match": {"user_id": user_id, "is_archived": False}},
-        {
-            "$facet": {
-                "total": [{"$count": "count"}],
-                "due": [
-                    {"$match": {"next_review_at": {"$lte": now}}},
-                    {"$count": "count"},
-                ],
-                "learning": [
-                    {"$match": {"repetition": {"$lt": 3}}},
-                    {"$count": "count"},
-                ],
-                "mastered": [
-                    {"$match": {"repetition": {"$gte": 3}}},
-                    {"$count": "count"},
-                ],
-                "intervals": [
-                    {
-                        "$bucket": {
-                            "groupBy": "$interval",
-                            "boundaries": [0, 2, 5, 10, 30, 9999],
-                            "default": "other",
-                            "output": {"count": {"$sum": 1}},
-                        }
-                    }
-                ],
-            }
-        },
-    ]
-
-    cursor = db.words.aggregate(pipeline)
-    results = await cursor.to_list(length=1)
-    data = results[0] if results else {}
-
-    total_words = data.get("total", [{}])[0].get("count", 0) if data.get("total") else 0
-    due_words = data.get("due", [{}])[0].get("count", 0) if data.get("due") else 0
-    learning_words = data.get("learning", [{}])[0].get("count", 0) if data.get("learning") else 0
-    mastered_words = data.get("mastered", [{}])[0].get("count", 0) if data.get("mastered") else 0
-
-    interval_labels = {
-        0: "1 день (новые)",
-        2: "2-4 дня",
-        5: "5-9 дней",
-        10: "10-29 дней",
-        30: "30+ дней (отлично)",
-    }
-    interval_dist: dict[str, int] = {}
-    for bucket in data.get("intervals", []):
-        bound = bucket.get("_id")
-        label = interval_labels.get(bound, f"{bound}d")
-        interval_dist[label] = bucket.get("count", 0)
+    total_words = await words_col.count_documents({"user_id": user_id})
+    learning_words = await words_col.count_documents({"user_id": user_id, "is_archived": False})
+    mastered_words = await words_col.count_documents({"user_id": user_id, "is_archived": True})
+    due_words = await words_col.count_documents({
+        "user_id": user_id,
+        "is_archived": False,
+        "next_review_at": {"$lte": now},
+    })
 
     return StatsResponse(
         total_words=total_words,
@@ -183,7 +138,7 @@ async def get_stats(current_user: User = Depends(get_current_user)) -> StatsResp
         learning_words=learning_words,
         mastered_words=mastered_words,
         streak=current_user.streak,
-        interval_distribution=interval_dist,
+        interval_distribution={},
     )
 
 
