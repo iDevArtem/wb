@@ -2,11 +2,13 @@ from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 DEFAULT_MODELS_POOL: list[str] = [
-    "gemini-3.5-flash-lite",
     "gemini-3.7-flash",
+    "gemini-3.8-flash",
+    "gemini-3.5-flash-lite",
     "gemini-3.6-flash",
-    "gemini-3.5-flash",
+    "gemini-2.5-flash",
     "gemini-3.1-flash-lite",
+    "gemini-2.5-flash-lite",
 ]
 
 
@@ -17,7 +19,7 @@ class Settings(BaseSettings):
         default_factory=list,
         description="Optional list/comma-separated Gemini API keys for rotation",
     )
-    gemini_model: str = Field(default="gemini-3.5-flash-lite", description="Primary Gemini model name")
+    gemini_model: str = Field(default="gemini-3.7-flash", description="Primary Gemini model name")
     gemini_models_pool: str | list[str] = Field(
         default_factory=lambda: list(DEFAULT_MODELS_POOL),
         description="Fallback pool of Gemini models",
@@ -31,7 +33,10 @@ class Settings(BaseSettings):
         description="MongoDB database name",
     )
     default_timezone: str = Field(default="UTC", description="Default user timezone")
+    tts_engine: str = Field(default="edge", description="TTS engine: 'edge' (Edge-TTS) or 'gemini' (Gemini Neural TTS)")
     tts_voice: str = Field(default="en-US-AriaNeural", description="edge-tts voice identifier")
+    gemini_tts_voice: str = Field(default="Kore", description="Gemini TTS voice preset: Kore, Puck, Fenrir, Aoede, Charon, Enceladus")
+    gemini_tts_model: str = Field(default="gemini-2.5-flash-preview-tts", description="Gemini TTS model name")
     log_level: str = Field(default="INFO", description="Logging level")
     webapp_url: str = Field(default="https://wb.qper.link", description="Base URL of the WebApp / Dashboard")
     web_host: str = Field(default="0.0.0.0", description="Web server host")

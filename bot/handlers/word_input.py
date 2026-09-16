@@ -32,10 +32,15 @@ router = Router(name="word_input")
 
 def format_word_card(analysis: WordAnalysis) -> str:
     escaped_word = html.escape(analysis.canonical_word)
-    escaped_trans = html.escape(analysis.transcription)
     escaped_pos = html.escape(analysis.pos)
     escaped_lemma = html.escape(analysis.lemma)
     escaped_transl = html.escape(analysis.translation)
+
+    if analysis.transcription_uk and analysis.transcription_us and analysis.transcription_uk != analysis.transcription_us:
+        trans_display = f"🇬🇧 <code>{html.escape(analysis.transcription_uk)}</code> | 🇺🇸 <code>{html.escape(analysis.transcription_us)}</code>"
+    else:
+        raw_trans = analysis.transcription or analysis.transcription_us or analysis.transcription_uk or ""
+        trans_display = f"[{html.escape(raw_trans)}]"
 
     typo_note = ""
     if analysis.corrected_from:
@@ -55,7 +60,7 @@ def format_word_card(analysis: WordAnalysis) -> str:
         colloc_block = "\n🔗 <b>Коллокации / синонимы:</b>\n" + "\n".join(collocs) + "\n"
 
     card = (
-        f"📖 <b>{escaped_word}</b> [{escaped_trans}] — <i>{escaped_pos}</i>\n"
+        f"📖 <b>{escaped_word}</b> {trans_display} — <i>{escaped_pos}</i>\n"
         f"{typo_note}"
         f"🌱 Словарная форма: <code>{escaped_lemma}</code>\n"
         f"🇷🇺 Перевод: <b>{escaped_transl}</b>\n"

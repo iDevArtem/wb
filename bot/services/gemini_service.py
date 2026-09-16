@@ -1,3 +1,4 @@
+import asyncio
 import logging
 from pydantic import BaseModel, Field
 from google import genai
@@ -44,7 +45,15 @@ class WordAnalysis(BaseModel):
     )
     transcription: str = Field(
         ...,
-        description="IPA phonetic transcription, e.g. /ˈkæveɪˌɑːt/",
+        description="Standard IPA phonetic transcription, e.g. /ˈkæveɪˌɑːt/ or 🇬🇧 /ˈkɑːst/ | 🇺🇸 /ˈkæst/",
+    )
+    transcription_uk: str | None = Field(
+        default=None,
+        description="IPA phonetic transcription for British English (Received Pronunciation - RP), e.g. /ˈkɑːst/",
+    )
+    transcription_us: str | None = Field(
+        default=None,
+        description="IPA phonetic transcription for American English (General American - GA), e.g. /ˈkæst/",
     )
     translation: str = Field(
         ...,
@@ -79,7 +88,7 @@ class WordAllTensesResponse(BaseModel):
     word: str = Field(..., description="Target word or phrase")
     is_verb: bool = Field(..., description="True if target word is a verb or phrasal verb, False otherwise")
     notes: str | None = Field(default=None, description="Optional Russian note (e.g. if stative verb not commonly used in continuous tenses)")
-    tenses: list[TenseItem] = Field(..., description="List of all 12 English tenses with examples and translations")
+    tenses: list[TenseItem] = Field(..., description="List of all 12 English tenses with examples, temporal markers, and translations")
 
 
 class WordFamilyItem(BaseModel):
@@ -130,10 +139,13 @@ Rules:
 1. If the input is in Russian or Ukrainian, translate it into the most natural, commonly used canonical English word or set expression.
 2. If the input is in English with typos (e.g. "necesary", "definately", "accommodate"), fix the spelling in `canonical_word`, and put the original typo in `corrected_from`. If no typo, `corrected_from` must be null.
 3. If the input is in an inflected grammatical form (e.g., "went", "better", "running", "geese", "taken"), set `lemma` to its base dictionary headword ("go", "good", "run", "goose", "take"). `canonical_word` can either be the input form or lemma, but dictionary headword `lemma` must always be the base form.
-4. Provide standard International Phonetic Alphabet (IPA) in `transcription` (e.g., /ˈkæveɪˌɑːt/).
-5. Provide accurate, idiomatic Russian translation in `translation`.
+4. Phonetics: Provide strict International Phonetic Alphabet (IPA) with primary (ˈ) and secondary (ˌ) stress marks.
+   - `transcription_uk`: British English (Received Pronunciation - RP) IPA transcription, e.g. /ˈkɑːst/.
+   - `transcription_us`: American English (General American - GA) IPA transcription, e.g. /ˈkæst/.
+   - `transcription`: Combined display string if different, e.g. "🇬🇧 /ˈkɑːst/  🇺🇸 /ˈkæst/" or single IPA "/ˈkæveɪˌɑːt/" if identical.
+5. Provide accurate, idiomatic Russian translation in `translation`, capturing polysemy, register, and stylistic nuances.
 6. Provide 2-3 modern, realistic example sentences demonstrating usage in `examples`.
-7. Provide 1-2 common collocations or synonyms in `synonyms_collocations`.
+7. Provide 1-2 common collocations, idioms, or synonyms in `synonyms_collocations`.
 8. Provide grammatical forms in `forms` if applicable (V1, V2, V3, -ing, 3rd person -s for verbs; comparative/superlative for adjectives; plural for nouns; plus summary and notes).
 """
 
@@ -153,12 +165,13 @@ Given a word or phrase, generate natural, modern example sentences across ALL 12
 11. Future Perfect
 12. Future Perfect Continuous
 
+Enrich examples with characteristic temporal markers (e.g., usually, currently, already, for 2 hours, yesterday, while, by the time, tomorrow, by next year).
 If the target word is a verb, conjugate it properly in each tense. If it is a stative verb not typically used in continuous forms, mention that in `notes`, but still provide grammatically valid illustrative examples.
 If the target word is a noun, adjective, or phrase, use it naturally in sentences framed in each of the 12 tenses.
 Each tense must include:
 - `tense_name`: English name of the tense
 - `aspect`: Short explanation in Russian of nuance/usage
-- `example_en`: Clean, natural English sentence
+- `example_en`: Clean, natural English sentence with clear context
 - `example_ru`: Accurate, idiomatic Russian translation
 """
 
@@ -292,9 +305,14 @@ class GeminiService:
         self,
         contents: any,
         config: types.GenerateContentConfig,
+        custom_pool: list[str] | None = None,
     ) -> types.GenerateContentResponse:
         clients = self._ensure_clients()
-        models = self._get_models_pool()
+        models = custom_pool or self._get_models_pool()
+
+        # Ensure thinking mode is disabled by default for low latency and quota saving
+        if config.thinking_config is None:
+            config.thinking_config = types.ThinkingConfig(thinking_budget=0)
 
         last_error: Exception | None = None
         hit_quota = False
@@ -318,6 +336,7 @@ class GeminiService:
                             model_name,
                             client_idx,
                         )
+                        await asyncio.sleep(0.5)
                         continue
                     elif is_model_unavailable_error(e):
                         logger.warning(
@@ -328,10 +347,11 @@ class GeminiService:
                         continue
                     elif is_transient_server_error(e):
                         logger.warning(
-                            "Gemini model '%s' (key #%d) returned transient server error (503/5xx). Failing over to next model...",
+                            "Gemini model '%s' (key #%d) returned transient server error (503/5xx). Retrying...",
                             model_name,
                             client_idx,
                         )
+                        await asyncio.sleep(0.5)
                         continue
                     else:
                         logger.exception("Gemini API call failed with unrecoverable error on model '%s'", model_name)
@@ -357,6 +377,7 @@ class GeminiService:
             response_schema=WordAnalysis,
             system_instruction=WORD_ANALYSIS_SYSTEM_PROMPT,
             temperature=0.2,
+            thinking_config=types.ThinkingConfig(thinking_budget=0),
             automatic_function_calling=types.AutomaticFunctionCallingConfig(disable=True),
         )
 
@@ -382,6 +403,7 @@ class GeminiService:
             response_schema=WordAnalysis,
             system_instruction=WORD_ANALYSIS_SYSTEM_PROMPT,
             temperature=0.2,
+            thinking_config=types.ThinkingConfig(thinking_budget=0),
             automatic_function_calling=types.AutomaticFunctionCallingConfig(disable=True),
         )
 
@@ -415,6 +437,7 @@ class GeminiService:
             response_schema=VoiceQuizEvaluation,
             system_instruction=VOICE_QUIZ_SYSTEM_PROMPT,
             temperature=0.2,
+            thinking_config=types.ThinkingConfig(thinking_budget=0),
             automatic_function_calling=types.AutomaticFunctionCallingConfig(disable=True),
         )
 
@@ -446,6 +469,7 @@ class GeminiService:
             response_schema=WordAllTensesResponse,
             system_instruction=ALL_TENSES_SYSTEM_PROMPT,
             temperature=0.2,
+            thinking_config=types.ThinkingConfig(thinking_budget=0),
             automatic_function_calling=types.AutomaticFunctionCallingConfig(disable=True),
         )
         response = await self._generate_content_with_fallback(contents=prompt, config=config)
@@ -472,6 +496,7 @@ class GeminiService:
             response_schema=WordFamilyResponse,
             system_instruction=WORD_FAMILY_SYSTEM_PROMPT,
             temperature=0.2,
+            thinking_config=types.ThinkingConfig(thinking_budget=0),
             automatic_function_calling=types.AutomaticFunctionCallingConfig(disable=True),
         )
         response = await self._generate_content_with_fallback(contents=prompt, config=config)
@@ -498,12 +523,50 @@ class GeminiService:
             response_schema=WordDialogueResponse,
             system_instruction=WORD_DIALOGUE_SYSTEM_PROMPT,
             temperature=0.3,
+            thinking_config=types.ThinkingConfig(thinking_budget=0),
             automatic_function_calling=types.AutomaticFunctionCallingConfig(disable=True),
         )
         response = await self._generate_content_with_fallback(contents=prompt, config=config)
         if not response.text:
             raise GeminiServiceError("Gemini API returned an empty response for word dialogue")
         return WordDialogueResponse.model_validate_json(response.text)
+
+    async def synthesize_speech_audio(
+        self,
+        text: str,
+        voice_name: str | None = None,
+        model: str | None = None,
+    ) -> bytes:
+        """
+        Synthesize neural speech using Gemini TTS model (e.g. gemini-2.5-flash-preview-tts).
+        Returns raw audio bytes.
+        """
+        chosen_voice = voice_name or settings.gemini_tts_voice
+        chosen_model = model or settings.gemini_tts_model
+        prompt = f"Please pronounce the following clearly with natural articulation: {text.strip()}"
+        config = types.GenerateContentConfig(
+            response_modalities=["AUDIO"],
+            speech_config=types.SpeechConfig(
+                voice_config=types.VoiceConfig(
+                    prebuilt_voice_config=types.PrebuiltVoiceConfig(
+                        voice_name=chosen_voice,
+                    )
+                )
+            ),
+        )
+
+        response = await self._generate_content_with_fallback(
+            contents=prompt,
+            config=config,
+            custom_pool=[chosen_model, "gemini-2.5-flash-preview-tts", "gemini-3.1-flash-tts-preview"],
+        )
+
+        if response.candidates and response.candidates[0].content and response.candidates[0].content.parts:
+            for part in response.candidates[0].content.parts:
+                if getattr(part, "inline_data", None) and getattr(part.inline_data, "data", None):
+                    return part.inline_data.data
+
+        raise GeminiServiceError("No audio stream returned from Gemini TTS")
 
 
 gemini_service = GeminiService()

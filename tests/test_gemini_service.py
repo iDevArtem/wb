@@ -28,7 +28,7 @@ def test_settings_models_pool_parsing():
 def test_settings_default_models_pool():
     s = Settings(_env_file=None)
     assert s.gemini_models_pool == DEFAULT_MODELS_POOL
-    assert s.effective_models_pool[0] == "gemini-3.5-flash-lite"
+    assert s.effective_models_pool[0] == "gemini-3.7-flash"
 
 
 def test_settings_api_keys_parsing():
@@ -244,3 +244,59 @@ async def test_gemini_multiple_keys_rotation():
     assert result.canonical_word == "world"
     assert mock_client1.aio.models.generate_content.call_count == 1
     assert mock_client2.aio.models.generate_content.call_count == 1
+
+
+@pytest.mark.asyncio
+async def test_word_analysis_phonetics_uk_us():
+    mock_client = MagicMock()
+    mock_models = MagicMock()
+    mock_client.aio.models = mock_models
+
+    valid_json = (
+        '{"canonical_word": "schedule", "lemma": "schedule", "pos": "noun", '
+        '"transcription": "🇬🇧 /ˈʃɛdjuːl/ | 🇺🇸 /ˈskɛdʒuːl/", '
+        '"transcription_uk": "/ˈʃɛdjuːl/", "transcription_us": "/ˈskɛdʒuːl/", '
+        '"translation": "расписание", "corrected_from": null, '
+        '"examples": [], "synonyms_collocations": []}'
+    )
+    resp = MagicMock()
+    resp.text = valid_json
+    mock_models.generate_content = AsyncMock(return_value=resp)
+
+    service = GeminiService(api_key="test_key", models_pool=["gemini-3.7-flash"])
+    service._clients = [mock_client]
+
+    result = await service.analyze_text("schedule")
+    assert result.transcription_uk == "/ˈʃɛdjuːl/"
+    assert result.transcription_us == "/ˈskɛdʒuːl/"
+
+    # Verify thinking budget was set to 0 in config
+    call_kwargs = mock_models.generate_content.call_args.kwargs
+    config = call_kwargs["config"]
+    assert config.thinking_config is not None
+    assert config.thinking_config.thinking_budget == 0
+
+
+@pytest.mark.asyncio
+async def test_gemini_tts_synthesis():
+    mock_client = MagicMock()
+    mock_models = MagicMock()
+    mock_client.aio.models = mock_models
+
+    mock_part = MagicMock()
+    mock_part.inline_data = MagicMock()
+    mock_part.inline_data.data = b"fake_pcm_audio_stream"
+
+    mock_resp = MagicMock()
+    mock_candidate = MagicMock()
+    mock_candidate.content.parts = [mock_part]
+    mock_resp.candidates = [mock_candidate]
+
+    mock_models.generate_content = AsyncMock(return_value=mock_resp)
+
+    service = GeminiService(api_key="test_key", models_pool=["gemini-3.7-flash"])
+    service._clients = [mock_client]
+
+    audio = await service.synthesize_speech_audio("flabbergasted", voice_name="Kore")
+    assert audio == b"fake_pcm_audio_stream"
+

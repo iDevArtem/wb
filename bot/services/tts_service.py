@@ -9,18 +9,40 @@ logger = logging.getLogger(__name__)
 class TTSService:
     def __init__(self, voice: str | None = None):
         self.voice = voice or settings.tts_voice
+        self._cache: dict[str, bytes] = {}
 
     async def generate_audio(self, text: str) -> io.BytesIO:
         """
-        Synthesize text speech into an in-memory BytesIO MP3 buffer using edge-tts.
+        Synthesize text speech into an in-memory BytesIO buffer.
+        Supports caching and hybrid engines (Edge-TTS / Gemini TTS preview).
         No temporary files are created on disk.
         """
         if not text or not text.strip():
             raise ValueError("Text for TTS cannot be empty")
 
         clean_text = text.strip()
-        logger.debug("Generating TTS audio for text: '%s' with voice: %s", clean_text, self.voice)
+        cache_key = f"{settings.tts_engine}:{self.voice}:{clean_text.lower()}"
+        if cache_key in self._cache:
+            logger.debug("Returning cached TTS audio for '%s'", clean_text)
+            return io.BytesIO(self._cache[cache_key])
 
+        # Try Gemini TTS if configured
+        if settings.tts_engine == "gemini":
+            try:
+                from bot.services.gemini_service import gemini_service
+                logger.debug("Generating TTS audio with Gemini Neural TTS for text: '%s'", clean_text)
+                raw_audio = await gemini_service.synthesize_speech_audio(
+                    text=clean_text,
+                    voice_name=settings.gemini_tts_voice,
+                    model=settings.gemini_tts_model,
+                )
+                self._cache[cache_key] = raw_audio
+                return io.BytesIO(raw_audio)
+            except Exception as e:
+                logger.warning("Gemini TTS failed (%s). Falling back to Edge-TTS...", e)
+
+        # Fallback to Edge-TTS
+        logger.debug("Generating TTS audio with Edge-TTS for text: '%s' with voice: %s", clean_text, self.voice)
         communicate = edge_tts.Communicate(text=clean_text, voice=self.voice)
         audio_buffer = io.BytesIO()
 
@@ -29,10 +51,12 @@ class TTSService:
                 audio_buffer.write(chunk["data"])
 
         audio_buffer.seek(0)
-        if audio_buffer.getbuffer().nbytes == 0:
+        audio_bytes = audio_buffer.getvalue()
+        if not audio_bytes:
             raise RuntimeError(f"Edge-TTS produced 0 bytes for input: '{clean_text}'")
 
-        return audio_buffer
+        self._cache[cache_key] = audio_bytes
+        return io.BytesIO(audio_bytes)
 
 
 tts_service = TTSService()
