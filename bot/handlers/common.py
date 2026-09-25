@@ -2,7 +2,7 @@ import html
 import logging
 import math
 from datetime import datetime, timezone
-from aiogram import Router
+from aiogram import Router, F
 from aiogram.filters import Command, CommandStart
 from aiogram.types import CallbackQuery, InlineKeyboardMarkup, Message
 from bson import ObjectId

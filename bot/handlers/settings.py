@@ -133,8 +133,7 @@ async def handle_custom_tz_input(
         )
     except Exception:
         await message.answer(
-            f"❌ Не удалось распознать часовой пояс «{html.escape(candidate_tz)}».
-"
+            f"❌ Не удалось распознать часовой пояс «{html.escape(candidate_tz)}».\n"
             "Пожалуйста, укажи валидный TZ из базы IANA (например: <code>Europe/Berlin</code>):",
             parse_mode="HTML",
         )
@@ -145,11 +144,8 @@ async def cb_set_quiet_menu(callback: CallbackQuery) -> None:
     await callback.answer()
     if callback.message:
         await callback.message.edit_text(
-            "🌙 <b>Настройка тихих часов:</b>
-
-"
-            "В указанный интервал бот не будет присылать напоминания о словах.
-"
+            "🌙 <b>Настройка тихих часов:</b>\n\n"
+            "В указанный интервал бот не будет присылать напоминания о словах.\n"
             "Выбери удобный режим:",
             reply_markup=get_quiet_hours_presets_keyboard(),
             parse_mode="HTML",
@@ -201,8 +197,7 @@ async def cb_set_target_menu(callback: CallbackQuery) -> None:
     await callback.answer()
     if callback.message:
         await callback.message.edit_text(
-            "🎯 <b>Выбери язык, который хочешь выучить:</b>
-"
+            "🎯 <b>Выбери язык, который хочешь выучить:</b>\n"
             "<i>(Слова для разных языков хранятся раздельно)</i>",
             reply_markup=get_language_presets_keyboard("target"),
             parse_mode="HTML",
