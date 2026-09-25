@@ -52,37 +52,20 @@ async def cmd_start(message: Message, user: User) -> None:
 @router.message(F.text == "❓ Помощь")
 async def cmd_help(message: Message) -> None:
     text = (
-        "📖 <b>Справочник возможностей бота:</b>
-
-"
-        "1️⃣ <b>Добавление слов (Universal Input):</b>
-"
-        "— Отправляй слова на родном или изучаемом языке.
-"
+        "📖 <b>Справочник возможностей бота:</b>\n\n"
+        "1️⃣ <b>Добавление слов (Universal Input):</b>\n"
+        "— Отправляй слова на родном или изучаемом языке.\n"
         "— Поддерживаются войсы (Telegram voice): я напрямую отправляю аудио в Gemini, "
-        "распознаю произношение и формирую карточку.
-"
-        "— Каждое слово озвучивается нейронным голосом Microsoft Edge TTS.
-
-"
-        "2️⃣ <b>Интервальные повторения (SM-2):</b>
-"
-        "— Алгоритм SuperMemo-2 рассчитывает оптимальные дни для повторения (1 день, 6 дней, затем с коэффициентом легкости).
-"
-        "— При ошибке интервал сбрасывается, чтобы закрепить материал.
-
-"
-        "3️⃣ <b>Квиз и проверка знаний (/quiz):</b>
-"
-        "— Режимы: правописание (Spelling), множественный выбор (4 варианта), аудирование (Listening) и голосовой ответ (Voice Mode).
-"
-        "— Доступно 3 попытки с интеллектуальными подсказками.
-
-"
-        "4️⃣ <b>Тихие часы:</b>
-"
-        "— Напоминания приходят только в удобное для тебя время (по умолчанию с 10:00 до 21:00).
-"
+        "распознаю произношение и формирую карточку.\n"
+        "— Каждое слово озвучивается нейронным голосом Microsoft Edge TTS.\n\n"
+        "2️⃣ <b>Интервальные повторения (SM-2):</b>\n"
+        "— Алгоритм SuperMemo-2 рассчитывает оптимальные дни для повторения (1 день, 6 дней, затем с коэффициентом легкости).\n"
+        "— При ошибке интервал сбрасывается, чтобы закрепить материал.\n\n"
+        "3️⃣ <b>Квиз и проверка знаний (/quiz):</b>\n"
+        "— Режимы: правописание (Spelling), множественный выбор (4 варианта), аудирование (Listening) и голосовой ответ (Voice Mode).\n"
+        "— Доступно 3 попытки с интеллектуальными подсказками.\n\n"
+        "4️⃣ <b>Тихие часы:</b>\n"
+        "— Напоминания приходят только в удобное для тебя время (по умолчанию с 10:00 до 21:00).\n"
         "— Настрой свой часовой пояс в /settings."
     )
     await message.answer(text, parse_mode="HTML")
@@ -116,27 +99,15 @@ async def cmd_stats(message: Message, user: User) -> None:
             avg_interval = float(doc.get("avg_interval", 0.0) or 0.0)
 
     text = (
-        "📊 <b>Твой прогресс в изучении:</b>
-
-"
-        f"🔥 <b>Текущий стрик:</b> {user.streak} дн.
-"
-        f"📚 <b>Всего слов в словаре:</b> {total_words}
-"
-        f"⚡ <b>Слов на изучении:</b> {active_words}
-"
-        f"✅ <b>Выучено (в архиве):</b> {archived_words}
-"
-        f"🎯 <b>Готово к повторению сегодня:</b> {due_words}
-"
-        f"📈 <b>Средний интервал памяти:</b> {avg_interval:.1f} дн.
-
-"
-        f"🌍 <b>Часовой пояс:</b> <code>{user.timezone}</code>
-"
-        f"🌙 <b>Тихие часы:</b> {user.quiet_hours_start}:00 — {user.quiet_hours_end}:00
-
-"
+        "📊 <b>Твой прогресс в изучении:</b>\n\n"
+        f"🔥 <b>Текущий стрик:</b> {user.streak} дн.\n"
+        f"📚 <b>Всего слов в словаре:</b> {total_words}\n"
+        f"⚡ <b>Слов на изучении:</b> {active_words}\n"
+        f"✅ <b>Выучено (в архиве):</b> {archived_words}\n"
+        f"🎯 <b>Готово к повторению сегодня:</b> {due_words}\n"
+        f"📈 <b>Средний интервал памяти:</b> {avg_interval:.1f} дн.\n\n"
+        f"🌍 <b>Часовой пояс:</b> <code>{user.timezone}</code>\n"
+        f"🌙 <b>Тихие часы:</b> {user.quiet_hours_start}:00 — {user.quiet_hours_end}:00\n\n"
         + ("💡 <i>Есть слова для повторения! Напиши /quiz, чтобы освежить память.</i>" if due_words > 0 else "🎉 <i>Все слова на сегодня повторены! Отличная работа!</i>")
     )
     await message.answer(text, parse_mode="HTML")
@@ -168,8 +139,7 @@ async def cmd_archive(message: Message, user: User) -> None:
 
     for w in words:
         item_text = (
-            f"• <b>{w.canonical_word}</b> [{w.transcription}] — {w.translation}
-"
+            f"• <b>{w.canonical_word}</b> [{w.transcription}] — {w.translation}\n"
             f"  <i>Интервал памяти был: {w.interval} дн.</i>"
         )
         await message.answer(
@@ -237,9 +207,7 @@ async def render_words_page(
 
     if total_count == 0:
         return (
-            "📭 <b>Твой список слов пуст!</b>
-
-"
+            "📭 <b>Твой список слов пуст!</b>\n\n"
             "Отправь мне любое слово на изучаемом или родном языке текстом или голосовым сообщением, чтобы начать учить.",
             None,
         )
@@ -261,13 +229,9 @@ async def render_words_page(
     words = [Word.model_validate(doc) async for doc in cursor]
 
     header = (
-        f"📚 <b>Слова на изучении</b>
-"
-        f"Всего слов: <b>{total_count}</b> • Страница <b>{page}</b> из <b>{total_pages}</b>
-"
-        f"<i>(Сортировка: сначала слова, готовые к повторению)</i>
-
-"
+        f"📚 <b>Слова на изучении</b>\n"
+        f"Всего слов: <b>{total_count}</b> • Страница <b>{page}</b> из <b>{total_pages}</b>\n"
+        f"<i>(Сортировка: сначала слова, готовые к повторению)</i>\n\n"
     )
 
     rows = []
@@ -290,14 +254,11 @@ async def render_words_page(
         short_transl = w.translation.split(",")[0].strip()
         transcription_str = f" [{html.escape(w.transcription)}]" if w.transcription else ""
         rows.append(
-            f"{idx}. <b>{html.escape(w.canonical_word)}</b>{transcription_str} — {html.escape(short_transl)}
-"
+            f"{idx}. <b>{html.escape(w.canonical_word)}</b>{transcription_str} — {html.escape(short_transl)}\n"
             f"   ↳ ⏳ {w.interval} дн. (шаг {w.repetition}) • {status}"
         )
 
-    text = header + "
-
-".join(rows)
+    text = header + "\n\n".join(rows)
     keyboard = get_words_pagination_keyboard(page, total_pages)
     return text, keyboard
 
