@@ -37,7 +37,7 @@ def format_word_card(analysis: WordAnalysis) -> str:
     escaped_transl = html.escape(analysis.translation)
 
     if analysis.transcription_uk and analysis.transcription_us and analysis.transcription_uk != analysis.transcription_us:
-        trans_display = f"🇬🇧 <code>{html.escape(analysis.transcription_uk)}</code> | 🇺🇸 <code>{html.escape(analysis.transcription_us)}</code>"
+        trans_display = f"<code>{html.escape(analysis.transcription_uk)}</code> | <code>{html.escape(analysis.transcription_us)}</code>"
     else:
         raw_trans = analysis.transcription or analysis.transcription_us or analysis.transcription_uk or ""
         trans_display = f"[{html.escape(raw_trans)}]"
@@ -51,7 +51,7 @@ def format_word_card(analysis: WordAnalysis) -> str:
     if analysis.examples:
         ex_lines = []
         for ex in analysis.examples[:3]:
-            ex_lines.append(f"• {html.escape(ex.en)}\n  — <i>{html.escape(ex.ru)}</i>")
+            ex_lines.append(f"• {html.escape(ex.target)}\n  — <i>{html.escape(ex.native)}</i>")
         examples_block = "\n💬 <b>Примеры:</b>\n" + "\n".join(ex_lines) + "\n"
 
     colloc_block = ""
@@ -63,7 +63,7 @@ def format_word_card(analysis: WordAnalysis) -> str:
         f"📖 <b>{escaped_word}</b> {trans_display} — <i>{escaped_pos}</i>\n"
         f"{typo_note}"
         f"🌱 Словарная форма: <code>{escaped_lemma}</code>\n"
-        f"🇷🇺 Перевод: <b>{escaped_transl}</b>\n"
+        f"Перевод: <b>{escaped_transl}</b>\n"
         f"{examples_block}"
         f"{colloc_block}"
     )
@@ -112,7 +112,7 @@ def format_forms_message(word: Word) -> str:
 
 def format_tenses_message(word: Word, tenses_dict: dict) -> str:
     escaped_word = html.escape(word.canonical_word)
-    lines = [f"⏳ <b>Все 12 времен английского: {escaped_word}</b>\n"]
+    lines = [f"⏳ <b>Основные времена/формы: {escaped_word}</b>\n"]
     if tenses_dict.get("notes"):
         lines.append(f"ℹ️ <i>{html.escape(tenses_dict['notes'])}</i>\n")
 
@@ -120,8 +120,8 @@ def format_tenses_message(word: Word, tenses_dict: dict) -> str:
     for t in tenses:
         name = html.escape(t.get("tense_name", ""))
         aspect = html.escape(t.get("aspect", ""))
-        ex_en = html.escape(t.get("example_en", ""))
-        ex_ru = html.escape(t.get("example_ru", ""))
+        ex_en = html.escape(t.get("example_target", t.get("example_en", "")))
+        ex_ru = html.escape(t.get("example_native", t.get("example_ru", "")))
         lines.append(
             f"🔹 <b>{name}</b> <i>({aspect})</i>\n"
             f"• {ex_en}\n"
@@ -142,8 +142,8 @@ def format_family_message(word: Word, family_dict: dict) -> str:
         w = html.escape(m.get("word", ""))
         pos = html.escape(m.get("pos", ""))
         tr = html.escape(m.get("translation", ""))
-        ex_en = html.escape(m.get("example_en", ""))
-        ex_ru = html.escape(m.get("example_ru", ""))
+        ex_en = html.escape(m.get("example_target", m.get("example_en", "")))
+        ex_ru = html.escape(m.get("example_native", m.get("example_ru", "")))
         lines.append(
             f"• <b>{w}</b> <i>({pos})</i> — <b>{tr}</b>\n"
             f"  «{ex_en}»\n"
@@ -171,8 +171,8 @@ def format_dialogue_message(word: Word, dialogue_dict: dict) -> str:
     return "\n".join(lines)
 
 
-def _word_query_by_id(word_id_str: str, user_id: int) -> dict:
-    query: dict = {"user_id": user_id}
+def _word_query_by_id(word_id_str: str, user: User) -> dict:
+    query: dict = {"user_id": user.tg_id, "target_language": user.target_language, "native_language": user.native_language}
     if ObjectId.is_valid(word_id_str):
         query["_id"] = ObjectId(word_id_str)
     else:
@@ -181,14 +181,14 @@ def _word_query_by_id(word_id_str: str, user_id: int) -> dict:
 
 
 async def check_existing_word(
-    user_id: int,
+    user: User,
     word_text: str,
 ) -> Word | None:
     norm = word_text.strip().lower()
     words_col = get_words_collection()
     pattern = f"^{re.escape(norm)}$"
     doc = await words_col.find_one({
-        "user_id": user_id,
+        "user_id": user.tg_id, "target_language": user.target_language, "native_language": user.native_language,
         "is_archived": False,
         "$or": [
             {"canonical_word": {"$regex": pattern, "$options": "i"}},
@@ -235,9 +235,9 @@ async def handle_voice_input(
         analysis = await gemini_service.analyze_voice(audio_bytes=audio_bytes, mime_type="audio/ogg")
 
         # Check duplicate
-        existing = await check_existing_word(user.id, analysis.canonical_word)
+        existing = await check_existing_word(user, analysis.canonical_word)
         if not existing and analysis.lemma:
-            existing = await check_existing_word(user.id, analysis.lemma)
+            existing = await check_existing_word(user, analysis.lemma)
 
         if existing:
             await status_msg.delete()
@@ -254,7 +254,7 @@ async def handle_voice_input(
             return
 
         # Synthesize audio with edge-tts in memory
-        tts_audio = await tts_service.generate_audio(analysis.canonical_word)
+        tts_audio = await tts_service.generate_audio(analysis.canonical_word, target_lang=user.target_language)
 
         # Save to DB
         new_word = Word(
@@ -326,7 +326,7 @@ async def handle_text_input(
     state: FSMContext,
 ) -> None:
     """
-    Handle text input: translate Russian/Ukrainian, fix typos, reduce inflections,
+    Handle text input: translate native language, fix typos, reduce inflections,
     synthesize pronunciation, and save.
     """
     current_state = await state.get_state()
@@ -339,7 +339,7 @@ async def handle_text_input(
         return
 
     # Check for direct local duplicate before making an API call
-    direct_match = await check_existing_word(user.id, text)
+    direct_match = await check_existing_word(user, text)
     if direct_match:
         dup_text = (
             f"💡 Ты уже учишь слово <b>{html.escape(direct_match.canonical_word)}</b>!\n"
@@ -360,9 +360,9 @@ async def handle_text_input(
         analysis = await gemini_service.analyze_text(text)
 
         # Check for duplicate after canonical/lemma analysis
-        existing = await check_existing_word(user.id, analysis.canonical_word)
+        existing = await check_existing_word(user, analysis.canonical_word)
         if not existing and analysis.lemma:
-            existing = await check_existing_word(user.id, analysis.lemma)
+            existing = await check_existing_word(user, analysis.lemma)
 
         if existing:
             await status_msg.delete()
@@ -380,7 +380,7 @@ async def handle_text_input(
             return
 
         # In-memory neural TTS
-        tts_audio = await tts_service.generate_audio(analysis.canonical_word)
+        tts_audio = await tts_service.generate_audio(analysis.canonical_word, target_lang=user.target_language)
 
         # Save to DB
         new_word = Word(
@@ -448,7 +448,7 @@ async def handle_text_input(
 async def cb_repeat_tts(callback: CallbackQuery, user: User) -> None:
     word_id_str = callback.data.split(":")[1]
     words_col = get_words_collection()
-    doc = await words_col.find_one(_word_query_by_id(word_id_str, user.id))
+    doc = await words_col.find_one(_word_query_by_id(word_id_str, user))
 
     if not doc:
         await callback.answer("Слово не найдено", show_alert=True)
@@ -457,7 +457,7 @@ async def cb_repeat_tts(callback: CallbackQuery, user: User) -> None:
     word = Word.model_validate(doc)
     await callback.answer("Генерирую озвучку...")
     try:
-        audio = await tts_service.generate_audio(word.canonical_word)
+        audio = await tts_service.generate_audio(word.canonical_word, target_lang=user.target_language)
         voice_file = BufferedInputFile(audio.getvalue(), filename=f"{word.canonical_word}.mp3")
         if callback.message:
             await callback.message.answer_voice(
@@ -474,7 +474,7 @@ async def cb_repeat_tts(callback: CallbackQuery, user: User) -> None:
 async def cb_delete_word(callback: CallbackQuery, user: User) -> None:
     word_id_str = callback.data.split(":")[1]
     words_col = get_words_collection()
-    doc = await words_col.find_one_and_delete(_word_query_by_id(word_id_str, user.id))
+    doc = await words_col.find_one_and_delete(_word_query_by_id(word_id_str, user))
 
     if not doc:
         await callback.answer("Слово не найдено", show_alert=True)
@@ -494,7 +494,7 @@ async def cb_archive_word(callback: CallbackQuery, user: User) -> None:
     word_id_str = callback.data.split(":")[1]
     words_col = get_words_collection()
     doc = await words_col.find_one_and_update(
-        _word_query_by_id(word_id_str, user.id),
+        _word_query_by_id(word_id_str, user),
         {"$set": {"is_archived": True, "updated_at": utc_now()}},
         return_document=True,
     )
@@ -516,7 +516,7 @@ async def cb_archive_word(callback: CallbackQuery, user: User) -> None:
 async def cb_word_forms(callback: CallbackQuery, user: User) -> None:
     word_id_str = callback.data.split(":")[1]
     words_col = get_words_collection()
-    query = _word_query_by_id(word_id_str, user.id)
+    query = _word_query_by_id(word_id_str, user)
     doc = await words_col.find_one(query)
 
     if not doc:
@@ -550,7 +550,7 @@ async def cb_word_forms(callback: CallbackQuery, user: User) -> None:
 async def cb_word_tenses(callback: CallbackQuery, user: User) -> None:
     word_id_str = callback.data.split(":")[1]
     words_col = get_words_collection()
-    query = _word_query_by_id(word_id_str, user.id)
+    query = _word_query_by_id(word_id_str, user)
     doc = await words_col.find_one(query)
 
     if not doc:
@@ -568,7 +568,7 @@ async def cb_word_tenses(callback: CallbackQuery, user: User) -> None:
             await callback.message.reply(text, parse_mode="HTML")
         return
 
-    await callback.answer("⏳ Составляю все 12 времен...")
+    await callback.answer("⏳ Генерирую примеры во всех временах...")
     try:
         res = await gemini_service.get_word_all_tenses(
             word=word.canonical_word,
@@ -594,7 +594,7 @@ async def cb_word_tenses(callback: CallbackQuery, user: User) -> None:
 async def cb_word_family(callback: CallbackQuery, user: User) -> None:
     word_id_str = callback.data.split(":")[1]
     words_col = get_words_collection()
-    query = _word_query_by_id(word_id_str, user.id)
+    query = _word_query_by_id(word_id_str, user)
     doc = await words_col.find_one(query)
 
     if not doc:
@@ -638,7 +638,7 @@ async def cb_word_family(callback: CallbackQuery, user: User) -> None:
 async def cb_word_dialogue(callback: CallbackQuery, user: User) -> None:
     word_id_str = callback.data.split(":")[1]
     words_col = get_words_collection()
-    query = _word_query_by_id(word_id_str, user.id)
+    query = _word_query_by_id(word_id_str, user)
     doc = await words_col.find_one(query)
 
     if not doc:

@@ -48,14 +48,14 @@ def test_word_all_tenses_schema():
             {
                 "tense_name": "Present Simple",
                 "aspect": "Регулярное действие",
-                "example_en": "I take the train every day.",
-                "example_ru": "Я сажусь на поезд каждый день.",
+                "example_target": "I take the train every day.",
+                "example_native": "Я сажусь на поезд каждый день.",
             },
             {
                 "tense_name": "Present Continuous",
                 "aspect": "Действие в момент речи",
-                "example_en": "I am taking notes now.",
-                "example_ru": "Я сейчас делаю заметки.",
+                "example_target": "I am taking notes now.",
+                "example_native": "Я сейчас делаю заметки.",
             },
         ],
     }
@@ -73,15 +73,15 @@ def test_word_family_schema():
                 "word": "decision",
                 "pos": "существительное",
                 "translation": "решение",
-                "example_en": "It was a hard decision.",
-                "example_ru": "Это было трудное решение.",
+                "example_target": "It was a hard decision.",
+                "example_native": "Это было трудное решение.",
             },
             {
                 "word": "decisive",
                 "pos": "прилагательное",
                 "translation": "решительный",
-                "example_en": "She is very decisive.",
-                "example_ru": "Она очень решительная.",
+                "example_target": "She is very decisive.",
+                "example_native": "Она очень решительная.",
             },
         ],
     }
@@ -98,13 +98,13 @@ def test_word_dialogue_schema():
         "lines": [
             {
                 "speaker": "John",
-                "en": "Are you ready to negotiate the contract?",
-                "ru": "Вы готовы вести переговоры по контракту?",
+                "target": "Are you ready to negotiate the contract?",
+                "native": "Вы готовы вести переговоры по контракту?",
             },
             {
                 "speaker": "Mary",
-                "en": "Yes, let's negotiate favorable terms.",
-                "ru": "Да, давайте обсудим выгодные условия.",
+                "target": "Yes, let's negotiate favorable terms.",
+                "native": "Да, давайте обсудим выгодные условия.",
             },
         ],
     }
@@ -174,13 +174,13 @@ def test_format_tenses_message():
             {
                 "tense_name": "Present Simple",
                 "aspect": "Регулярное действие",
-                "example_en": "I go to gym.",
-                "example_ru": "Я хожу в зал.",
+                "example_target": "I go to gym.",
+                "example_native": "Я хожу в зал.",
             }
         ],
     }
     msg = format_tenses_message(word, tenses_dict)
-    assert "Все 12 времен английского: go" in msg
+    assert "Основные времена/формы: go" in msg
     assert "Present Simple" in msg
     assert "I go to gym." in msg
 
@@ -202,8 +202,8 @@ def test_format_family_message():
                 "word": "creative",
                 "pos": "прилагательное",
                 "translation": "творческий",
-                "example_en": "She is creative.",
-                "example_ru": "Она творческая.",
+                "example_target": "She is creative.",
+                "example_native": "Она творческая.",
             }
         ],
     }
@@ -228,8 +228,8 @@ def test_format_dialogue_message():
         "lines": [
             {
                 "speaker": "Waiter",
-                "en": "Are you ready to order?",
-                "ru": "Вы готовы сделать заказ?",
+                "target": "Are you ready to order?",
+                "native": "Вы готовы сделать заказ?",
             }
         ],
     }
@@ -267,7 +267,7 @@ async def test_gemini_service_extra_methods():
     # Test tenses
     tenses_json = (
         '{"word": "run", "is_verb": true, "notes": null, "tenses": ['
-        '{"tense_name": "Past Simple", "aspect": "прошлое", "example_en": "He ran.", "example_ru": "Он бежал."}'
+        '{"tense_name": "Past Simple", "aspect": "прошлое", "example_target": "He ran.", "example_native": "Он бежал."}'
         ']}'
     )
     resp_tenses = MagicMock()
@@ -282,7 +282,7 @@ async def test_gemini_service_extra_methods():
     # Test family
     family_json = (
         '{"root": "act", "members": ['
-        '{"word": "action", "pos": "существительное", "translation": "действие", "example_en": "Action speaks.", "example_ru": "Действие говорит."}'
+        '{"word": "action", "pos": "существительное", "translation": "действие", "example_target": "Action speaks.", "example_native": "Действие говорит."}'
         ']}'
     )
     resp_family = MagicMock()
@@ -297,7 +297,7 @@ async def test_gemini_service_extra_methods():
     # Test dialogue
     dialogue_json = (
         '{"word": "coffee", "situation": "Кафе", "lines": ['
-        '{"speaker": "A", "en": "I love coffee.", "ru": "Я люблю кофе."}'
+        '{"speaker": "A", "target": "I love coffee.", "native": "Я люблю кофе."}'
         ']}'
     )
     resp_dialogue = MagicMock()

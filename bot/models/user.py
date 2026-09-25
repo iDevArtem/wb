@@ -16,6 +16,8 @@ class User(MongoBaseModel):
     last_activity_date: date | None = None
     last_notified_at: datetime | None = None
     is_active: bool = True
+    native_language: str = "ru"
+    target_language: str = "en"
 
     @property
     def id(self) -> int:
@@ -23,5 +25,5 @@ class User(MongoBaseModel):
         return self.tg_id
 
     def __repr__(self) -> str:
-        return f"<User tg_id={self.tg_id} username={self.username}>"
+        return f"<User tg_id={self.tg_id} username={self.username} native={self.native_language} target={self.target_language}>"
 

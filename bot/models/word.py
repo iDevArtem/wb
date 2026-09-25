@@ -12,6 +12,8 @@ def default_next_review() -> datetime:
 class Word(MongoBaseModel):
     id: PyObjectId | None = Field(default=None, alias="_id")
     user_id: int
+    native_language: str = "ru"
+    target_language: str = "en"
     canonical_word: str
     lemma: str
     pos: str
@@ -30,5 +32,5 @@ class Word(MongoBaseModel):
     is_archived: bool = False
 
     def __repr__(self) -> str:
-        return f"<Word id={self.id} canonical='{self.canonical_word}' user_id={self.user_id}>"
+        return f"<Word id={self.id} canonical='{self.canonical_word}' user_id={self.user_id} target={self.target_language}>"
 

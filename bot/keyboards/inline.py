@@ -155,6 +155,10 @@ def get_settings_keyboard() -> InlineKeyboardMarkup:
     """
     builder = InlineKeyboardBuilder()
     builder.row(
+        InlineKeyboardButton(text="🗣 Родной язык", callback_data="set_native_lang"),
+        InlineKeyboardButton(text="🎯 Изучаемый язык", callback_data="set_target_lang"),
+    )
+    builder.row(
         InlineKeyboardButton(text="🌍 Выбрать часовой пояс", callback_data="set_tz"),
     )
     builder.row(
@@ -245,3 +249,22 @@ def get_start_keyboard() -> InlineKeyboardMarkup:
         )
     return builder.as_markup()
 
+
+def get_language_presets_keyboard(lang_type: str) -> InlineKeyboardMarkup:
+    """
+    Quick language preset buttons.
+    """
+    presets = [
+        ("Русский", "ru"),
+        ("English", "en"),
+        ("Español (Испанский)", "es"),
+        ("Deutsch (Немецкий)", "de"),
+        ("Français (Французский)", "fr"),
+        ("Italiano (Итальянский)", "it"),
+    ]
+    builder = InlineKeyboardBuilder()
+    for title, code in presets:
+        builder.row(InlineKeyboardButton(text=title, callback_data=f"save_{lang_type}:{code}"))
+    builder.row(InlineKeyboardButton(text="✏️ Ввести вручную (код IANA)", callback_data=f"manual_{lang_type}"))
+    builder.row(InlineKeyboardButton(text="🔙 Назад в настройки", callback_data="open_settings"))
+    return builder.as_markup()

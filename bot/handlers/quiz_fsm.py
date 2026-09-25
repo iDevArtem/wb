@@ -57,11 +57,13 @@ def _word_query_by_id(word_id_str: str, user_id: int) -> dict:
 async def fetch_distractors(
     user_id: int,
     correct_translation: str,
+    target_lang: str,
+    native_lang: str,
     count: int = 3,
 ) -> list[str]:
     words_col = get_words_collection()
     cursor = words_col.find(
-        {"user_id": user_id, "translation": {"$ne": correct_translation}},
+        {"user_id": user_id, "target_language": target_lang, "native_language": native_lang, "translation": {"$ne": correct_translation}},
         {"translation": 1},
     ).limit(20)
     results = [doc.get("translation") async for doc in cursor if doc.get("translation")]
@@ -94,13 +96,13 @@ async def start_quiz_session(
         word_ids = [str(doc["_id"])] if doc else []
     elif allow_all:
         cursor = words_col.find(
-            {"user_id": user.id, "is_archived": False},
+            {"user_id": user.id, "is_archived": False, "target_language": user.target_language, "native_language": user.native_language},
             {"_id": 1},
         ).sort("next_review_at", 1).limit(15)
         word_ids = [str(doc["_id"]) async for doc in cursor]
     else:
         cursor = words_col.find(
-            {"user_id": user.id, "is_archived": False, "next_review_at": {"$lte": now_utc}},
+            {"user_id": user.id, "is_archived": False, "next_review_at": {"$lte": now_utc}, "target_language": user.target_language, "native_language": user.native_language},
             {"_id": 1},
         ).sort("next_review_at", 1).limit(20)
         word_ids = [str(doc["_id"]) async for doc in cursor]
@@ -108,7 +110,7 @@ async def start_quiz_session(
     if not word_ids:
         # Check if user has any active words
         has_any = await words_col.find_one(
-            {"user_id": user.id, "is_archived": False},
+            {"user_id": user.id, "is_archived": False, "target_language": user.target_language, "native_language": user.native_language},
             {"_id": 1},
         )
 
@@ -207,10 +209,10 @@ async def present_next_word(
     if mode == "spelling":
         prompt_text = (
             "✍️ <b>Режим: Правописание (Spelling)</b>\n\n"
-            f"Переведи на английский слово:\n"
+            f"Переведи на изучаемый язык слово:\n"
             f"👉 <b>{html.escape(word.translation)}</b>\n\n"
             f"<i>Часть речи: {html.escape(word.pos)}</i>\n"
-            "Напиши английское слово в ответном сообщении (3 попытки):"
+            "Напиши слово на изучаемом языке в ответном сообщении (3 попытки):"
         )
         await message.answer(prompt_text, reply_markup=get_quiz_control_keyboard(), parse_mode="HTML")
 
@@ -229,10 +231,10 @@ async def present_next_word(
     elif mode == "listening":
         prompt_text = (
             "🎧 <b>Режим: Аудирование (Listening)</b>\n\n"
-            "Послушай произношение и напиши это слово на английском (или его русский перевод):"
+            "Послушай произношение и напиши это слово (или его перевод):"
         )
         try:
-            audio = await tts_service.generate_audio(word.canonical_word)
+            audio = await tts_service.generate_audio(word.canonical_word, target_lang=user.target_language)
             voice_file = BufferedInputFile(audio.getvalue(), filename="listening.mp3")
             await message.answer_voice(voice=voice_file, caption=prompt_text, parse_mode="HTML")
             await message.answer("Введи ответ:", reply_markup=get_quiz_control_keyboard())
@@ -256,6 +258,7 @@ async def present_next_word(
 
 
 @router.message(Command("quiz"))
+@router.message(F.text == "🎯 Начать квиз")
 async def cmd_quiz(message: Message, user: User, state: FSMContext) -> None:
     await state.clear()
     await start_quiz_session(message, user, state, allow_all=False)
@@ -568,7 +571,7 @@ async def on_quiz_failure(
 
         # Send fresh pronunciation audio
         try:
-            audio = await tts_service.generate_audio(word.canonical_word)
+            audio = await tts_service.generate_audio(word.canonical_word, target_lang=user.target_language)
             voice_file = BufferedInputFile(audio.getvalue(), filename=f"{word.canonical_word}.mp3")
             await message.answer_voice(
                 voice=voice_file,

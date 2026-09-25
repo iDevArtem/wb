@@ -5,13 +5,29 @@ from bot.core.config import settings
 
 logger = logging.getLogger(__name__)
 
+LANGUAGE_VOICE_MAP = {
+    "en": "en-US-AriaNeural",
+    "es": "es-ES-ElviraNeural",
+    "fr": "fr-FR-DeniseNeural",
+    "de": "de-DE-KatjaNeural",
+    "it": "it-IT-ElsaNeural",
+    "pt": "pt-PT-RaquelNeural",
+    "ru": "ru-RU-SvetlanaNeural",
+    "zh": "zh-CN-XiaoxiaoNeural",
+    "ja": "ja-JP-NanamiNeural",
+    "ko": "ko-KR-SunHiNeural"
+}
 
 class TTSService:
     def __init__(self, voice: str | None = None):
-        self.voice = voice or settings.tts_voice
+        self.default_voice = voice or settings.tts_voice
         self._cache: dict[str, bytes] = {}
 
-    async def generate_audio(self, text: str) -> io.BytesIO:
+    def get_voice_for_language(self, target_lang: str) -> str:
+        lang_prefix = target_lang.lower().split("-")[0]
+        return LANGUAGE_VOICE_MAP.get(lang_prefix, self.default_voice)
+
+    async def generate_audio(self, text: str, target_lang: str = "en") -> io.BytesIO:
         """
         Synthesize text speech into an in-memory BytesIO buffer.
         Supports caching and hybrid engines (Edge-TTS / Gemini TTS preview).
@@ -21,7 +37,9 @@ class TTSService:
             raise ValueError("Text for TTS cannot be empty")
 
         clean_text = text.strip()
-        cache_key = f"{settings.tts_engine}:{self.voice}:{clean_text.lower()}"
+        voice = self.get_voice_for_language(target_lang)
+        cache_key = f"{settings.tts_engine}:{voice}:{clean_text.lower()}"
+        
         if cache_key in self._cache:
             logger.debug("Returning cached TTS audio for '%s'", clean_text)
             return io.BytesIO(self._cache[cache_key])
@@ -42,8 +60,8 @@ class TTSService:
                 logger.warning("Gemini TTS failed (%s). Falling back to Edge-TTS...", e)
 
         # Fallback to Edge-TTS
-        logger.debug("Generating TTS audio with Edge-TTS for text: '%s' with voice: %s", clean_text, self.voice)
-        communicate = edge_tts.Communicate(text=clean_text, voice=self.voice)
+        logger.debug("Generating TTS audio with Edge-TTS for text: '%s' with voice: %s", clean_text, voice)
+        communicate = edge_tts.Communicate(text=clean_text, voice=voice)
         audio_buffer = io.BytesIO()
 
         async for chunk in communicate.stream():

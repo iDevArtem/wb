@@ -22,18 +22,18 @@ class WordFormsDetail(BaseModel):
     comparative: str | None = Field(default=None, description="Comparative degree (for adjectives/adverbs)")
     superlative: str | None = Field(default=None, description="Superlative degree (for adjectives/adverbs)")
     plural: str | None = Field(default=None, description="Plural form (for nouns)")
-    notes: str | None = Field(default=None, description="Grammar note in Russian, e.g. 'Неправильный глагол' or 'Исчисляемое существительное'")
+    notes: str | None = Field(default=None, description="Grammar note in the native language, e.g. 'Неправильный глагол' or 'Исчисляемое существительное'")
 
 
 class ExampleItem(BaseModel):
-    en: str = Field(..., description="Example sentence in English")
-    ru: str = Field(..., description="Russian translation of the example sentence")
+    target: str = Field(..., description="Example sentence in the target language")
+    native: str = Field(..., description="Translation of the example sentence into the native language")
 
 
 class WordAnalysis(BaseModel):
     canonical_word: str = Field(
         ...,
-        description="Canonical English word or phrase (e.g., 'necessary', 'go')",
+        description="Canonical target language word or phrase (e.g., 'necessary', 'go')",
     )
     lemma: str = Field(
         ...,
@@ -49,15 +49,15 @@ class WordAnalysis(BaseModel):
     )
     transcription_uk: str | None = Field(
         default=None,
-        description="IPA phonetic transcription for British English (Received Pronunciation - RP), e.g. /ˈkɑːst/",
+        description="IPA phonetic transcription for dialect 1 (e.g. British English) if applicable",
     )
     transcription_us: str | None = Field(
         default=None,
-        description="IPA phonetic transcription for American English (General American - GA), e.g. /ˈkæst/",
+        description="IPA phonetic transcription for dialect 2 (e.g. American English) if applicable",
     )
     translation: str = Field(
         ...,
-        description="Accurate, natural Russian translation",
+        description="Accurate, natural translation into the native language",
     )
     corrected_from: str | None = Field(
         default=None,
@@ -78,25 +78,25 @@ class WordAnalysis(BaseModel):
 
 
 class TenseItem(BaseModel):
-    tense_name: str = Field(..., description="English name of the tense, e.g. 'Present Simple', 'Past Continuous'")
-    aspect: str = Field(..., description="Short explanation of usage in Russian, e.g. 'Регулярное действие в настоящем'")
-    example_en: str = Field(..., description="Natural example sentence with the target word in this tense")
-    example_ru: str = Field(..., description="Russian translation of the example sentence")
+    tense_name: str = Field(..., description="Target language name of the tense or grammatical structure, e.g. 'Present Simple', 'Past Continuous'")
+    aspect: str = Field(..., description="Short explanation of usage in the native language, e.g. 'Регулярное действие в настоящем'")
+    example_target: str = Field(..., description="Natural example sentence with the target word in this tense/structure")
+    example_native: str = Field(..., description="Translation of the example sentence into the native language")
 
 
 class WordAllTensesResponse(BaseModel):
     word: str = Field(..., description="Target word or phrase")
     is_verb: bool = Field(..., description="True if target word is a verb or phrasal verb, False otherwise")
-    notes: str | None = Field(default=None, description="Optional Russian note (e.g. if stative verb not commonly used in continuous tenses)")
-    tenses: list[TenseItem] = Field(..., description="List of all 12 English tenses with examples, temporal markers, and translations")
+    notes: str | None = Field(default=None, description="Optional note in the native language (e.g. if stative verb not commonly used in continuous tenses)")
+    tenses: list[TenseItem] = Field(..., description="List of relevant tenses or structures in the target language with examples, temporal markers, and translations")
 
 
 class WordFamilyItem(BaseModel):
     word: str = Field(..., description="Derivative or related word in the word family")
-    pos: str = Field(..., description="Part of speech in Russian, e.g. существительное, глагол, прилагательное, наречие")
-    translation: str = Field(..., description="Russian translation")
-    example_en: str = Field(..., description="Short natural example sentence in English")
-    example_ru: str = Field(..., description="Russian translation of example")
+    pos: str = Field(..., description="Part of speech in the native language, e.g. существительное, глагол, прилагательное, наречие")
+    translation: str = Field(..., description="Native language translation")
+    example_target: str = Field(..., description="Short natural example sentence in the target language")
+    example_native: str = Field(..., description="Native language translation of the example")
 
 
 class WordFamilyResponse(BaseModel):
@@ -106,13 +106,13 @@ class WordFamilyResponse(BaseModel):
 
 class DialogueLine(BaseModel):
     speaker: str = Field(..., description="Speaker name, e.g. 'Alex', 'Sarah', 'Barista'")
-    en: str = Field(..., description="Spoken English line naturally featuring or responding to the target word")
-    ru: str = Field(..., description="Russian translation of the dialogue line")
+    target: str = Field(..., description="Spoken line in the target language naturally featuring or responding to the target word")
+    native: str = Field(..., description="Native language translation of the dialogue line")
 
 
 class WordDialogueResponse(BaseModel):
     word: str = Field(..., description="Target word or phrase")
-    situation: str = Field(..., description="Realistic setting description in Russian (e.g. 'В кофейне', 'На собеседовании')")
+    situation: str = Field(..., description="Realistic setting description in the native language (e.g. 'В кофейне', 'На собеседовании')")
     lines: list[DialogueLine] = Field(..., description="3-4 turn realistic spoken dialogue")
 
 
@@ -127,78 +127,68 @@ class VoiceQuizEvaluation(BaseModel):
     )
     feedback: str = Field(
         ...,
-        description="Short encouraging feedback or pronunciation tip in Russian",
+        description="Short encouraging feedback or pronunciation tip in the native language",
     )
 
 
-WORD_ANALYSIS_SYSTEM_PROMPT = """
-You are an expert bilingual lexicographer, English tutor, and linguistics engine.
+def get_word_analysis_prompt(native_lang: str, target_lang: str) -> str:
+    return f"""
+You are an expert bilingual lexicographer, {target_lang} tutor, and linguistics engine.
 Your task is to analyze user input (text or audio) and output a clean, accurate structured JSON.
 
 Rules:
-1. If the input is in Russian or Ukrainian, translate it into the most natural, commonly used canonical English word or set expression.
-2. If the input is in English with typos (e.g. "necesary", "definately", "accommodate"), fix the spelling in `canonical_word`, and put the original typo in `corrected_from`. If no typo, `corrected_from` must be null.
-3. If the input is in an inflected grammatical form (e.g., "went", "better", "running", "geese", "taken"), set `lemma` to its base dictionary headword ("go", "good", "run", "goose", "take"). `canonical_word` can either be the input form or lemma, but dictionary headword `lemma` must always be the base form.
-4. Phonetics: Provide strict International Phonetic Alphabet (IPA) with primary (ˈ) and secondary (ˌ) stress marks.
-   - `transcription_uk`: British English (Received Pronunciation - RP) IPA transcription, e.g. /ˈkɑːst/.
-   - `transcription_us`: American English (General American - GA) IPA transcription, e.g. /ˈkæst/.
-   - `transcription`: Combined display string if different, e.g. "🇬🇧 /ˈkɑːst/  🇺🇸 /ˈkæst/" or single IPA "/ˈkæveɪˌɑːt/" if identical.
-5. Provide accurate, idiomatic Russian translation in `translation`, capturing polysemy, register, and stylistic nuances.
+1. If the input is in {native_lang} or a related language, translate it into the most natural, commonly used canonical {target_lang} word or set expression.
+2. If the input is in {target_lang} with typos (e.g. "necesary", "definately"), fix the spelling in `canonical_word`, and put the original typo in `corrected_from`. If no typo, `corrected_from` must be null.
+3. If the input is in an inflected grammatical form, set `lemma` to its base dictionary headword. `canonical_word` can either be the input form or lemma, but dictionary headword `lemma` must always be the base form.
+4. Phonetics: Provide strict International Phonetic Alphabet (IPA) with primary (ˈ) and secondary (ˌ) stress marks if applicable for {target_lang}.
+5. Provide accurate, idiomatic {native_lang} translation in `translation`, capturing polysemy, register, and stylistic nuances.
 6. Provide 2-3 modern, realistic example sentences demonstrating usage in `examples`.
 7. Provide 1-2 common collocations, idioms, or synonyms in `synonyms_collocations`.
-8. Provide grammatical forms in `forms` if applicable (V1, V2, V3, -ing, 3rd person -s for verbs; comparative/superlative for adjectives; plural for nouns; plus summary and notes).
+8. Provide grammatical forms in `forms` if applicable.
 """
 
-ALL_TENSES_SYSTEM_PROMPT = """
-You are an expert English tutor.
-Given a word or phrase, generate natural, modern example sentences across ALL 12 English tenses:
-1. Present Simple
-2. Present Continuous
-3. Present Perfect
-4. Present Perfect Continuous
-5. Past Simple
-6. Past Continuous
-7. Past Perfect
-8. Past Perfect Continuous
-9. Future Simple
-10. Future Continuous
-11. Future Perfect
-12. Future Perfect Continuous
+def get_all_tenses_prompt(native_lang: str, target_lang: str) -> str:
+    return f"""
+You are an expert {target_lang} tutor.
+Given a word or phrase, generate natural, modern example sentences across all major tenses or grammatical structures in {target_lang}.
 
-Enrich examples with characteristic temporal markers (e.g., usually, currently, already, for 2 hours, yesterday, while, by the time, tomorrow, by next year).
-If the target word is a verb, conjugate it properly in each tense. If it is a stative verb not typically used in continuous forms, mention that in `notes`, but still provide grammatically valid illustrative examples.
-If the target word is a noun, adjective, or phrase, use it naturally in sentences framed in each of the 12 tenses.
-Each tense must include:
-- `tense_name`: English name of the tense
-- `aspect`: Short explanation in Russian of nuance/usage
-- `example_en`: Clean, natural English sentence with clear context
-- `example_ru`: Accurate, idiomatic Russian translation
+Enrich examples with characteristic temporal markers (e.g., usually, currently, already, yesterday).
+If the target word is a verb, conjugate it properly.
+If the target word is a noun, adjective, or phrase, use it naturally in sentences.
+Each tense/structure must include:
+- `tense_name`: {target_lang} name of the tense
+- `aspect`: Short explanation in {native_lang} of nuance/usage
+- `example_target`: Clean, natural {target_lang} sentence with clear context
+- `example_native`: Accurate, idiomatic {native_lang} translation
 """
 
-WORD_FAMILY_SYSTEM_PROMPT = """
-You are an expert English lexicographer.
-Given an English word or lemma, produce its "Word Family" (derivatives across parts of speech: noun, verb, adjective, adverb).
+def get_word_family_prompt(native_lang: str, target_lang: str) -> str:
+    return f"""
+You are an expert {target_lang} lexicographer.
+Given a {target_lang} word or lemma, produce its "Word Family" (derivatives across parts of speech).
 Provide 3-6 key derivative words. For each derivative, provide:
-- `word`: derivative English word
-- `pos`: part of speech in Russian (существительное, глагол, прилагательное, наречие)
-- `translation`: accurate Russian translation
-- `example_en`: short, clear example sentence
-- `example_ru`: Russian translation of the example
+- `word`: derivative {target_lang} word
+- `pos`: part of speech in {native_lang}
+- `translation`: accurate {native_lang} translation
+- `example_target`: short, clear example sentence in {target_lang}
+- `example_native`: {native_lang} translation of the example
 """
 
-WORD_DIALOGUE_SYSTEM_PROMPT = """
-You are a creative English teacher.
-Given an English word or phrase, craft a short, highly realistic, everyday spoken dialogue (3-4 turns) where native speakers use this word naturally in context.
+def get_word_dialogue_prompt(native_lang: str, target_lang: str) -> str:
+    return f"""
+You are a creative {target_lang} teacher.
+Given a {target_lang} word or phrase, craft a short, highly realistic, everyday spoken dialogue (3-4 turns) where native speakers use this word naturally in context.
 Provide:
-- `situation`: A vivid context setting in Russian (e.g. "Заказ кофе в аэропорту", "Обсуждение дедлайна с коллегой")
-- `lines`: 3-4 conversational turns with `speaker`, `en`, and `ru`. At least one line must naturally feature the target word.
+- `situation`: A vivid context setting in {native_lang}
+- `lines`: 3-4 conversational turns with `speaker`, `target`, and `native`. At least one line must naturally feature the target word.
 """
 
-VOICE_QUIZ_SYSTEM_PROMPT = """
-You are an English language examiner evaluating a student's voice response.
-The target English word is provided. The student records a voice message in English.
+def get_voice_quiz_prompt(native_lang: str, target_lang: str) -> str:
+    return f"""
+You are a {target_lang} language examiner evaluating a student's voice response.
+The target {target_lang} word is provided. The student records a voice message in {target_lang}.
 Transcribe what the student said, check if their pronunciation and word match the target word
-(or acceptable variant/synonym), and provide concise constructive feedback in Russian.
+(or acceptable variant/synonym), and provide concise constructive feedback in {native_lang}.
 """
 
 
@@ -366,16 +356,16 @@ class GeminiService:
 
         raise GeminiServiceError(f"Не удалось выполнить запрос к Gemini: {last_error}") from last_error
 
-    async def analyze_text(self, text: str) -> WordAnalysis:
+    async def analyze_text(self, text: str, native_lang: str = "ru", target_lang: str = "en") -> WordAnalysis:
         """
-        Analyze a text input (Russian/Ukrainian translation, English with typos,
+        Analyze a text input (native translation, target language with typos,
         or inflected word forms) and return a structured WordAnalysis.
         """
         prompt = f"Analyze the following word or phrase: \"{text.strip()}\""
         config = types.GenerateContentConfig(
             response_mime_type="application/json",
             response_schema=WordAnalysis,
-            system_instruction=WORD_ANALYSIS_SYSTEM_PROMPT,
+            system_instruction=get_word_analysis_prompt(native_lang, target_lang),
             temperature=0.2,
             thinking_config=types.ThinkingConfig(thinking_budget=0),
             automatic_function_calling=types.AutomaticFunctionCallingConfig(disable=True),
@@ -387,21 +377,21 @@ class GeminiService:
 
         return WordAnalysis.model_validate_json(response.text)
 
-    async def analyze_voice(self, audio_bytes: bytes, mime_type: str = "audio/ogg") -> WordAnalysis:
+    async def analyze_voice(self, audio_bytes: bytes, native_lang: str = "ru", target_lang: str = "en", mime_type: str = "audio/ogg") -> WordAnalysis:
         """
         Transcribe and analyze a voice message (in-memory audio bytes)
         and return a structured WordAnalysis.
         """
         audio_part = types.Part.from_bytes(data=audio_bytes, mime_type=mime_type)
         instruction = (
-            "Listen to this audio recording. The speaker is saying a word or phrase in English, "
-            "Russian, or Ukrainian. Recognize the word accurately, normalize it according to the "
+            f"Listen to this audio recording. The speaker is saying a word or phrase in {target_lang} or "
+            f"{native_lang}. Recognize the word accurately, normalize it according to the "
             "system instructions, and return the structured WordAnalysis."
         )
         config = types.GenerateContentConfig(
             response_mime_type="application/json",
             response_schema=WordAnalysis,
-            system_instruction=WORD_ANALYSIS_SYSTEM_PROMPT,
+            system_instruction=get_word_analysis_prompt(native_lang, target_lang),
             temperature=0.2,
             thinking_config=types.ThinkingConfig(thinking_budget=0),
             automatic_function_calling=types.AutomaticFunctionCallingConfig(disable=True),
@@ -435,7 +425,7 @@ class GeminiService:
         config = types.GenerateContentConfig(
             response_mime_type="application/json",
             response_schema=VoiceQuizEvaluation,
-            system_instruction=VOICE_QUIZ_SYSTEM_PROMPT,
+            system_instruction=get_voice_quiz_prompt(native_lang, target_lang),
             temperature=0.2,
             thinking_config=types.ThinkingConfig(thinking_budget=0),
             automatic_function_calling=types.AutomaticFunctionCallingConfig(disable=True),
@@ -456,18 +446,20 @@ class GeminiService:
         lemma: str,
         pos: str,
         translation: str,
+        native_lang: str = "ru",
+        target_lang: str = "en",
     ) -> WordAllTensesResponse:
         """
-        Generate natural example sentences across ALL 12 English tenses for the target word.
+        Generate natural example sentences across major tenses for the target word.
         """
         prompt = (
-            f"Generate all 12 English tenses with natural examples and Russian translations for: '{word}' "
+            f"Generate major {target_lang} tenses/aspects with natural examples and {native_lang} translations for: '{word}' "
             f"(lemma: '{lemma}', part of speech: '{pos}', translation: '{translation}')."
         )
         config = types.GenerateContentConfig(
             response_mime_type="application/json",
             response_schema=WordAllTensesResponse,
-            system_instruction=ALL_TENSES_SYSTEM_PROMPT,
+            system_instruction=get_all_tenses_prompt(native_lang, target_lang),
             temperature=0.2,
             thinking_config=types.ThinkingConfig(thinking_budget=0),
             automatic_function_calling=types.AutomaticFunctionCallingConfig(disable=True),
@@ -483,18 +475,20 @@ class GeminiService:
         lemma: str,
         pos: str,
         translation: str,
+        native_lang: str = "ru",
+        target_lang: str = "en",
     ) -> WordFamilyResponse:
         """
         Generate derivative words (word family across noun, verb, adj, adv) for the target word.
         """
         prompt = (
-            f"Generate the word family (derivatives) with examples and Russian translations for: '{word}' "
+            f"Generate the word family (derivatives) with examples and {native_lang} translations for: '{word}' "
             f"(lemma: '{lemma}', part of speech: '{pos}', translation: '{translation}')."
         )
         config = types.GenerateContentConfig(
             response_mime_type="application/json",
             response_schema=WordFamilyResponse,
-            system_instruction=WORD_FAMILY_SYSTEM_PROMPT,
+            system_instruction=get_word_family_prompt(native_lang, target_lang),
             temperature=0.2,
             thinking_config=types.ThinkingConfig(thinking_budget=0),
             automatic_function_calling=types.AutomaticFunctionCallingConfig(disable=True),
@@ -510,6 +504,8 @@ class GeminiService:
         lemma: str,
         pos: str,
         translation: str,
+        native_lang: str = "ru",
+        target_lang: str = "en",
     ) -> WordDialogueResponse:
         """
         Generate a short, realistic spoken dialogue in context using the target word.
@@ -521,7 +517,7 @@ class GeminiService:
         config = types.GenerateContentConfig(
             response_mime_type="application/json",
             response_schema=WordDialogueResponse,
-            system_instruction=WORD_DIALOGUE_SYSTEM_PROMPT,
+            system_instruction=get_word_dialogue_prompt(native_lang, target_lang),
             temperature=0.3,
             thinking_config=types.ThinkingConfig(thinking_budget=0),
             automatic_function_calling=types.AutomaticFunctionCallingConfig(disable=True),

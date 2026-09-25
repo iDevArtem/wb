@@ -84,11 +84,16 @@ def test_word_from_mongo():
 
 
 def test_word_query_by_id():
+    user = User(tg_id=12345, native_language="ru", target_language="en")
     oid = ObjectId()
-    q1 = _word_query_by_id(str(oid), 12345)
+    q1 = _word_query_by_id(str(oid), user)
     assert q1["user_id"] == 12345
+    assert q1["target_language"] == "en"
+    assert q1["native_language"] == "ru"
     assert q1["_id"] == oid
 
-    q2 = _word_query_by_id("non_object_id_string", 12345)
+    q2 = _word_query_by_id("non_object_id_string", user)
     assert q2["user_id"] == 12345
+    assert q2["target_language"] == "en"
+    assert q2["native_language"] == "ru"
     assert q2["_id"] == "non_object_id_string"
