@@ -38,12 +38,13 @@ class QuizState(StatesGroup):
     answering = State()
 
 
-BACKUP_DISTRACTORS = [
-    t(user.native_language, "достижение"), t(user.native_language, "исследование"), t(user.native_language, "возможность"), t(user.native_language, "препятствие"),
-    t(user.native_language, "намерение"), t(user.native_language, "решение"), t(user.native_language, "соглашение"), t(user.native_language, "развитие"), t(user.native_language, "внимание"),
-    t(user.native_language, "ответственность"), t(user.native_language, "впечатление"), t(user.native_language, "сравнение"), t(user.native_language, "отношение"),
-    t(user.native_language, "улучшение"), t(user.native_language, "вдохновение"), t(user.native_language, "воображение"), t(user.native_language, "любопытство"),
-]
+def get_backup_distractors(lang: str) -> list[str]:
+    return [
+        t(lang, "достижение"), t(lang, "исследование"), t(lang, "возможность"), t(lang, "препятствие"),
+        t(lang, "намерение"), t(lang, "решение"), t(lang, "соглашение"), t(lang, "развитие"), t(lang, "внимание"),
+        t(lang, "ответственность"), t(lang, "впечатление"), t(lang, "сравнение"), t(lang, "отношение"),
+        t(lang, "улучшение"), t(lang, "вдохновение"), t(lang, "воображение"), t(lang, "любопытство"),
+    ]
 
 
 def _word_query_by_id(word_id_str: str, user_id: int) -> dict:
@@ -71,7 +72,7 @@ async def fetch_distractors(
     unique_candidates = list({r for r in results if r and r != correct_translation})
 
     if len(unique_candidates) < count:
-        for backup in BACKUP_DISTRACTORS:
+        for backup in get_backup_distractors(native_lang):
             if backup != correct_translation and backup not in unique_candidates:
                 unique_candidates.append(backup)
             if len(unique_candidates) >= count:
