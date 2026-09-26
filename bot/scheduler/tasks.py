@@ -73,6 +73,8 @@ async def check_due_words_task(bot: Bot) -> None:
                 "user_id": user.tg_id,
                 "is_archived": False,
                 "next_review_at": {"$lte": now_utc},
+                "target_language": user.target_language,
+                "native_language": user.native_language,
             })
 
             if due_count > 0:

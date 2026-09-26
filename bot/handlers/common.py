@@ -203,6 +203,7 @@ async def render_words_page(
         "user_id": user.tg_id,
         "is_archived": False,
         "target_language": user.target_language,
+        "native_language": user.native_language,
     })
 
     if total_count == 0:
@@ -221,6 +222,7 @@ async def render_words_page(
             "user_id": user.tg_id,
             "is_archived": False,
             "target_language": user.target_language,
+            "native_language": user.native_language,
         })
         .sort([("next_review_at", 1), ("_id", 1)])
         .skip(offset)

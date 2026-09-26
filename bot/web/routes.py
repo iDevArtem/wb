@@ -97,6 +97,8 @@ async def auth_telegram(req: TelegramAuthRequest) -> AuthResponse:
             "first_name": user_obj.first_name,
             "streak": user_obj.streak,
             "timezone": user_obj.timezone,
+            "native_language": user_obj.native_language,
+            "target_language": user_obj.target_language,
         },
     )
 
@@ -113,6 +115,8 @@ async def get_me(current_user: User = Depends(get_current_user)) -> dict[str, An
         "timezone": current_user.timezone,
         "quiet_hours_start": current_user.quiet_hours_start,
         "quiet_hours_end": current_user.quiet_hours_end,
+        "native_language": current_user.native_language,
+        "target_language": current_user.target_language,
     }
 
 
@@ -123,13 +127,19 @@ async def get_stats(current_user: User = Depends(get_current_user)) -> StatsResp
     user_id = current_user.id
     now = datetime.now(timezone.utc)
 
-    total_words = await words_col.count_documents({"user_id": user_id})
-    learning_words = await words_col.count_documents({"user_id": user_id, "is_archived": False})
-    mastered_words = await words_col.count_documents({"user_id": user_id, "is_archived": True})
+    lang_filter = {
+        "native_language": current_user.native_language,
+        "target_language": current_user.target_language,
+    }
+    
+    total_words = await words_col.count_documents({"user_id": user_id, **lang_filter})
+    learning_words = await words_col.count_documents({"user_id": user_id, "is_archived": False, **lang_filter})
+    mastered_words = await words_col.count_documents({"user_id": user_id, "is_archived": True, **lang_filter})
     due_words = await words_col.count_documents({
         "user_id": user_id,
         "is_archived": False,
         "next_review_at": {"$lte": now},
+        **lang_filter,
     })
 
     return StatsResponse(
@@ -161,7 +171,11 @@ async def get_words(
     user_id = current_user.id
     now = datetime.now(timezone.utc)
 
-    query_filter: dict[str, Any] = {"user_id": user_id}
+    query_filter: dict[str, Any] = {
+        "user_id": user_id,
+        "native_language": current_user.native_language,
+        "target_language": current_user.target_language,
+    }
 
     if filter == "archived":
         query_filter["is_archived"] = True
