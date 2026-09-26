@@ -63,17 +63,17 @@ class WordAnalysis(BaseModel):
         default=None,
         description="Original typo string if spelling was corrected, else null",
     )
-    examples: list[ExampleItem] = Field(
-        default_factory=list,
-        description="2-3 live, natural example sentences with translations",
-    )
-    synonyms_collocations: list[str] = Field(
-        default_factory=list,
-        description="1-2 set phrases, idioms, or collocations with the word",
-    )
-    forms: WordFormsDetail | None = Field(
+    level: str | None = Field(
         default=None,
-        description="Grammar forms if applicable (e.g. V1/V2/V3 for verbs, comparative for adjectives, plural for nouns)",
+        description="CEFR proficiency level if applicable, e.g. 'A1', 'B2', 'C1'",
+    )
+    definition: str | None = Field(
+        default=None,
+        description="One short, simple sentence explaining the meaning in the target language (like a learner's dictionary)",
+    )
+    grammar_notes: list[str] = Field(
+        default_factory=list,
+        description="Very short, critical grammar tags/forms. E.g. ['[C]', 'plural: tables'] for English nouns, ['der', 'pl: die Tische'] for German nouns, or ['[m]'] for romance languages.",
     )
 
 
@@ -104,12 +104,12 @@ Your task is to analyze user input (text or audio) and output a clean, accurate 
 Rules:
 1. If the input is in {native_lang} or a related language, translate it into the most natural, commonly used canonical {target_lang} word or set expression.
 2. If the input is in {target_lang} with typos (e.g. "necesary", "definately"), fix the spelling in `canonical_word`, and put the original typo in `corrected_from`. If no typo, `corrected_from` must be null.
-3. If the input is in an inflected grammatical form, set `lemma` to its base dictionary headword. `canonical_word` can either be the input form or lemma, but dictionary headword `lemma` must always be the base form.
-4. Phonetics: Provide strict International Phonetic Alphabet (IPA) with primary (ˈ) and secondary (ˌ) stress marks if applicable for {target_lang}.
-5. Provide accurate, idiomatic {native_lang} translation in `translation`, capturing polysemy, register, and stylistic nuances.
-6. Provide 2-3 modern, realistic example sentences demonstrating usage in `examples`.
-7. Provide 1-2 common collocations, idioms, or synonyms in `synonyms_collocations`.
-8. Provide grammatical forms in `forms` if applicable.
+3. If the input is an inflected form, set `lemma` to its base dictionary headword.
+4. Phonetics: Provide strict IPA with stress marks if applicable for {target_lang}.
+5. Provide accurate, idiomatic {native_lang} translation in `translation`.
+6. `level`: Determine the CEFR level (A1, A2, B1, B2, C1, C2) of the word.
+7. `definition`: Provide one short, simple explanation of the meaning in {target_lang}.
+8. `grammar_notes`: Provide a minimal list of crucial grammar facts. Example: for English nouns include `[C]` or `[U]`, for verbs include `[intransitive]`. For German nouns include gender `der`/`die`/`das` and plural form. Keep these tags very short (1-3 words max).
 """
 
 def get_voice_quiz_prompt(native_lang: str, target_lang: str) -> str:

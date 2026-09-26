@@ -74,7 +74,7 @@ async def test_gemini_fallback_success_on_second_model():
     valid_json = (
         '{"canonical_word": "hello", "lemma": "hello", "pos": "noun", '
         '"transcription": "/həˈloʊ/", "translation": "привет", '
-        '"corrected_from": null, "examples": [], "synonyms_collocations": []}'
+        '"corrected_from": null, "level": "A1", "definition": "A greeting.", "grammar_notes": []}'
     )
     success_resp = MagicMock()
     success_resp.text = valid_json
@@ -111,7 +111,7 @@ async def test_gemini_fallback_on_404_deprecated_model():
     valid_json = (
         '{"canonical_word": "test", "lemma": "test", "pos": "verb", '
         '"transcription": "/tɛst/", "translation": "тестировать", '
-        '"corrected_from": null, "examples": [], "synonyms_collocations": []}'
+        '"corrected_from": null, "level": "A1", "definition": "A greeting.", "grammar_notes": []}'
     )
     success_resp = MagicMock()
     success_resp.text = valid_json
@@ -146,7 +146,7 @@ async def test_gemini_fallback_on_503_high_demand():
     valid_json = (
         '{"canonical_word": "peace", "lemma": "peace", "pos": "noun", '
         '"transcription": "/piːs/", "translation": "мир", '
-        '"corrected_from": null, "examples": [], "synonyms_collocations": []}'
+        '"corrected_from": null, "level": "A1", "definition": "A greeting.", "grammar_notes": []}'
     )
     success_resp = MagicMock()
     success_resp.text = valid_json
@@ -226,7 +226,7 @@ async def test_gemini_multiple_keys_rotation():
     valid_json = (
         '{"canonical_word": "world", "lemma": "world", "pos": "noun", '
         '"transcription": "/wɜːrld/", "translation": "мир", '
-        '"corrected_from": null, "examples": [], "synonyms_collocations": []}'
+        '"corrected_from": null, "level": "A1", "definition": "A greeting.", "grammar_notes": []}'
     )
     success_resp = MagicMock()
     success_resp.text = valid_json
@@ -257,7 +257,7 @@ async def test_word_analysis_phonetics_uk_us():
         '"transcription": "🇬🇧 /ˈʃɛdjuːl/ | 🇺🇸 /ˈskɛdʒuːl/", '
         '"transcription_uk": "/ˈʃɛdjuːl/", "transcription_us": "/ˈskɛdʒuːl/", '
         '"translation": "расписание", "corrected_from": null, '
-        '"examples": [], "synonyms_collocations": []}'
+        '"level": "A2", "definition": "A plan of activities or events.", "grammar_notes": []}'
     )
     resp = MagicMock()
     resp.text = valid_json

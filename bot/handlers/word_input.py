@@ -52,12 +52,26 @@ def format_word_card(analysis: WordAnalysis) -> str:
     if analysis.lemma.lower() != analysis.canonical_word.lower():
         lemma_note = f"\n🌱 Словарная форма: <code>{escaped_lemma}</code>"
 
+    level_display = f" • <b>{analysis.level}</b>" if getattr(analysis, "level", None) else ""
+    
+    definition_block = ""
+    if getattr(analysis, "definition", None):
+        definition_block = f"\n\n💡 <b>Смысл:</b> <i>{html.escape(analysis.definition)}</i>"
+        
+    grammar_block = ""
+    grammar_notes = getattr(analysis, "grammar_notes", [])
+    if grammar_notes:
+        grammar_list = " • ".join(html.escape(n) for n in grammar_notes)
+        grammar_block = f"\n📐 <b>Грамматика:</b> {grammar_list}"
+
     card = (
-        f"📖 <b>{escaped_word}</b> <i>({escaped_pos})</i>\n"
+        f"📖 <b>{escaped_word}</b> <i>({escaped_pos})</i>{level_display}\n"
         f"{typo_note}"
         f"🗣 {trans_display}"
         f"{lemma_note}\n"
         f"💬 <b>{escaped_transl}</b>"
+        f"{definition_block}"
+        f"{grammar_block}"
     )
     return card
 
@@ -163,14 +177,14 @@ async def handle_voice_input(
             transcription=analysis.transcription,
             translation=analysis.translation,
             corrected_from=analysis.corrected_from,
-            examples=[e.model_dump() for e in analysis.examples],
-            synonyms_collocations=analysis.synonyms_collocations,
+            level=getattr(analysis, "level", None),
+            definition=getattr(analysis, "definition", None),
+            grammar_notes=getattr(analysis, "grammar_notes", []),
             repetition=0,
             interval=1,
             ease_factor=2.5,
             next_review_at=datetime.now(timezone.utc) + timedelta(days=1),
             is_archived=False,
-            extra_data={"forms": analysis.forms.model_dump() if analysis.forms else None},
         )
         words_col = get_words_collection()
         insert_res = await words_col.insert_one(new_word.to_mongo())
@@ -293,14 +307,14 @@ async def handle_text_input(
             transcription=analysis.transcription,
             translation=analysis.translation,
             corrected_from=analysis.corrected_from,
-            examples=[e.model_dump() for e in analysis.examples],
-            synonyms_collocations=analysis.synonyms_collocations,
+            level=getattr(analysis, "level", None),
+            definition=getattr(analysis, "definition", None),
+            grammar_notes=getattr(analysis, "grammar_notes", []),
             repetition=0,
             interval=1,
             ease_factor=2.5,
             next_review_at=datetime.now(timezone.utc) + timedelta(days=1),
             is_archived=False,
-            extra_data={"forms": analysis.forms.model_dump() if analysis.forms else None},
         )
         words_col = get_words_collection()
         insert_res = await words_col.insert_one(new_word.to_mongo())

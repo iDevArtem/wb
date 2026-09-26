@@ -20,6 +20,10 @@ class Word(MongoBaseModel):
     transcription: str
     translation: str
     corrected_from: str | None = None
+    level: str | None = None
+    definition: str | None = None
+    grammar_notes: list[str] = Field(default_factory=list)
+    # Legacy fields
     examples: list[dict[str, str]] = Field(default_factory=list)
     synonyms_collocations: list[str] = Field(default_factory=list)
     extra_data: dict[str, Any] = Field(default_factory=dict)
