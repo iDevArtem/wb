@@ -1,11 +1,9 @@
-import asyncio
-from bot.core.database import get_database, get_words_collection
+with open("tests/test_extra_features.py", "r") as f:
+    content = f.read()
 
-async def test():
-    words_col = get_words_collection()
-    cursor = await words_col.aggregate([{"$limit": 1}])
-    print("cursor", type(cursor))
-    res = await cursor.to_list()
-    print("res", res)
+import re
+# Keep only up to before test_gemini_service_extra_methods
+new_content = re.sub(r'@pytest\.mark\.asyncio\nasync def test_gemini_service_extra_methods.*', '', content, flags=re.DOTALL)
 
-asyncio.run(test())
+with open("tests/test_extra_features.py", "w") as f:
+    f.write(new_content)

@@ -7,8 +7,7 @@ def get_word_card_keyboard(word_id: int | str) -> InlineKeyboardMarkup:
     """
     Inline keyboard for a newly added or inspected word card:
     [🔊 Озвучить еще раз]
-    [📐 Формы] [⏳ Времена]
-    [🌱 Однокоренные] [🎭 Живой диалог]
+    [💬 Примеры]
     [🗑 Удалить] [✅ Знаю (в архив)]
     """
     builder = InlineKeyboardBuilder()

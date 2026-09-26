@@ -81,45 +81,6 @@ class WordExamplesResponse(BaseModel):
     examples: list[ExampleItem] = Field(..., description="A list of exactly 5 contextually diverse example sentences")
 
 
-class TenseItem(BaseModel):
-    tense_name: str = Field(..., description="Target language name of the tense or grammatical structure, e.g. 'Present Simple', 'Past Continuous'")
-    aspect: str = Field(..., description="Short explanation of usage in the native language, e.g. 'Регулярное действие в настоящем'")
-    example_target: str = Field(..., description="Natural example sentence with the target word in this tense/structure")
-    example_native: str = Field(..., description="Translation of the example sentence into the native language")
-
-
-class WordAllTensesResponse(BaseModel):
-    word: str = Field(..., description="Target word or phrase")
-    is_verb: bool = Field(..., description="True if target word is a verb or phrasal verb, False otherwise")
-    notes: str | None = Field(default=None, description="Optional note in the native language (e.g. if stative verb not commonly used in continuous tenses)")
-    tenses: list[TenseItem] = Field(..., description="List of relevant tenses or structures in the target language with examples, temporal markers, and translations")
-
-
-class WordFamilyItem(BaseModel):
-    word: str = Field(..., description="Derivative or related word in the word family")
-    pos: str = Field(..., description="Part of speech in the native language, e.g. существительное, глагол, прилагательное, наречие")
-    translation: str = Field(..., description="Native language translation")
-    example_target: str = Field(..., description="Short natural example sentence in the target language")
-    example_native: str = Field(..., description="Native language translation of the example")
-
-
-class WordFamilyResponse(BaseModel):
-    root: str = Field(..., description="Root/base word")
-    members: list[WordFamilyItem] = Field(..., description="List of related word family members (nouns, verbs, adjectives, adverbs)")
-
-
-class DialogueLine(BaseModel):
-    speaker: str = Field(..., description="Speaker name, e.g. 'Alex', 'Sarah', 'Barista'")
-    target: str = Field(..., description="Spoken line in the target language naturally featuring or responding to the target word")
-    native: str = Field(..., description="Native language translation of the dialogue line")
-
-
-class WordDialogueResponse(BaseModel):
-    word: str = Field(..., description="Target word or phrase")
-    situation: str = Field(..., description="Realistic setting description in the native language (e.g. 'В кофейне', 'На собеседовании')")
-    lines: list[DialogueLine] = Field(..., description="3-4 turn realistic spoken dialogue")
-
-
 class VoiceQuizEvaluation(BaseModel):
     transcribed_text: str = Field(
         ...,
@@ -149,42 +110,6 @@ Rules:
 6. Provide 2-3 modern, realistic example sentences demonstrating usage in `examples`.
 7. Provide 1-2 common collocations, idioms, or synonyms in `synonyms_collocations`.
 8. Provide grammatical forms in `forms` if applicable.
-"""
-
-def get_all_tenses_prompt(native_lang: str, target_lang: str) -> str:
-    return f"""
-You are an expert {target_lang} tutor.
-Given a word or phrase, generate natural, modern example sentences across all major tenses or grammatical structures in {target_lang}.
-
-Enrich examples with characteristic temporal markers (e.g., usually, currently, already, yesterday).
-If the target word is a verb, conjugate it properly.
-If the target word is a noun, adjective, or phrase, use it naturally in sentences.
-Each tense/structure must include:
-- `tense_name`: {target_lang} name of the tense
-- `aspect`: Short explanation in {native_lang} of nuance/usage
-- `example_target`: Clean, natural {target_lang} sentence with clear context
-- `example_native`: Accurate, idiomatic {native_lang} translation
-"""
-
-def get_word_family_prompt(native_lang: str, target_lang: str) -> str:
-    return f"""
-You are an expert {target_lang} lexicographer.
-Given a {target_lang} word or lemma, produce its "Word Family" (derivatives across parts of speech).
-Provide 3-6 key derivative words. For each derivative, provide:
-- `word`: derivative {target_lang} word
-- `pos`: part of speech in {native_lang}
-- `translation`: accurate {native_lang} translation
-- `example_target`: short, clear example sentence in {target_lang}
-- `example_native`: {native_lang} translation of the example
-"""
-
-def get_word_dialogue_prompt(native_lang: str, target_lang: str) -> str:
-    return f"""
-You are a creative {target_lang} teacher.
-Given a {target_lang} word or phrase, craft a short, highly realistic, everyday spoken dialogue (3-4 turns) where native speakers use this word naturally in context.
-Provide:
-- `situation`: A vivid context setting in {native_lang}
-- `lines`: 3-4 conversational turns with `speaker`, `target`, and `native`. At least one line must naturally feature the target word.
 """
 
 def get_voice_quiz_prompt(native_lang: str, target_lang: str) -> str:
@@ -446,35 +371,6 @@ class GeminiService:
 
         return VoiceQuizEvaluation.model_validate_json(response.text)
 
-    async def get_word_all_tenses(
-        self,
-        word: str,
-        lemma: str,
-        pos: str,
-        translation: str,
-        native_lang: str = "ru",
-        target_lang: str = "en",
-    ) -> WordAllTensesResponse:
-        """
-        Generate natural example sentences across major tenses for the target word.
-        """
-        prompt = (
-            f"Generate major {target_lang} tenses/aspects with natural examples and {native_lang} translations for: '{word}' "
-            f"(lemma: '{lemma}', part of speech: '{pos}', translation: '{translation}')."
-        )
-        config = types.GenerateContentConfig(
-            response_mime_type="application/json",
-            response_schema=WordAllTensesResponse,
-            system_instruction=get_all_tenses_prompt(native_lang, target_lang),
-            temperature=0.2,
-            thinking_config=types.ThinkingConfig(thinking_budget=0),
-            automatic_function_calling=types.AutomaticFunctionCallingConfig(disable=True),
-        )
-        response = await self._generate_content_with_fallback(contents=prompt, config=config)
-        if not response.text:
-            raise GeminiServiceError("Gemini API returned an empty response for word tenses")
-        return WordAllTensesResponse.model_validate_json(response.text)
-
     async def get_word_examples(
         self,
         word: str,
@@ -503,64 +399,6 @@ class GeminiService:
         if not response.text:
             raise GeminiServiceError("Gemini API returned an empty response for examples")
         return WordExamplesResponse.model_validate_json(response.text)
-
-    async def get_word_family(
-        self,
-        word: str,
-        lemma: str,
-        pos: str,
-        translation: str,
-        native_lang: str = "ru",
-        target_lang: str = "en",
-    ) -> WordFamilyResponse:
-        """
-        Generate derivative words (word family across noun, verb, adj, adv) for the target word.
-        """
-        prompt = (
-            f"Generate the word family (derivatives) with examples and {native_lang} translations for: '{word}' "
-            f"(lemma: '{lemma}', part of speech: '{pos}', translation: '{translation}')."
-        )
-        config = types.GenerateContentConfig(
-            response_mime_type="application/json",
-            response_schema=WordFamilyResponse,
-            system_instruction=get_word_family_prompt(native_lang, target_lang),
-            temperature=0.2,
-            thinking_config=types.ThinkingConfig(thinking_budget=0),
-            automatic_function_calling=types.AutomaticFunctionCallingConfig(disable=True),
-        )
-        response = await self._generate_content_with_fallback(contents=prompt, config=config)
-        if not response.text:
-            raise GeminiServiceError("Gemini API returned an empty response for word family")
-        return WordFamilyResponse.model_validate_json(response.text)
-
-    async def get_word_dialogue(
-        self,
-        word: str,
-        lemma: str,
-        pos: str,
-        translation: str,
-        native_lang: str = "ru",
-        target_lang: str = "en",
-    ) -> WordDialogueResponse:
-        """
-        Generate a short, realistic spoken dialogue in context using the target word.
-        """
-        prompt = (
-            f"Craft a natural everyday spoken dialogue using the word: '{word}' "
-            f"(lemma: '{lemma}', part of speech: '{pos}', translation: '{translation}')."
-        )
-        config = types.GenerateContentConfig(
-            response_mime_type="application/json",
-            response_schema=WordDialogueResponse,
-            system_instruction=get_word_dialogue_prompt(native_lang, target_lang),
-            temperature=0.3,
-            thinking_config=types.ThinkingConfig(thinking_budget=0),
-            automatic_function_calling=types.AutomaticFunctionCallingConfig(disable=True),
-        )
-        response = await self._generate_content_with_fallback(contents=prompt, config=config)
-        if not response.text:
-            raise GeminiServiceError("Gemini API returned an empty response for word dialogue")
-        return WordDialogueResponse.model_validate_json(response.text)
 
     async def synthesize_speech_audio(
         self,
