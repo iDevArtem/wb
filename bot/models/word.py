@@ -12,7 +12,7 @@ def default_next_review() -> datetime:
 class Word(MongoBaseModel):
     id: PyObjectId | None = Field(default=None, alias="_id")
     user_id: int
-    native_language: str = "ru"
+    native_language: str = "uk"
     target_language: str = "en"
     canonical_word: str
     lemma: str

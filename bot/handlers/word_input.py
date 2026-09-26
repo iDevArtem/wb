@@ -264,6 +264,8 @@ async def handle_voice_input(
         # Save to DB
         new_word = Word(
             user_id=user.id,
+            native_language=user.native_language,
+            target_language=user.target_language,
             canonical_word=analysis.canonical_word,
             lemma=analysis.lemma,
             pos=analysis.pos,
@@ -394,6 +396,8 @@ async def handle_text_input(
         # Save to DB
         new_word = Word(
             user_id=user.id,
+            native_language=user.native_language,
+            target_language=user.target_language,
             canonical_word=analysis.canonical_word,
             lemma=analysis.lemma,
             pos=analysis.pos,
