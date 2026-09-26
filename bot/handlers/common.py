@@ -27,14 +27,22 @@ router = Router(name="common")
 @router.message(CommandStart())
 async def cmd_start(message: Message, user: User) -> None:
     text = (
-        f"👋 Привет, <b>{message.from_user.first_name or 'друг'}</b>!\n\n" + "Я твой персональный AI-репетитор языков с научной системой "
-        "интервальных повторений <b>SuperMemo-2 (SM-2)</b>, нейронным произношением и искусственным интеллектом Gemini.\n\n" + f"Сейчас ты учишь <b>{user.target_language}</b>, используя язык <b>{user.native_language}</b>.\n\n" + "✨ <b>Как добавлять слова:</b>\n"
-        "• <b>Текст на родном языке:</b> напиши любое слово — переведу на изучаемый язык.\n" + "• <b>Слово с опечаткой:</b> исправлю и сохраню правильный вариант.\n"
-        "• <b>Грамматическая форма:</b> приведу к словарной форме.\n" + "• <b>Голосовое сообщение:</b> надиктуй слово в войс — Gemini распознает и разберет его!\n\n"
-        "🧠 <b>Основные возможности:</b>\n" + "• 📖 <b>Веб-словарь:</b> отслеживай все слова, прогресс и озвучку в Mini App!\n"
-        "• /words — Список всех слов на изучении\n" + "• /quiz — Начать интерактивную тренировку слов\n"
-        "• /stats — Твоя статистика и стрик повторений\n" + "• /archive — Слова, отправленные в архив\n"
-        "• /settings — Смена языков, часового пояса и тихих часов\n\n" + t(user.native_language, "Отправь мне прямо сейчас любое слово текстом или голосовым! 🚀")
+        f"👋 {t(user.native_language, 'Привет')}, <b>{message.from_user.first_name or 'друг'}</b>!\n\n" + 
+        t(user.native_language, "Я твой персональный AI-репетитор языков с научной системой интервальных повторений <b>SuperMemo-2 (SM-2)</b>, нейронным произношением и искусственным интеллектом Gemini.") + "\n\n" + 
+        t(user.native_language, "Сейчас ты учишь {target}, используя язык {native}.").replace("{target}", f"<b>{user.target_language}</b>").replace("{native}", f"<b>{user.native_language}</b>") + "\n\n" + 
+        "✨ <b>" + t(user.native_language, "Как добавлять слова:") + "</b>\n" +
+        t(user.native_language, "• <b>Текст на родном языке:</b> напиши любое слово — переведу на изучаемый язык.") + "\n" + 
+        t(user.native_language, "• <b>Слово с опечаткой:</b> исправлю и сохраню правильный вариант.") + "\n" +
+        t(user.native_language, "• <b>Грамматическая форма:</b> приведу к словарной форме.") + "\n" + 
+        t(user.native_language, "• <b>Голосовое сообщение:</b> надиктуй слово в войс — Gemini распознает и разберет его!") + "\n\n" +
+        "🧠 <b>" + t(user.native_language, "Основные возможности:") + "</b>\n" + 
+        t(user.native_language, "• 📖 <b>Веб-словарь:</b> отслеживай все слова, прогресс и озвучку в Mini App!") + "\n" +
+        t(user.native_language, "• /words — Список всех слов на изучении") + "\n" + 
+        t(user.native_language, "• /quiz — Начать интерактивную тренировку слов") + "\n" +
+        t(user.native_language, "• /stats — Твоя статистика и стрик повторений") + "\n" + 
+        t(user.native_language, "• /archive — Слова, отправленные в архив") + "\n" +
+        t(user.native_language, "• /settings — Смена языков, часового пояса и тихих часов") + "\n\n" + 
+        t(user.native_language, "Отправь мне прямо сейчас любое слово текстом или голосовым! 🚀")
     )
     await message.answer(text, reply_markup=get_start_keyboard(user.native_language), parse_mode="HTML")
     await message.answer(t(user.native_language, "Используй меню ниже для быстрой навигации 👇"), reply_markup=get_main_menu_keyboard(user.native_language))
@@ -84,12 +92,16 @@ async def cmd_stats(message: Message, user: User) -> None:
             avg_interval = float(doc.get("avg_interval", 0.0) or 0.0)
 
     text = (
-        "📊 <b>Твой прогресс в изучении:</b>\n\n" + f"🔥 <b>Текущий стрик:</b> {user.streak} дн.\n" +
-        f"📚 <b>Всего слов в словаре:</b> {total_words}\n" + f"⚡ <b>Слов на изучении:</b> {active_words}\n" +
-        f"✅ <b>Выучено (в архиве):</b> {archived_words}\n" + f"🎯 <b>Готово к повторению сегодня:</b> {due_words}\n" +
-        f"📈 <b>Средний интервал памяти:</b> {avg_interval:.1f} дн.\n\n" + f"🌍 <b>Часовой пояс:</b> <code>{user.timezone}</code>\n" +
-        f"🌙 <b>Тихие часы:</b> {user.quiet_hours_start}:00 — {user.quiet_hours_end}:00\n\n"
-        + (t(user.native_language, "💡 <i>Есть слова для повторения! Напиши /quiz, чтобы освежить память.</i>") if due_words > 0 else t(user.native_language, "🎉 <i>Все слова на сегодня повторены! Отличная работа!</i>"))
+        f"📊 <b>{{t(user.native_language, 'Твой прогресс в изучении:')}}</b>\n\n" +
+        f"🔥 <b>{{t(user.native_language, 'Текущий стрик:')}}</b> {{user.streak}} {{t(user.native_language, 'дн.')}}\n" +
+        f"📚 <b>{{t(user.native_language, 'Всего слов в словаре:')}}</b> {{total_words}}\n" +
+        f"⚡ <b>{{t(user.native_language, 'Слов на изучении:')}}</b> {{active_words}}\n" +
+        f"✅ <b>{{t(user.native_language, 'Выучено (в архиве):')}}</b> {{archived_words}}\n" +
+        f"🎯 <b>{{t(user.native_language, 'Готово к повторению сегодня:')}}</b> {{due_words}}\n" +
+        f"📈 <b>{{t(user.native_language, 'Средний интервал памяти:')}}</b> {{avg_interval:.1f}} {{t(user.native_language, 'дн.')}}\n\n" +
+        f"🌍 <b>{{t(user.native_language, 'Часовой пояс:')}}</b> <code>{{user.timezone}}</code>\n" +
+        f"🌙 <b>{{t(user.native_language, 'Тихие часы:')}}</b> {{user.quiet_hours_start}}:00 — {{user.quiet_hours_end}}:00\n\n" +
+        (t(user.native_language, "💡 <i>Есть слова для повторения! Напиши /quiz, чтобы освежить память.</i>") if due_words > 0 else t(user.native_language, "🎉 <i>Все слова на сегодня повторены! Отличная работа!</i>"))
     )
     await message.answer(text, parse_mode="HTML")
 
@@ -114,13 +126,13 @@ async def cmd_archive(message: Message, user: User) -> None:
         return
 
     await message.answer(
-        f"📦 <b>Архив выученных слов (последние {len(words)}):</b>",
+        f"📦 <b>{t(user.native_language, 'Архив выученных слов (последние')} {len(words)}):</b>",
         parse_mode="HTML",
     )
 
     for w in words:
         item_text = (
-            f"• <b>{w.canonical_word}</b> [{w.transcription}] — {w.translation}\n" + f"  <i>Интервал памяти был: {w.interval} дн.</i>"
+            f"• <b>{w.canonical_word}</b> [{w.transcription}] — {w.translation}\n" + f"  <i>{t(user.native_language, 'Интервал памяти был:')} {w.interval} {t(user.native_language, 'дн.')}</i>"
         )
         await message.answer(
             item_text,
@@ -154,7 +166,7 @@ async def cb_unarchive_word(callback: CallbackQuery, user: User) -> None:
     await callback.answer(t(user.native_language, "Слово возвращено в активные повторения!"), show_alert=False)
     if callback.message:
         await callback.message.edit_text(
-            f"↩️ Слово <b>{word.canonical_word}</b> возвращено в обучение!",
+            f"↩️ {t(user.native_language, 'Слово')} <b>{word.canonical_word}</b> {t(user.native_language, 'возвращено в обучение!')}",
             parse_mode="HTML",
         )
 
@@ -210,8 +222,8 @@ async def render_words_page(
     words = [Word.model_validate(doc) async for doc in cursor]
 
     header = (
-        f"📚 <b>Слова на изучении</b>\n" + f"Всего слов: <b>{total_count}</b> • Страница <b>{page}</b> из <b>{total_pages}</b>\n" +
-        f"<i>(Сортировка: сначала слова, готовые к повторению)</i>\n\n"
+        f"📚 <b>{t(user.native_language, 'Слова на изучении')}</b>\n" + f"{t(user.native_language, 'Всего слов:')} <b>{total_count}</b> • {t(user.native_language, 'Страница')} <b>{page}</b> {t(user.native_language, 'из')} <b>{total_pages}</b>\n" +
+        f"<i>{t(user.native_language, '(Сортировка: сначала слова, готовые к повторению)')}</i>\n\n"
     )
 
     rows = []
@@ -221,20 +233,20 @@ async def render_words_page(
             review_time = review_time.replace(tzinfo=timezone.utc)
 
         if review_time <= now_utc:
-            status = "🔴 <b>пора повторить!</b>"
+            status = "🔴 <b>" + t(user.native_language, "пора повторить!") + "</b>"
         else:
             diff = review_time - now_utc
             hours = int(diff.total_seconds() // 3600)
             if hours < 24:
-                status = f"🟡 через {max(1, hours)} ч."
+                status = f"🟡 {t(user.native_language, 'через')} {max(1, hours)} {t(user.native_language, 'ч.')}"
             else:
                 days = math.ceil(hours / 24)
-                status = f"🟢 через {days} дн."
+                status = f"🟢 {t(user.native_language, 'через')} {days} {t(user.native_language, 'дн.')}"
 
         short_transl = w.translation.split(",")[0].strip()
         transcription_str = f" [{html.escape(w.transcription)}]" if w.transcription else ""
         rows.append(
-            f"{idx}. <b>{html.escape(w.canonical_word)}</b>{transcription_str} — {html.escape(short_transl)}\n" + f"   ↳ ⏳ {w.interval} дн. (шаг {w.repetition}) • {status}"
+            f"{idx}. <b>{html.escape(w.canonical_word)}</b>{transcription_str} — {html.escape(short_transl)}\n" + f"   ↳ ⏳ {w.interval} {t(user.native_language, 'дн.')} ({t(user.native_language, 'шаг')} {w.repetition}) • {status}"
         )
 
     text = header + "\n\n".join(rows)

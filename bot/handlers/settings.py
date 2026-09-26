@@ -33,12 +33,12 @@ class SettingsState(StatesGroup):
 @router.message(TranslatedText("⚙️ Настройки"))
 async def cmd_settings(message: Message, user: User) -> None:
     text = (
-        f"⚙️ <b>{t(user.native_language, 'Настройки профиля:')}</b>\n\n" +
-        f"🗣 <b>{t(user.native_language, 'Родной язык:')}</b> <code>{user.native_language}</code>\n" +
-        f"🎯 <b>{t(user.native_language, 'Изучаемый язык:')}</b> <code>{user.target_language}</code>\n" +
-        f"🌍 <b>{t(user.native_language, 'Часовой пояс:')}</b> <code>{user.timezone}</code>\n" +
-        f"🌙 <b>{t(user.native_language, 'Тихие часы:')}</b> с {user.quiet_hours_start}:00 до {user.quiet_hours_end}:00\n" +
-        f"<i>(Уведомления отправляются только днем с {user.quiet_hours_end}:00 до {user.quiet_hours_start}:00)</i>\n\n" +
+        f"⚙️ <b>{{t(user.native_language, 'Настройки профиля:')}}</b>\n\n" +
+        f"🗣 <b>{{t(user.native_language, 'Родной язык:')}}</b> <code>{{user.native_language}}</code>\n" +
+        f"🎯 <b>{{t(user.native_language, 'Изучаемый язык:')}}</b> <code>{{user.target_language}}</code>\n" +
+        f"🌍 <b>{{t(user.native_language, 'Часовой пояс:')}}</b> <code>{{user.timezone}}</code>\n" +
+        f"🌙 <b>{{t(user.native_language, 'Тихие часы:')}}</b> {{t(user.native_language, 'с')}} {{user.quiet_hours_start}}:00 {{t(user.native_language, 'до')}} {{user.quiet_hours_end}}:00\n" +
+        f"<i>({{t(user.native_language, 'Уведомления отправляются только днем с')}} {{user.quiet_hours_end}}:00 {{t(user.native_language, 'до')}} {{user.quiet_hours_start}}:00)</i>\n\n" +
         t(user.native_language, "Выбери нужный пункт для изменения:")
     )
     await message.answer(text, reply_markup=get_settings_keyboard(user.native_language), parse_mode="HTML")
@@ -48,11 +48,11 @@ async def cmd_settings(message: Message, user: User) -> None:
 async def cb_open_settings(callback: CallbackQuery, user: User) -> None:
     await callback.answer()
     text = (
-        f"⚙️ <b>{t(user.native_language, 'Настройки профиля:')}</b>\n\n" +
-        f"🗣 <b>{t(user.native_language, 'Родной язык:')}</b> <code>{user.native_language}</code>\n" +
-        f"🎯 <b>{t(user.native_language, 'Изучаемый язык:')}</b> <code>{user.target_language}</code>\n" +
-        f"🌍 <b>{t(user.native_language, 'Часовой пояс:')}</b> <code>{user.timezone}</code>\n" +
-        f"🌙 <b>{t(user.native_language, 'Тихие часы:')}</b> с {user.quiet_hours_start}:00 до {user.quiet_hours_end}:00\n\n" +
+        f"⚙️ <b>{{t(user.native_language, 'Настройки профиля:')}}</b>\n\n" +
+        f"🗣 <b>{{t(user.native_language, 'Родной язык:')}}</b> <code>{{user.native_language}}</code>\n" +
+        f"🎯 <b>{{t(user.native_language, 'Изучаемый язык:')}}</b> <code>{{user.target_language}}</code>\n" +
+        f"🌍 <b>{{t(user.native_language, 'Часовой пояс:')}}</b> <code>{{user.timezone}}</code>\n" +
+        f"🌙 <b>{{t(user.native_language, 'Тихие часы:')}}</b> {{t(user.native_language, 'с')}} {{user.quiet_hours_start}}:00 {{t(user.native_language, 'до')}} {{user.quiet_hours_end}}:00\n\n" +
         t(user.native_language, "Выбери нужный пункт для изменения:")
     )
     if callback.message:
@@ -91,7 +91,7 @@ async def cb_save_timezone(
         await callback.answer(t(user.native_language, "Часовой пояс обновлен!"))
         if callback.message:
             await callback.message.edit_text(
-                f"✅ Часовой пояс успешно изменен на: <code>{tz_str}</code>",
+                f"✅ {t(user.native_language, 'Часовой пояс успешно изменен на:')} <code>{tz_str}</code>",
                 reply_markup=get_settings_keyboard(user.native_language),
                 parse_mode="HTML",
             )
@@ -128,13 +128,13 @@ async def handle_custom_tz_input(
         )
         await state.clear()
         await message.answer(
-            f"✅ Часовой пояс успешно сохранен: <code>{candidate_tz}</code>",
+            f"✅ {t(user.native_language, 'Часовой пояс успешно сохранен:')} <code>{candidate_tz}</code>",
             reply_markup=get_settings_keyboard(user.native_language),
             parse_mode="HTML",
         )
     except Exception:
         await message.answer(
-            f"❌ Не удалось распознать часовой пояс «{html.escape(candidate_tz)}».\n"
+            f"❌ {t(user.native_language, 'Не удалось распознать часовой пояс')} «{html.escape(candidate_tz)}».\n"
             "Пожалуйста, укажи валидный TZ из базы IANA (например: <code>Europe/Berlin</code>):",
             parse_mode="HTML",
         )
@@ -177,7 +177,7 @@ async def cb_save_quiet_hours(
     await callback.answer(t(user.native_language, "Тихие часы обновлены!"))
     if callback.message:
         await callback.message.edit_text(
-            f"✅ Тихие часы сохранены: с {start_h}:00 до {end_h}:00.",
+            f"✅ {t(user.native_language, 'Тихие часы сохранены: с')} {start_h}:00 {t(user.native_language, 'до')} {end_h}:00.",
             reply_markup=get_settings_keyboard(user.native_language),
             parse_mode="HTML",
         )
@@ -242,7 +242,7 @@ async def handle_custom_native_input(message: Message, user: User, state: FSMCon
     user.native_language = code
     await get_users_collection().update_one({"tg_id": user.tg_id}, {"$set": {"native_language": code}})
     await state.clear()
-    await message.answer(f"✅ Родной язык сохранен: <code>{code}</code>", reply_markup=get_settings_keyboard(user.native_language), parse_mode="HTML")
+    await message.answer(f"✅ {t(user.native_language, 'Родной язык сохранен:')} <code>{code}</code>", reply_markup=get_settings_keyboard(user.native_language), parse_mode="HTML")
 
 @router.message(SettingsState.waiting_for_custom_target, F.text)
 async def handle_custom_target_input(message: Message, user: User, state: FSMContext) -> None:
@@ -250,7 +250,7 @@ async def handle_custom_target_input(message: Message, user: User, state: FSMCon
     user.target_language = code
     await get_users_collection().update_one({"tg_id": user.tg_id}, {"$set": {"target_language": code}})
     await state.clear()
-    await message.answer(f"✅ Изучаемый язык сохранен: <code>{code}</code>", reply_markup=get_settings_keyboard(user.native_language), parse_mode="HTML")
+    await message.answer(f"✅ {t(user.native_language, 'Изучаемый язык сохранен:')} <code>{code}</code>", reply_markup=get_settings_keyboard(user.native_language), parse_mode="HTML")
 
 
 @router.callback_query(lambda c: c.data == "my_dictionaries")
@@ -293,7 +293,7 @@ async def cb_my_dictionaries(callback: CallbackQuery, user: User) -> None:
             count = res["count"]
             
             prefix = "✅ " if (native == user.native_language and target == user.target_language) else ""
-            btn_text = f"{prefix}{target.upper()} (родной: {native.upper()}) — {count} слов"
+            btn_text = f"{prefix}{target.upper()} ({t(user.native_language, '(родной')} {native.upper()}) — {count} слов"
             cb_data = f"switch_dict:{native}:{target}"
             builder.row(InlineKeyboardButton(text=btn_text, callback_data=cb_data))
             
@@ -315,18 +315,18 @@ async def cb_switch_dict(callback: CallbackQuery, user: User) -> None:
         {"$set": {"native_language": native, "target_language": target, "updated_at": utc_now()}}
     )
     
-    await callback.answer(f"✅ Выбран словарь: {target.upper()} (родной {native.upper()})", show_alert=True)
+    await callback.answer(f"✅ {t(user.native_language, 'Выбран словарь:')} {target.upper()} ({t(user.native_language, '(родной')} {native.upper()})", show_alert=True)
     
     user.native_language = native
     user.target_language = target
     
     text = (
-        f"⚙️ <b>{t(user.native_language, 'Настройки профиля:')}</b>\n\n" +
-        f"🗣 <b>{t(user.native_language, 'Родной язык:')}</b> <code>{user.native_language}</code>\n" +
-        f"🎯 <b>{t(user.native_language, 'Изучаемый язык:')}</b> <code>{user.target_language}</code>\n" +
-        f"🌍 <b>{t(user.native_language, 'Часовой пояс:')}</b> <code>{user.timezone}</code>\n" +
-        f"🌙 <b>{t(user.native_language, 'Тихие часы:')}</b> с {user.quiet_hours_start}:00 до {user.quiet_hours_end}:00\n" +
-        f"<i>(Уведомления отправляются только днем с {user.quiet_hours_end}:00 до {user.quiet_hours_start}:00)</i>\n\n" +
+        f"⚙️ <b>{{t(user.native_language, 'Настройки профиля:')}}</b>\n\n" +
+        f"🗣 <b>{{t(user.native_language, 'Родной язык:')}}</b> <code>{{user.native_language}}</code>\n" +
+        f"🎯 <b>{{t(user.native_language, 'Изучаемый язык:')}}</b> <code>{{user.target_language}}</code>\n" +
+        f"🌍 <b>{{t(user.native_language, 'Часовой пояс:')}}</b> <code>{{user.timezone}}</code>\n" +
+        f"🌙 <b>{{t(user.native_language, 'Тихие часы:')}}</b> {{t(user.native_language, 'с')}} {{user.quiet_hours_start}}:00 {{t(user.native_language, 'до')}} {{user.quiet_hours_end}}:00\n" +
+        f"<i>({{t(user.native_language, 'Уведомления отправляются только днем с')}} {{user.quiet_hours_end}}:00 {{t(user.native_language, 'до')}} {{user.quiet_hours_start}}:00)</i>\n\n" +
         t(user.native_language, "Выбери нужный пункт для изменения:")
     )
     from bot.keyboards.inline import get_settings_keyboard

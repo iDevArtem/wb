@@ -275,8 +275,8 @@ async def handle_text_input(
         if existing:
             await status_msg.delete()
             dup_text = (
-                f"💡 Ты уже учишь слово <b>{html.escape(existing.canonical_word)}</b> " +
-                f"(форма/перевод: <i>{html.escape(text)}</i>)!\n" + f"Интервал повторения: <b>{existing.interval}</b> дн.\n" + t(user.native_language, "Хочешь повторить прямо сейчас?")
+                f"💡 {t(user.native_language, 'Ты уже учишь слово')} <b>{html.escape(existing.canonical_word)}</b> " +
+                f"({t(user.native_language, '(форма/перевод:')} <i>{html.escape(text)}</i>)!\n" + f"Интервал повторения: <b>{existing.interval}</b> дн.\n" + t(user.native_language, "Хочешь повторить прямо сейчас?")
             )
             await message.answer(
                 dup_text,
@@ -387,7 +387,7 @@ async def cb_delete_word(callback: CallbackQuery, user: User) -> None:
     await callback.answer(t(user.native_language, "Слово удалено"))
     if callback.message:
         await callback.message.edit_text(
-            f"🗑 Слово <b>{html.escape(word.canonical_word)}</b> удалено из словаря.",
+            f"🗑 {t(user.native_language, 'Слово')} <b>{html.escape(word.canonical_word)}</b> {t(user.native_language, 'удалено из словаря.')}",
             parse_mode="HTML",
         )
 
@@ -410,7 +410,7 @@ async def cb_archive_word(callback: CallbackQuery, user: User) -> None:
     await callback.answer(t(user.native_language, "Слово перенесено в архив!"))
     if callback.message:
         await callback.message.edit_text(
-            f"✅ Слово <b>{html.escape(word.canonical_word)}</b> перенесено в архив!",
+            f"✅ {t(user.native_language, 'Слово')} <b>{html.escape(word.canonical_word)}</b> {t(user.native_language, 'перенесено в архив!')}",
             parse_mode="HTML",
         )
 
@@ -442,7 +442,7 @@ async def cb_word_examples(callback: CallbackQuery, user: User) -> None:
         ex_lines = []
         for ex in res.examples:
             ex_lines.append(f"• {html.escape(ex.target)}\n  — <i>{html.escape(ex.native)}</i>")
-        text = f"💬 <b>Примеры с «{html.escape(word.canonical_word)}»:</b>\n\n" + "\n\n".join(ex_lines)
+        text = f"💬 <b>{t(user.native_language, 'Примеры с')} «{html.escape(word.canonical_word)}»:</b>\n\n" + "\n\n".join(ex_lines)
         
         if callback.message:
             await callback.message.reply(text, parse_mode="HTML")

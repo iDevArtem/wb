@@ -156,9 +156,9 @@ async def present_next_word(
         first_tries = data.get("correct_first_try", 0)
         await state.clear()
         await message.answer(
-            f"🏁 <b>Квиз завершен!</b>\n\n" +
-            f"🎯 Повторено слов: <b>{completed}</b>\n"
-            f"⭐ С первой попытки: <b>{first_tries}</b>\n\n" +
+            f"🏁 <b>{t(user.native_language, 'Квиз завершен!')}</b>\n\n" +
+            f"🎯 {t(user.native_language, 'Повторено слов:')} <b>{completed}</b>\n"
+            f"⭐ {t(user.native_language, 'С первой попытки:')} <b>{first_tries}</b>\n\n" +
             t(user.native_language, "Отличная работа для долгосрочной памяти! 🧠"),
             parse_mode="HTML",
         )
@@ -210,9 +210,9 @@ async def present_next_word(
     if mode == "spelling":
         prompt_text = (
             "✍️ <b>Режим: Правописание (Spelling)</b>\n\n" +
-            f"Переведи на изучаемый язык слово:\n"
+            f"{t(user.native_language, 'Переведи на изучаемый язык слово:')}\n"
             f"👉 <b>{html.escape(word.translation)}</b>\n\n" +
-            f"<i>Часть речи: {html.escape(word.pos)}</i>\n" +
+            f"<i>{t(user.native_language, 'Часть речи:')} {html.escape(word.pos)}</i>\n" +
             t(user.native_language, "Напиши слово на изучаемом языке в ответном сообщении (3 попытки):")
         )
         await message.answer(prompt_text, reply_markup=get_quiz_control_keyboard(user.native_language), parse_mode="HTML")
@@ -220,7 +220,7 @@ async def present_next_word(
     elif mode == "multiple_choice":
         prompt_text = (
             "🧩 <b>Режим: Выбор перевода (Multiple Choice)</b>\n\n" +
-            f"Каков перевод слова:\n"
+            f"{t(user.native_language, 'Каков перевод слова:')}\n"
             f"👉 <b>{html.escape(word.canonical_word)}</b> [{html.escape(word.transcription)}]?"
         )
         await message.answer(
@@ -242,7 +242,7 @@ async def present_next_word(
         except Exception:
             # Fallback to spelling if TTS fails
             await message.answer(
-                f"✍️ Напиши перевод слова <b>{html.escape(word.translation)}</b>:",
+                f"✍️ {t(user.native_language, 'Напиши перевод слова')} <b>{html.escape(word.translation)}</b>:",
                 reply_markup=get_quiz_control_keyboard(user.native_language),
                 parse_mode="HTML",
             )
@@ -250,9 +250,9 @@ async def present_next_word(
     elif mode == "voice_mode":
         prompt_text = (
             "🗣 <b>Режим: Голосовое произношение (Voice Mode)</b>\n\n" +
-            f"Произнеси вслух в голосовом сообщении слово:\n"
+            f"{t(user.native_language, 'Произнеси вслух в голосовом сообщении слово:')}\n"
             f"👉 <b>{html.escape(word.canonical_word)}</b> [{html.escape(word.transcription)}]\n" +
-            f"<i>Значение: {html.escape(word.translation)}</i>\n\n"
+            f"<i>{t(user.native_language, 'Значение:')} {html.escape(word.translation)}</i>\n\n"
             "Запиши войс (voice message) с произношением:"
         )
         await message.answer(prompt_text, reply_markup=get_quiz_control_keyboard(user.native_language), parse_mode="HTML")
@@ -317,8 +317,8 @@ async def handle_mc_choice(
         if attempts_left > 0:
             hint = SRSService.get_attempt_1_hint(canonical)
             await callback.message.answer(
-                f"❌ Неверно! Осталось попыток: {attempts_left}.\n" +
-                f"💡 Подсказка: {hint}",
+                f"❌ {t(user.native_language, 'Неверно! Осталось попыток:')} {attempts_left}.\n" +
+                f"💡 {t(user.native_language, 'Подсказка:')} {hint}",
                 reply_markup=get_quiz_control_keyboard(user.native_language),
                 parse_mode="HTML",
             )
@@ -364,8 +364,8 @@ async def handle_quiz_voice_answer(
 
         if eval_result.is_correct:
             await message.answer(
-                f"🎉 <b>Отличное произношение!</b>\n" +
-                f"Ты сказал: «{html.escape(eval_result.transcribed_text)}»\n"
+                f"🎉 <b>{t(user.native_language, 'Отличное произношение!')}</b>\n" +
+                f"{t(user.native_language, 'Ты сказал:')} «{html.escape(eval_result.transcribed_text)}»\n"
                 f"💬 {html.escape(eval_result.feedback)}",
                 parse_mode="HTML",
             )
@@ -374,9 +374,9 @@ async def handle_quiz_voice_answer(
             attempts_left -= 1
             await state.update_data(attempts_left=attempts_left)
             await message.answer(
-                f"Не совсем точно. Распознано: «{html.escape(eval_result.transcribed_text)}»\n" +
+                f"{t(user.native_language, 'Не совсем точно. Распознано:')} «{html.escape(eval_result.transcribed_text)}»\n" +
                 f"💡 {html.escape(eval_result.feedback)}\n"
-                f"Осталось попыток: {attempts_left}",
+                f"{t(user.native_language, 'Осталось попыток:')} {attempts_left}",
                 reply_markup=get_quiz_control_keyboard(user.native_language),
                 parse_mode="HTML",
             )
@@ -443,8 +443,8 @@ async def handle_quiz_text_answer(
             # Hint 1: First letter + blanks
             hint = SRSService.get_attempt_1_hint(canonical)
             await message.answer(
-                f"❌ Неверно!\n\n" +
-                f"💡 <b>Подсказка 1:</b> {hint}\n" +
+                f"❌ {t(user.native_language, 'Неверно!')}\n\n" +
+                f"💡 <b>{t(user.native_language, 'Подсказка 1:')}</b> {hint}\n" +
                 t(user.native_language, "Осталось 2 попытки. Попробуй еще раз:"),
                 reply_markup=get_quiz_control_keyboard(user.native_language),
                 parse_mode="HTML",
@@ -453,8 +453,8 @@ async def handle_quiz_text_answer(
             # Hint 2: Example sentence with blank
             hint = SRSService.get_attempt_2_hint(canonical, lemma, examples)
             await message.answer(
-                f"❌ Снова не то!\n\n" +
-                f"💡 <b>Подсказка 2 (контекст):</b>\n{hint}\n\n" +
+                f"❌ {t(user.native_language, 'Снова не то!')}\n\n" +
+                f"💡 <b>{t(user.native_language, 'Подсказка 2 (контекст):')}</b>\n{hint}\n\n" +
                 t(user.native_language, "Осталась последняя попытка:"),
                 reply_markup=get_quiz_control_keyboard(user.native_language),
                 parse_mode="HTML",
@@ -512,12 +512,12 @@ async def on_quiz_success(
         praise = t(user.native_language, "🌟 Великолепно с первой попытки!") if attempts_left == 3 else t(user.native_language, "👍 Правильно!")
         text = (
             f"🎉 <b>{praise}</b>\n\n" +
-            f"Слово: <b>{html.escape(word.canonical_word)}</b> [{html.escape(word.transcription)}] — {html.escape(word.translation)}\n"
-            f"📈 Следующее повторение через: <b>{srs_res.interval}</b> дн. (шаг {srs_res.repetition})\n" +
-            f"Осталось в этой сессии: <b>{len(queue)}</b>"
+            f"{t(user.native_language, 'Слово:')} <b>{html.escape(word.canonical_word)}</b> [{html.escape(word.transcription)}] — {html.escape(word.translation)}\n"
+            f"📈 {t(user.native_language, 'Следующее повторение через:')} <b>{srs_res.interval}</b> {t(user.native_language, 'дн.')} ({t(user.native_language, 'шаг')} {srs_res.repetition})\n" +
+            f"{t(user.native_language, 'Осталось в этой сессии:')} <b>{len(queue)}</b>"
         )
     else:
-        text = f"🎉 <b>Правильно!</b> Осталось в этой сессии: <b>{len(queue)}</b>"
+        text = f"🎉 <b>{t(user.native_language, 'Правильно!')}</b> {t(user.native_language, 'Осталось в этой сессии:')} <b>{len(queue)}</b>"
 
     await message.answer(text, reply_markup=get_quiz_next_keyboard(user.native_language), parse_mode="HTML")
 
@@ -565,10 +565,10 @@ async def on_quiz_failure(
 
         text = (
             "❌ <b>Все 3 попытки исчерпаны!</b>\n\n" +
-            f"Правильный ответ: <b>{html.escape(word.canonical_word)}</b> [{html.escape(word.transcription)}]\n"
-            f"Перевод: <b>{html.escape(word.translation)}</b>\n\n"
+            f"{t(user.native_language, 'Правильный ответ:')} <b>{html.escape(word.canonical_word)}</b> [{html.escape(word.transcription)}]\n"
+            f"{t(user.native_language, 'Перевод:')} <b>{html.escape(word.translation)}</b>\n\n"
             "🔄 Интервал сброшен: слово вернется на повторение уже завтра (1 день).\n" +
-            f"Осталось в этой сессии: <b>{len(queue)}</b>"
+            f"{t(user.native_language, 'Осталось в этой сессии:')} <b>{len(queue)}</b>"
         )
         await message.answer(text, reply_markup=get_quiz_next_keyboard(user.native_language), parse_mode="HTML")
 
@@ -578,14 +578,14 @@ async def on_quiz_failure(
             voice_file = BufferedInputFile(audio.getvalue(), filename=f"{word.canonical_word}.mp3")
             await message.answer_voice(
                 voice=voice_file,
-                caption=f"🔊 Запомни произношение: <b>{html.escape(word.canonical_word)}</b>",
+                caption=f"🔊 {t(user.native_language, 'Запомни произношение:')} <b>{html.escape(word.canonical_word)}</b>",
                 parse_mode="HTML",
             )
         except Exception:
             logger.exception("Failed to send pronunciation after failure")
     else:
         await message.answer(
-            f"❌ Неверно. Осталось в этой сессии: <b>{len(queue)}</b>",
+            f"❌ {t(user.native_language, 'Неверно.')} {t(user.native_language, 'Осталось в этой сессии:')} <b>{len(queue)}</b>",
             reply_markup=get_quiz_next_keyboard(user.native_language),
             parse_mode="HTML",
         )
@@ -630,8 +630,8 @@ async def cb_quiz_stop(
     await state.clear()
     if callback.message:
         await callback.message.answer(
-            f"🛑 <b>Квиз завершен досрочно.</b>\n" +
-            f"Повторено слов: {completed} (с 1-й попытки: {first_tries}).",
+            f"🛑 <b>{t(user.native_language, 'Квиз завершен досрочно.')}</b>\n" +
+            f"{t(user.native_language, 'Повторено слов:')} {completed} ({t(user.native_language, 'с 1-й попытки:')} {first_tries}).",
             parse_mode="HTML",
         )
 
