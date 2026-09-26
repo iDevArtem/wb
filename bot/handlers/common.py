@@ -89,7 +89,7 @@ async def cmd_stats(message: Message, user: User) -> None:
         f"✅ <b>Выучено (в архиве):</b> {archived_words}\n" + f"🎯 <b>Готово к повторению сегодня:</b> {due_words}\n" +
         f"📈 <b>Средний интервал памяти:</b> {avg_interval:.1f} дн.\n\n" + f"🌍 <b>Часовой пояс:</b> <code>{user.timezone}</code>\n" +
         f"🌙 <b>Тихие часы:</b> {user.quiet_hours_start}:00 — {user.quiet_hours_end}:00\n\n"
-        + ("💡 <i>Есть слова для повторения! Напиши /quiz, чтобы освежить память.</i>" if due_words > 0 else "🎉 <i>Все слова на сегодня повторены! Отличная работа!</i>")
+        + (t(user.native_language, "💡 <i>Есть слова для повторения! Напиши /quiz, чтобы освежить память.</i>") if due_words > 0 else t(user.native_language, "🎉 <i>Все слова на сегодня повторены! Отличная работа!</i>"))
     )
     await message.answer(text, parse_mode="HTML")
 
