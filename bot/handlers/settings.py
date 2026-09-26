@@ -254,6 +254,8 @@ async def handle_custom_target_input(message: Message, user: User, state: FSMCon
 
 @router.callback_query(lambda c: c.data == "my_dictionaries")
 async def cb_my_dictionaries(callback: CallbackQuery, user: User) -> None:
+    await callback.answer()
+    
     from bot.core.database import get_words_collection
     from aiogram.utils.keyboard import InlineKeyboardBuilder
     from aiogram.types import InlineKeyboardButton
@@ -275,7 +277,7 @@ async def cb_my_dictionaries(callback: CallbackQuery, user: User) -> None:
         {"$sort": {"count": -1}}
     ]
     
-    cursor = words_col.aggregate(pipeline)
+    cursor = await words_col.aggregate(pipeline)
     results = await cursor.to_list(length=100)
     
     builder = InlineKeyboardBuilder()

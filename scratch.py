@@ -1,12 +1,11 @@
 import asyncio
-from bot.services.gemini_service import gemini_service
-from bot.core.config import settings
+from bot.core.database import get_database, get_words_collection
 
-async def main():
-    try:
-        res = await gemini_service.analyze_text("house", native_lang="en", target_lang="de")
-        print(res)
-    except Exception as e:
-        print("ERROR:", repr(e))
+async def test():
+    words_col = get_words_collection()
+    cursor = await words_col.aggregate([{"$limit": 1}])
+    print("cursor", type(cursor))
+    res = await cursor.to_list()
+    print("res", res)
 
-asyncio.run(main())
+asyncio.run(test())
