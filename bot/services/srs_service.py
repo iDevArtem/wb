@@ -158,6 +158,7 @@ class SRSService:
         canonical_word: str,
         lemma: str,
         examples: list[dict[str, str]],
+        lang: str = "en",
     ) -> str:
         """
         Hint 2: Example sentence with the target word replaced by '___'.
