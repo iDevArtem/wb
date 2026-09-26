@@ -336,6 +336,9 @@ async def handle_quiz_voice_answer(
 ) -> None:
     data = await state.get_data()
     word_id = data.get("current_word_id")
+    if not word_id:
+        await message.answer(t(user.native_language, "Пожалуйста, нажми кнопку ниже:"), reply_markup=get_quiz_next_keyboard(user.native_language))
+        return
     canonical = data.get("canonical_word", "")
     lemma = data.get("lemma", "")
     attempts_left = data.get("attempts_left", 3)
@@ -413,6 +416,9 @@ async def handle_quiz_text_answer(
 ) -> None:
     data = await state.get_data()
     word_id = data.get("current_word_id")
+    if not word_id:
+        await message.answer(t(user.native_language, "Пожалуйста, нажми кнопку ниже:"), reply_markup=get_quiz_next_keyboard(user.native_language))
+        return
     canonical = data.get("canonical_word", "")
     lemma = data.get("lemma", "")
     translation = data.get("translation", "")
@@ -520,7 +526,12 @@ async def on_quiz_success(
     else:
         text = f"🎉 <b>{t(user.native_language, 'Правильно!')}</b> {t(user.native_language, 'Осталось в этой сессии:')} <b>{len(queue)}</b>"
 
-    await message.answer(text, reply_markup=get_quiz_next_keyboard(user.native_language), parse_mode="HTML")
+    if len(queue) > 0:
+        await message.answer(text, reply_markup=get_quiz_next_keyboard(user.native_language), parse_mode="HTML")
+    else:
+        await message.answer(text, parse_mode="HTML")
+        from bot.handlers.quiz_fsm import _ask_next_word
+        await _ask_next_word(message, user, state)
 
 
 async def on_quiz_failure(
@@ -571,7 +582,10 @@ async def on_quiz_failure(
             "🔄 " + t(user.native_language, "Интервал сброшен: слово вернется на повторение уже завтра (1 день).") + "\n" +
             f"{t(user.native_language, 'Осталось в этой сессии:')} <b>{len(queue)}</b>"
         )
-        await message.answer(text, reply_markup=get_quiz_next_keyboard(user.native_language), parse_mode="HTML")
+        if len(queue) > 0:
+            await message.answer(text, reply_markup=get_quiz_next_keyboard(user.native_language), parse_mode="HTML")
+        else:
+            await message.answer(text, parse_mode="HTML")
 
         # Send fresh pronunciation audio
         try:
