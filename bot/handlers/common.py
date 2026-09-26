@@ -27,7 +27,7 @@ router = Router(name="common")
 @router.message(CommandStart())
 async def cmd_start(message: Message, user: User) -> None:
     text = (
-        f"👋 {t(user.native_language, 'Привет')}, <b>{message.from_user.first_name or 'друг'}</b>!\n\n" + 
+        f"👋 {t(user.native_language, 'Привет')}, <b>{message.from_user.first_name or t(user.native_language, 'друг')}</b>!\n\n" + 
         t(user.native_language, "Я твой персональный AI-репетитор языков с научной системой интервальных повторений <b>SuperMemo-2 (SM-2)</b>, нейронным произношением и искусственным интеллектом Gemini.") + "\n\n" + 
         t(user.native_language, "Сейчас ты учишь {target}, используя язык {native}.").replace("{target}", f"<b>{user.target_language}</b>").replace("{native}", f"<b>{user.native_language}</b>") + "\n\n" + 
         "✨ <b>" + t(user.native_language, "Как добавлять слова:") + "</b>\n" +
@@ -52,14 +52,20 @@ async def cmd_start(message: Message, user: User) -> None:
 @router.message(TranslatedText("❓ Помощь"))
 async def cmd_help(message: Message) -> None:
     text = (
-        "📖 <b>Справочник возможностей бота:</b>\n\n" + "1️⃣ <b>Добавление слов (Universal Input):</b>\n"
-        "— Отправляй слова на родном или изучаемом языке.\n" + "— Поддерживаются войсы (Telegram voice): я напрямую отправляю аудио в Gemini, "
-        "распознаю произношение и формирую карточку.\n" + "— Каждое слово озвучивается нейронным голосом Microsoft Edge TTS.\n\n"
-        "2️⃣ <b>Интервальные повторения (SM-2):</b>\n" + "— Алгоритм SuperMemo-2 рассчитывает оптимальные дни для повторения (1 день, 6 дней, затем с коэффициентом легкости).\n"
-        "— При ошибке интервал сбрасывается, чтобы закрепить материал.\n\n" + "3️⃣ <b>Квиз и проверка знаний (/quiz):</b>\n"
-        "— Режимы: правописание (Spelling), множественный выбор (4 варианта), аудирование (Listening) и голосовой ответ (Voice Mode).\n" + "— Доступно 3 попытки с интеллектуальными подсказками.\n\n"
-        "4️⃣ <b>Тихие часы:</b>\n" + "— Напоминания приходят только в удобное для тебя время (по умолчанию с 10:00 до 21:00).\n"
-        "— Настрой свой часовой пояс в /settings."
+        "📖 <b>" + t(user.native_language, "Справочник возможностей бота:") + "</b>\n\n" + 
+        "1️⃣ <b>" + t(user.native_language, "Добавление слов (Universal Input):") + "</b>\n" +
+        t(user.native_language, "— Отправляй слова на родном или изучаемом языке.") + "\n" +
+        t(user.native_language, "— Поддерживаются войсы (Telegram voice): я напрямую отправляю аудио в Gemini, распознаю произношение и формирую карточку.") + "\n" +
+        t(user.native_language, "— Каждое слово озвучивается нейронным голосом Microsoft Edge TTS.") + "\n\n" +
+        "2️⃣ <b>" + t(user.native_language, "Интервальные повторения (SM-2):") + "</b>\n" +
+        t(user.native_language, "— Алгоритм SuperMemo-2 рассчитывает оптимальные дни для повторения (1 день, 6 дней, затем с коэффициентом легкости).") + "\n" +
+        t(user.native_language, "— При ошибке интервал сбрасывается, чтобы закрепить материал.") + "\n\n" +
+        "3️⃣ <b>" + t(user.native_language, "Квиз и проверка знаний (/quiz):") + "</b>\n" +
+        t(user.native_language, "— Режимы: правописание (Spelling), множественный выбор (4 варианта), аудирование (Listening) и голосовой ответ (Voice Mode).") + "\n" +
+        t(user.native_language, "— Доступно 3 попытки с интеллектуальными подсказками.") + "\n\n" +
+        "4️⃣ <b>" + t(user.native_language, "Тихие часы:") + "</b>\n" +
+        t(user.native_language, "— Напоминания приходят только в удобное для тебя время (по умолчанию с 10:00 до 21:00).") + "\n" +
+        t(user.native_language, "— Настрой свой часовой пояс в /settings.")
     )
     await message.answer(text, parse_mode="HTML")
 
@@ -119,8 +125,8 @@ async def cmd_archive(message: Message, user: User) -> None:
 
     if not words:
         await message.answer(
-            "📭 Твой архив пока пуст. Когда ты освоишь слово и нажмешь "
-            "«✅ Знаю (в архив)», оно появится здесь.",
+            t(user.native_language, "📭 Твой архив пока пуст. Когда ты освоишь слово и нажмешь «✅ Знаю (в архив)», оно появится здесь.")
+            
             parse_mode="HTML",
         )
         return
@@ -200,7 +206,7 @@ async def render_words_page(
 
     if total_count == 0:
         return (
-            "📭 <b>Твой список слов пуст!</b>\n\n" + t(user.native_language, "Отправь мне любое слово на изучаемом или родном языке текстом или голосовым сообщением, чтобы начать учить."),
+            "📭 <b>" + t(user.native_language, "Твой список слов пуст!") + "</b>\n\n" + t(user.native_language, "Отправь мне любое слово на изучаемом или родном языке текстом или голосовым сообщением, чтобы начать учить."),
             None,
         )
 

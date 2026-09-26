@@ -39,10 +39,10 @@ class QuizState(StatesGroup):
 
 
 BACKUP_DISTRACTORS = [
-    "достижение", "исследование", "возможность", "препятствие",
-    "намерение", "решение", "соглашение", "развитие", "внимание",
-    "ответственность", "впечатление", "сравнение", "отношение",
-    "улучшение", "вдохновение", "воображение", "любопытство",
+    t(user.native_language, "достижение"), t(user.native_language, "исследование"), t(user.native_language, "возможность"), t(user.native_language, "препятствие"),
+    t(user.native_language, "намерение"), t(user.native_language, "решение"), t(user.native_language, "соглашение"), t(user.native_language, "развитие"), t(user.native_language, "внимание"),
+    t(user.native_language, "ответственность"), t(user.native_language, "впечатление"), t(user.native_language, "сравнение"), t(user.native_language, "отношение"),
+    t(user.native_language, "улучшение"), t(user.native_language, "вдохновение"), t(user.native_language, "воображение"), t(user.native_language, "любопытство"),
 ]
 
 
@@ -117,16 +117,16 @@ async def start_quiz_session(
 
         if not has_any:
             await target_message.answer(
-                "📭 Твой словарь пуст!\n" +
+                t(user.native_language, "📭 Твой словарь пуст!") + "\n" +
                 t(user.native_language, "Отправь мне любое слово текстом или голосовым сообщением, чтобы начать учить."),
                 parse_mode="HTML",
             )
             return
 
         await target_message.answer(
-            "🎉 <b>Все слова на сегодня повторены!</b>\n\n"
-            "Интервалы SuperMemo-2 защищают тебя от зубрежки. "
-            "Но если ты хочешь потренироваться вне графика, отправь команду: /quiz_practice",
+            "🎉 <b>" + t(user.native_language, "Все слова на сегодня повторены!") + "</b>\n\n"
+            t(user.native_language, "Интервалы SuperMemo-2 защищают тебя от зубрежки. ")
+            t(user.native_language, "Но если ты хочешь потренироваться вне графика, отправь команду: /quiz_practice"),
             parse_mode="HTML",
         )
         return
@@ -209,7 +209,7 @@ async def present_next_word(
     # Deliver question according to mode
     if mode == "spelling":
         prompt_text = (
-            "✍️ <b>Режим: Правописание (Spelling)</b>\n\n" +
+            "✍️ <b>" + t(user.native_language, 'Режим: Правописание (Spelling)') + "</b>\n\n" +
             f"{t(user.native_language, 'Переведи на изучаемый язык слово:')}\n"
             f"👉 <b>{html.escape(word.translation)}</b>\n\n" +
             f"<i>{t(user.native_language, 'Часть речи:')} {html.escape(word.pos)}</i>\n" +
@@ -219,7 +219,7 @@ async def present_next_word(
 
     elif mode == "multiple_choice":
         prompt_text = (
-            "🧩 <b>Режим: Выбор перевода (Multiple Choice)</b>\n\n" +
+            "🧩 <b>" + t(user.native_language, 'Режим: Выбор перевода (Multiple Choice)') + "</b>\n\n" +
             f"{t(user.native_language, 'Каков перевод слова:')}\n"
             f"👉 <b>{html.escape(word.canonical_word)}</b> [{html.escape(word.transcription)}]?"
         )
@@ -231,7 +231,7 @@ async def present_next_word(
 
     elif mode == "listening":
         prompt_text = (
-            "🎧 <b>Режим: Аудирование (Listening)</b>\n\n" +
+            "🎧 <b>" + t(user.native_language, 'Режим: Аудирование (Listening)') + "</b>\n\n" +
             t(user.native_language, "Послушай произношение и напиши это слово (или его перевод):")
         )
         try:
@@ -249,11 +249,11 @@ async def present_next_word(
 
     elif mode == "voice_mode":
         prompt_text = (
-            "🗣 <b>Режим: Голосовое произношение (Voice Mode)</b>\n\n" +
+            "🗣 <b>" + t(user.native_language, 'Режим: Голосовое произношение (Voice Mode)') + "</b>\n\n" +
             f"{t(user.native_language, 'Произнеси вслух в голосовом сообщении слово:')}\n"
             f"👉 <b>{html.escape(word.canonical_word)}</b> [{html.escape(word.transcription)}]\n" +
             f"<i>{t(user.native_language, 'Значение:')} {html.escape(word.translation)}</i>\n\n"
-            "Запиши войс (voice message) с произношением:"
+            t(user.native_language, "Запиши войс (voice message) с произношением:")
         )
         await message.answer(prompt_text, reply_markup=get_quiz_control_keyboard(user.native_language), parse_mode="HTML")
 
@@ -315,7 +315,7 @@ async def handle_mc_choice(
         await state.update_data(attempts_left=attempts_left)
 
         if attempts_left > 0:
-            hint = SRSService.get_attempt_1_hint(canonical)
+            hint = SRSService.get_attempt_1_hint(canonical, user.native_language)
             await callback.message.answer(
                 f"❌ {t(user.native_language, 'Неверно! Осталось попыток:')} {attempts_left}.\n" +
                 f"💡 {t(user.native_language, 'Подсказка:')} {hint}",
@@ -344,7 +344,7 @@ async def handle_quiz_voice_answer(
     doc = await words_col.find_one(query)
     word = Word.model_validate(doc) if doc else None
 
-    status_msg = await message.answer("🎙 <i>Слушаю твой ответ...</i>", parse_mode="HTML")
+    status_msg = await message.answer("🎙 <i>" + t(user.native_language, "Слушаю твой ответ...") + "</i>", parse_mode="HTML")
 
     try:
         voice_file = await bot.get_file(message.voice.file_id)
@@ -386,7 +386,7 @@ async def handle_quiz_voice_answer(
     except GeminiQuotaExhaustedError:
         logger.warning("Gemini quota exhausted during quiz voice evaluation")
         await status_msg.edit_text(
-            "⏳ <b>Сервис ИИ временно перегружен</b> (исчерпан дневной лимит запросов к моделям).\n\n" +
+            "⏳ <b>" + t(user.native_language, "Сервис ИИ временно перегружен (исчерпан дневной лимит запросов к моделям).") + "</b>\n\n" +
             t(user.native_language, "Пожалуйста, повторите голосовой ответ через минуту или введите слово текстом."),
             parse_mode="HTML",
         )
@@ -441,7 +441,7 @@ async def handle_quiz_text_answer(
 
         if attempts_left == 2:
             # Hint 1: First letter + blanks
-            hint = SRSService.get_attempt_1_hint(canonical)
+            hint = SRSService.get_attempt_1_hint(canonical, user.native_language)
             await message.answer(
                 f"❌ {t(user.native_language, 'Неверно!')}\n\n" +
                 f"💡 <b>{t(user.native_language, 'Подсказка 1:')}</b> {hint}\n" +
@@ -451,7 +451,7 @@ async def handle_quiz_text_answer(
             )
         elif attempts_left == 1:
             # Hint 2: Example sentence with blank
-            hint = SRSService.get_attempt_2_hint(canonical, lemma, examples)
+            hint = SRSService.get_attempt_2_hint(canonical, lemma, examples, user.native_language)
             await message.answer(
                 f"❌ {t(user.native_language, 'Снова не то!')}\n\n" +
                 f"💡 <b>{t(user.native_language, 'Подсказка 2 (контекст):')}</b>\n{hint}\n\n" +
@@ -564,10 +564,10 @@ async def on_quiz_failure(
         )
 
         text = (
-            "❌ <b>Все 3 попытки исчерпаны!</b>\n\n" +
+            "❌ <b>" + t(user.native_language, "Все 3 попытки исчерпаны!") + "</b>\n\n" +
             f"{t(user.native_language, 'Правильный ответ:')} <b>{html.escape(word.canonical_word)}</b> [{html.escape(word.transcription)}]\n"
             f"{t(user.native_language, 'Перевод:')} <b>{html.escape(word.translation)}</b>\n\n"
-            "🔄 Интервал сброшен: слово вернется на повторение уже завтра (1 день).\n" +
+            "🔄 " + t(user.native_language, "Интервал сброшен: слово вернется на повторение уже завтра (1 день).") + "\n" +
             f"{t(user.native_language, 'Осталось в этой сессии:')} <b>{len(queue)}</b>"
         )
         await message.answer(text, reply_markup=get_quiz_next_keyboard(user.native_language), parse_mode="HTML")

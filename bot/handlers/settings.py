@@ -68,7 +68,7 @@ async def cb_set_timezone_menu(callback: CallbackQuery, user: User) -> None:
     await callback.answer()
     if callback.message:
         await callback.message.edit_text(
-            "🌍 <b>Выбери свой часовой пояс</b> из списка или нажми «Ввести вручную»:",
+            "🌍 <b>" + t(user.native_language, "Выбери свой часовой пояс из списка или нажми «Ввести вручную»:") + "</b>",
             reply_markup=get_timezone_presets_keyboard(user.native_language),
             parse_mode="HTML",
         )
@@ -105,8 +105,8 @@ async def cb_manual_tz(callback: CallbackQuery, state: FSMContext) -> None:
     await state.set_state(SettingsState.waiting_for_custom_tz)
     if callback.message:
         await callback.message.answer(
-            "✏️ Напиши название часового пояса в формате IANA (например, <code>Europe/Kyiv</code>, "
-            "<code>Europe/Warsaw</code>, <code>Asia/Tbilisi</code>):",
+            t(user.native_language, "✏️ Напиши название часового пояса в формате IANA (например, Europe/Kyiv, Europe/Warsaw, Asia/Tbilisi):")
+            
             parse_mode="HTML",
         )
 
@@ -135,7 +135,7 @@ async def handle_custom_tz_input(
     except Exception:
         await message.answer(
             f"❌ {t(user.native_language, 'Не удалось распознать часовой пояс')} «{html.escape(candidate_tz)}».\n"
-            "Пожалуйста, укажи валидный TZ из базы IANA (например: <code>Europe/Berlin</code>):",
+            t(user.native_language, "Пожалуйста, укажи валидный TZ из базы IANA (например: Europe/Berlin):"),
             parse_mode="HTML",
         )
 
@@ -145,8 +145,8 @@ async def cb_set_quiet_menu(callback: CallbackQuery, user: User) -> None:
     await callback.answer()
     if callback.message:
         await callback.message.edit_text(
-            "🌙 <b>Настройка тихих часов:</b>\n\n"
-            "В указанный интервал бот не будет присылать напоминания о словах.\n" +
+            "🌙 <b>" + t(user.native_language, "Настройка тихих часов:") + "</b>\n\n"
+            t(user.native_language, "В указанный интервал бот не будет присылать напоминания о словах.") + "\n" +
             t(user.native_language, "Выбери удобный режим:"),
             reply_markup=get_quiet_hours_presets_keyboard(user.native_language),
             parse_mode="HTML",
@@ -188,7 +188,7 @@ async def cb_set_native_menu(callback: CallbackQuery, user: User) -> None:
     await callback.answer()
     if callback.message:
         await callback.message.edit_text(
-            "🗣 <b>Выбери свой родной язык:</b>",
+            "🗣 <b>" + t(user.native_language, "Выбери свой родной язык:") + "</b>",
             reply_markup=get_language_presets_keyboard("native", user.native_language),
             parse_mode="HTML",
         )
@@ -198,8 +198,8 @@ async def cb_set_target_menu(callback: CallbackQuery, user: User) -> None:
     await callback.answer()
     if callback.message:
         await callback.message.edit_text(
-            "🎯 <b>Выбери язык, который хочешь выучить:</b>\n"
-            "<i>(Слова для разных языков хранятся раздельно)</i>",
+            "🎯 <b>" + t(user.native_language, "Выбери язык, который хочешь выучить:") + "</b>\n"
+            "<i>" + t(user.native_language, "(Слова для разных языков хранятся раздельно)") + "</i>",
             reply_markup=get_language_presets_keyboard("target", user.native_language),
             parse_mode="HTML",
         )
@@ -227,14 +227,14 @@ async def cb_manual_native(callback: CallbackQuery, state: FSMContext) -> None:
     await callback.answer()
     await state.set_state(SettingsState.waiting_for_custom_native)
     if callback.message:
-        await callback.message.answer("✏️ Введи код языка (например, ru, en, es):")
+        await callback.message.answer(t(user.native_language, "✏️ Введи код языка (например, ru, en, es):"))
 
 @router.callback_query(lambda c: c.data == "manual_target")
 async def cb_manual_target(callback: CallbackQuery, state: FSMContext) -> None:
     await callback.answer()
     await state.set_state(SettingsState.waiting_for_custom_target)
     if callback.message:
-        await callback.message.answer("✏️ Введи код изучаемого языка (например, en, de):")
+        await callback.message.answer(t(user.native_language, "✏️ Введи код изучаемого языка (например, en, de):"))
 
 @router.message(SettingsState.waiting_for_custom_native, F.text)
 async def handle_custom_native_input(message: Message, user: User, state: FSMContext) -> None:
@@ -286,18 +286,18 @@ async def cb_my_dictionaries(callback: CallbackQuery, user: User) -> None:
     if not results:
         text = t(user.native_language, "📭 У тебя пока нет словарей. Добавь первое слово, и словарь создастся автоматически!")
     else:
-        text = "📚 <b>Твои словари:</b>\n<i>Выбери словарь, чтобы сделать его активным:</i>"
+        text = "📚 <b>" + t(user.native_language, "Твои словари:") + "</b>\n<i>" + t(user.native_language, "Выбери словарь, чтобы сделать его активным:") + "</i>"
         for res in results:
             native = res["_id"].get("native_language", "ru")
             target = res["_id"].get("target_language", "en")
             count = res["count"]
             
             prefix = "✅ " if (native == user.native_language and target == user.target_language) else ""
-            btn_text = f"{prefix}{target.upper()} ({t(user.native_language, '(родной')} {native.upper()}) — {count} слов"
+            btn_text = f"{prefix}{target.upper()} ({t(user.native_language, 'родной')}: {native.upper()}) — {count} {t(user.native_language, 'слов')}"
             cb_data = f"switch_dict:{native}:{target}"
             builder.row(InlineKeyboardButton(text=btn_text, callback_data=cb_data))
             
-    builder.row(InlineKeyboardButton(text="🔙 Назад в настройки", callback_data="open_settings"))
+    builder.row(InlineKeyboardButton(text=t(user.native_language, "🔙 Назад в настройки"), callback_data="open_settings"))
     
     if callback.message:
         await callback.message.edit_text(text, reply_markup=builder.as_markup(), parse_mode="HTML")

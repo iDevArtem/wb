@@ -164,11 +164,11 @@ def get_timezone_presets_keyboard(lang: str = "ru") -> InlineKeyboardMarkup:
     Quick timezone preset buttons.
     """
     presets = [
-        ("Москва (UTC+3)", "Europe/Moscow"),
-        ("Киев (UTC+2/3)", "Europe/Kyiv"),
-        ("Лондон (UTC+0/1)", "Europe/London"),
-        ("Нью-Йорк (UTC-5/4)", "America/New_York"),
-        ("Алматы (UTC+5)", "Asia/Almaty"),
+        (t(lang, "Москва (UTC+3)"), "Europe/Moscow"),
+        (t(lang, "Киев (UTC+2/3)"), "Europe/Kyiv"),
+        (t(lang, "Лондон (UTC+0/1)"), "Europe/London"),
+        (t(lang, "Нью-Йорк (UTC-5/4)"), "America/New_York"),
+        (t(lang, "Алматы (UTC+5)"), "Asia/Almaty"),
         ("UTC (+0)", "UTC"),
     ]
     builder = InlineKeyboardBuilder()
@@ -184,10 +184,10 @@ def get_quiet_hours_presets_keyboard(lang: str = "ru") -> InlineKeyboardMarkup:
     Quiet hours presets.
     """
     presets = [
-        ("🌙 21:00 — 10:00 (По умолчанию)", "quiet:21:10"),
+        (t(lang, "🌙 21:00 — 10:00 (По умолчанию)"), "quiet:21:10"),
         ("🌙 22:00 — 09:00", "quiet:22:9"),
         ("🌙 23:00 — 08:00", "quiet:23:8"),
-        ("🔔 Без ограничений (всегда)", "quiet:0:0"),
+        (t(lang, "🔔 Без ограничений (всегда)"), "quiet:0:0"),
     ]
     builder = InlineKeyboardBuilder()
     for title, data in presets:
@@ -244,9 +244,9 @@ def get_language_presets_keyboard(lang_type: str, lang: str = "ru") -> InlineKey
     Quick language preset buttons.
     """
     presets = [
-        ("Українська", "uk"),
+        (t(lang, "Українська"), "uk"),
         ("English", "en"),
-        ("Русский", "ru"),
+        (t(lang, "Русский"), "ru"),
         ("Polski", "pl"),
         ("Italiano", "it"),
         ("Español", "es"),

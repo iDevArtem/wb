@@ -1,3 +1,4 @@
+from bot.core.i18n import t
 import re
 import string
 from dataclasses import dataclass
@@ -129,7 +130,7 @@ class SRSService:
         return False
 
     @classmethod
-    def get_attempt_1_hint(cls, word: str) -> str:
+    def get_attempt_1_hint(cls, word: str, lang: str = "en") -> str:
         """
         Hint 1: First letter and blanks (e.g., 'h _ _ _ o [5 letters]').
         For multi-word expressions, format each word.
@@ -149,7 +150,7 @@ class SRSService:
                 hint_parts.append(f"{w[0]} {middle_blanks} {w[-1]}")
 
         masked_str = "   ".join(hint_parts)
-        return f"<code>{masked_str}</code> [{total_letters} букв]"
+        return f"<code>{masked_str}</code> [{total_letters} {t(lang, 'букв')}]"
 
     @classmethod
     def get_attempt_2_hint(
@@ -191,4 +192,4 @@ class SRSService:
                 return f"«{masked_en}»\n<i>({ru_text})</i>"
             return f"«{masked_en}»"
 
-        return f"Контекст: <i>{canonical_word[0]}... ({lemma})</i>"
+        return f"{t(lang, 'Контекст:')} <i>{canonical_word[0]}... ({lemma})</i>"

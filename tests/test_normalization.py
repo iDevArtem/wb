@@ -65,7 +65,7 @@ def test_hints_generation():
     hint1 = SRSService.get_attempt_1_hint("serendipity")
     assert "s" in hint1
     assert "y" in hint1
-    assert "11 букв" in hint1
+    assert "11 letters" in hint1
 
     hint2 = SRSService.get_attempt_2_hint(
         canonical_word="ephemeral",

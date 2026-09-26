@@ -151,7 +151,7 @@ async def handle_voice_input(
         if existing:
             await status_msg.delete()
             text = (
-                f"💡 Ты уже учишь слово <b>{html.escape(existing.canonical_word)}</b>!\n" + f"Интервал повторения: <b>{existing.interval}</b> дн.\n" + t(user.native_language, "Хочешь повторить прямо сейчас?")
+                f"💡 {t(user.native_language, 'Ты уже учишь слово')} <b>{html.escape(existing.canonical_word)}</b>!\n" + f"{t(user.native_language, 'Интервал повторения:')} <b>{existing.interval}</b> {t(user.native_language, 'дн.')}\n" + t(user.native_language, "Хочешь повторить прямо сейчас?")
             )
             await message.answer(
                 text,
@@ -207,7 +207,7 @@ async def handle_voice_input(
     except GeminiQuotaExhaustedError:
         logger.warning("Gemini quota exhausted during voice input")
         await status_msg.edit_text(
-            "⏳ <b>Сервис ИИ временно перегружен</b> (исчерпан дневной лимит запросов к моделям).\n\n" + t(user.native_language, "Пожалуйста, подождите немного или повторите попытку позже."),
+            "⏳ <b>" + t(user.native_language, "Сервис ИИ временно перегружен (исчерпан дневной лимит запросов к моделям).") + "</b>\n\n" + t(user.native_language, "Пожалуйста, подождите немного или повторите попытку позже."),
             parse_mode="HTML",
         )
     except GeminiServiceError:
@@ -248,7 +248,7 @@ async def handle_text_input(
     direct_match = await check_existing_word(user, text)
     if direct_match:
         dup_text = (
-            f"💡 Ты уже учишь слово <b>{html.escape(direct_match.canonical_word)}</b>!\n" + f"Интервал повторения: <b>{direct_match.interval}</b> дн.\n" + t(user.native_language, "Хочешь повторить прямо сейчас?")
+            f"💡 {t(user.native_language, 'Ты уже учишь слово')} <b>{html.escape(direct_match.canonical_word)}</b>!\n" + f"{t(user.native_language, 'Интервал повторения:')} <b>{direct_match.interval}</b> {t(user.native_language, 'дн.')}\n" + t(user.native_language, "Хочешь повторить прямо сейчас?")
         )
         await message.answer(
             dup_text,
@@ -258,7 +258,7 @@ async def handle_text_input(
         return
 
     await bot.send_chat_action(message.chat.id, ChatAction.TYPING)
-    status_msg = await message.answer("🔍 <i>Анализирую слово...</i>", parse_mode="HTML")
+    status_msg = await message.answer("🔍 <i>" + t(user.native_language, "Анализирую слово...") + "</i>", parse_mode="HTML")
 
     try:
         analysis = await gemini_service.analyze_text(
@@ -276,7 +276,7 @@ async def handle_text_input(
             await status_msg.delete()
             dup_text = (
                 f"💡 {t(user.native_language, 'Ты уже учишь слово')} <b>{html.escape(existing.canonical_word)}</b> " +
-                f"({t(user.native_language, '(форма/перевод:')} <i>{html.escape(text)}</i>)!\n" + f"Интервал повторения: <b>{existing.interval}</b> дн.\n" + t(user.native_language, "Хочешь повторить прямо сейчас?")
+                f"({t(user.native_language, '(форма/перевод:')} <i>{html.escape(text)}</i>)!\n" + f"{t(user.native_language, 'Интервал повторения:')} <b>{existing.interval}</b> {t(user.native_language, 'дн.')}\n" + t(user.native_language, "Хочешь повторить прямо сейчас?")
             )
             await message.answer(
                 dup_text,
@@ -332,7 +332,7 @@ async def handle_text_input(
     except GeminiQuotaExhaustedError:
         logger.warning("Gemini quota exhausted during text input")
         await status_msg.edit_text(
-            "⏳ <b>Сервис ИИ временно перегружен</b> (исчерпан дневной лимит запросов к моделям).\n\n" + t(user.native_language, "Пожалуйста, подождите немного или повторите попытку позже."),
+            "⏳ <b>" + t(user.native_language, "Сервис ИИ временно перегружен (исчерпан дневной лимит запросов к моделям).") + "</b>\n\n" + t(user.native_language, "Пожалуйста, подождите немного или повторите попытку позже."),
             parse_mode="HTML",
         )
     except GeminiServiceError:
