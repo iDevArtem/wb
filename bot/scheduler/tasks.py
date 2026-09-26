@@ -1,3 +1,5 @@
+from bot.core.i18n import t
+
 import logging
 from datetime import datetime, timedelta, timezone
 from zoneinfo import ZoneInfo
@@ -79,9 +81,9 @@ async def check_due_words_task(bot: Bot) -> None:
 
             if due_count > 0:
                 text = (
-                    f"Пора повторить <b>{due_count}</b> слов! 🧠\n\n"
-                    "Интервальное повторение активирует долговременную память. "
-                    "Пройди быстрый квиз прямо сейчас:"
+                    f"Пора повторить <b>{due_count}</b> слов! 🧠\n\n" +
+                    t(user.native_language, "Интервальное повторение активирует долговременную память. ") +
+                    t(user.native_language, "Пройди быстрый квиз прямо сейчас:")
                 )
                 await bot.send_message(
                     chat_id=user.tg_id,

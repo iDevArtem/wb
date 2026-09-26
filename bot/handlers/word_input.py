@@ -1,3 +1,4 @@
+from bot.core.i18n import t, TranslatedText
 import html
 import io
 import logging
@@ -30,7 +31,7 @@ logger = logging.getLogger(__name__)
 router = Router(name="word_input")
 
 
-def format_word_card(analysis: WordAnalysis) -> str:
+def format_word_card(analysis: WordAnalysis, lang: str = "ru") -> str:
     escaped_word = html.escape(analysis.canonical_word)
     escaped_pos = html.escape(analysis.pos)
     escaped_lemma = html.escape(analysis.lemma)
@@ -45,31 +46,29 @@ def format_word_card(analysis: WordAnalysis) -> str:
     typo_note = ""
     if analysis.corrected_from:
         escaped_typo = html.escape(analysis.corrected_from)
-        typo_note = f"✏️ <i>Исправлена опечатка с:</i> <s>{escaped_typo}</s>\n"
+        typo_note = f"{t(lang, '✏️ Исправлена опечатка с:')} <s>{escaped_typo}</s>\n"
 
     # Compact layout requested by user
     lemma_note = ""
     if analysis.lemma.lower() != analysis.canonical_word.lower():
-        lemma_note = f"\n🌱 Словарная форма: <code>{escaped_lemma}</code>"
+        lemma_note = f"\n{t(lang, '🌱 Словарная форма:')} <code>{escaped_lemma}</code>"
 
     level_display = f" • <b>{analysis.level}</b>" if getattr(analysis, "level", None) else ""
     
     definition_block = ""
     if getattr(analysis, "definition", None):
-        definition_block = f"\n\n💡 <b>Смысл:</b> <i>{html.escape(analysis.definition)}</i>"
+        definition_block = f"\n\n💡 <b>{t(lang, '💡 Смысл:')}</b> <i>{html.escape(analysis.definition)}</i>"
         
     grammar_block = ""
     grammar_notes = getattr(analysis, "grammar_notes", [])
     if grammar_notes:
         grammar_list = " • ".join(html.escape(n) for n in grammar_notes)
-        grammar_block = f"\n📐 <b>Грамматика:</b> {grammar_list}"
+        grammar_block = f"\n📐 <b>{t(lang, '📐 Грамматика:')}</b> {grammar_list}"
 
     card = (
-        f"📖 <b>{escaped_word}</b> <i>({escaped_pos})</i>{level_display}\n"
-        f"{typo_note}"
+        f"📖 <b>{escaped_word}</b> <i>({escaped_pos})</i>{level_display}\n" + f"{typo_note}" +
         f"🗣 {trans_display}"
-        f"{lemma_note}\n"
-        f"💬 <b>{escaped_transl}</b>"
+        f"{lemma_note}\n" + f"💬 <b>{escaped_transl}</b>" +
         f"{definition_block}"
         f"{grammar_block}"
     )
@@ -123,13 +122,13 @@ async def handle_voice_input(
         return
 
     await bot.send_chat_action(message.chat.id, ChatAction.RECORD_VOICE)
-    status_msg = await message.answer("🎙 <i>Слушаю и анализирую произношение...</i>", parse_mode="HTML")
+    status_msg = await message.answer(t(user.native_language, '🎙 <i>Слушаю и анализирую произношение...</i>'), parse_mode="HTML")
 
     try:
         # Download voice directly into in-memory stream
         voice_file = await bot.get_file(message.voice.file_id)
         if not voice_file.file_path:
-            await status_msg.edit_text("❌ Не удалось загрузить голосовое сообщение из Telegram.")
+            await status_msg.edit_text(t(user.native_language, "❌ Не удалось загрузить голосовое сообщение из Telegram."))
             return
 
         voice_stream = io.BytesIO()
@@ -152,9 +151,7 @@ async def handle_voice_input(
         if existing:
             await status_msg.delete()
             text = (
-                f"💡 Ты уже учишь слово <b>{html.escape(existing.canonical_word)}</b>!\n"
-                f"Интервал повторения: <b>{existing.interval}</b> дн.\n"
-                "Хочешь повторить прямо сейчас?"
+                f"💡 Ты уже учишь слово <b>{html.escape(existing.canonical_word)}</b>!\n" + f"Интервал повторения: <b>{existing.interval}</b> дн.\n" + t(user.native_language, "Хочешь повторить прямо сейчас?")
             )
             await message.answer(
                 text,
@@ -193,7 +190,7 @@ async def handle_voice_input(
         await status_msg.delete()
 
         # Send card text
-        card_text = format_word_card(analysis)
+        card_text = format_word_card(analysis, user.native_language)
         voice_file_input = BufferedInputFile(
             tts_audio.getvalue(),
             filename=f"{analysis.canonical_word}.mp3",
@@ -210,20 +207,19 @@ async def handle_voice_input(
     except GeminiQuotaExhaustedError:
         logger.warning("Gemini quota exhausted during voice input")
         await status_msg.edit_text(
-            "⏳ <b>Сервис ИИ временно перегружен</b> (исчерпан дневной лимит запросов к моделям).\n\n"
-            "Пожалуйста, подождите немного или повторите попытку позже.",
+            "⏳ <b>Сервис ИИ временно перегружен</b> (исчерпан дневной лимит запросов к моделям).\n\n" + t(user.native_language, "Пожалуйста, подождите немного или повторите попытку позже."),
             parse_mode="HTML",
         )
     except GeminiServiceError:
         logger.exception("Gemini service error processing voice input")
         await status_msg.edit_text(
-            "⚠️ Не удалось распознать голосовое сообщение с помощью ИИ. Попробуйте записать еще раз.",
+            t(user.native_language, "⚠️ Не удалось распознать голосовое сообщение с помощью ИИ. Попробуйте записать еще раз."),
             parse_mode="HTML",
         )
     except Exception:
         logger.exception("Error processing voice input")
         await status_msg.edit_text(
-            "⚠️ Произошла непредвиденная ошибка при обработке голосового сообщения. Попробуйте позже.",
+            t(user.native_language, "⚠️ Произошла непредвиденная ошибка при обработке голосового сообщения. Попробуйте позже."),
             parse_mode="HTML",
         )
 
@@ -252,9 +248,7 @@ async def handle_text_input(
     direct_match = await check_existing_word(user, text)
     if direct_match:
         dup_text = (
-            f"💡 Ты уже учишь слово <b>{html.escape(direct_match.canonical_word)}</b>!\n"
-            f"Интервал повторения: <b>{direct_match.interval}</b> дн.\n"
-            "Хочешь повторить прямо сейчас?"
+            f"💡 Ты уже учишь слово <b>{html.escape(direct_match.canonical_word)}</b>!\n" + f"Интервал повторения: <b>{direct_match.interval}</b> дн.\n" + t(user.native_language, "Хочешь повторить прямо сейчас?")
         )
         await message.answer(
             dup_text,
@@ -281,10 +275,8 @@ async def handle_text_input(
         if existing:
             await status_msg.delete()
             dup_text = (
-                f"💡 Ты уже учишь слово <b>{html.escape(existing.canonical_word)}</b> "
-                f"(форма/перевод: <i>{html.escape(text)}</i>)!\n"
-                f"Интервал повторения: <b>{existing.interval}</b> дн.\n"
-                "Хочешь повторить прямо сейчас?"
+                f"💡 Ты уже учишь слово <b>{html.escape(existing.canonical_word)}</b> " +
+                f"(форма/перевод: <i>{html.escape(text)}</i>)!\n" + f"Интервал повторения: <b>{existing.interval}</b> дн.\n" + t(user.native_language, "Хочешь повторить прямо сейчас?")
             )
             await message.answer(
                 dup_text,
@@ -323,7 +315,7 @@ async def handle_text_input(
         await status_msg.delete()
 
         # Send voice and card
-        card_text = format_word_card(analysis)
+        card_text = format_word_card(analysis, user.native_language)
         voice_file_input = BufferedInputFile(
             tts_audio.getvalue(),
             filename=f"{analysis.canonical_word}.mp3",
@@ -340,20 +332,19 @@ async def handle_text_input(
     except GeminiQuotaExhaustedError:
         logger.warning("Gemini quota exhausted during text input")
         await status_msg.edit_text(
-            "⏳ <b>Сервис ИИ временно перегружен</b> (исчерпан дневной лимит запросов к моделям).\n\n"
-            "Пожалуйста, подождите немного или повторите попытку позже.",
+            "⏳ <b>Сервис ИИ временно перегружен</b> (исчерпан дневной лимит запросов к моделям).\n\n" + t(user.native_language, "Пожалуйста, подождите немного или повторите попытку позже."),
             parse_mode="HTML",
         )
     except GeminiServiceError:
         logger.exception("Gemini service error analyzing text word")
         await status_msg.edit_text(
-            "⚠️ Не удалось проанализировать слово с помощью ИИ. Пожалуйста, попробуйте снова через несколько секунд.",
+            t(user.native_language, "⚠️ Не удалось проанализировать слово с помощью ИИ. Пожалуйста, попробуйте снова через несколько секунд."),
             parse_mode="HTML",
         )
     except Exception:
         logger.exception("Error analyzing text word")
         await status_msg.edit_text(
-            "⚠️ Произошла непредвиденная ошибка при анализе слова. Попробуйте позже.",
+            t(user.native_language, "⚠️ Произошла непредвиденная ошибка при анализе слова. Попробуйте позже."),
             parse_mode="HTML",
         )
 
@@ -365,11 +356,11 @@ async def cb_repeat_tts(callback: CallbackQuery, user: User) -> None:
     doc = await words_col.find_one(_word_query_by_id(word_id_str, user))
 
     if not doc:
-        await callback.answer("Слово не найдено", show_alert=True)
+        await callback.answer(t(user.native_language, "Слово не найдено"), show_alert=True)
         return
 
     word = Word.model_validate(doc)
-    await callback.answer("Генерирую озвучку...")
+    await callback.answer(t(user.native_language, "Генерирую озвучку..."))
     try:
         audio = await tts_service.generate_audio(word.canonical_word, target_lang=user.target_language)
         voice_file = BufferedInputFile(audio.getvalue(), filename=f"{word.canonical_word}.mp3")
@@ -379,7 +370,7 @@ async def cb_repeat_tts(callback: CallbackQuery, user: User) -> None:
             )
     except Exception as e:
         logger.exception("Failed to synthesize TTS in callback")
-        await callback.answer("Ошибка синтеза речи", show_alert=True)
+        await callback.answer(t(user.native_language, "Ошибка синтеза речи"), show_alert=True)
 
 
 @router.callback_query(lambda c: c.data and c.data.startswith("delete_word:"))
@@ -389,11 +380,11 @@ async def cb_delete_word(callback: CallbackQuery, user: User) -> None:
     doc = await words_col.find_one_and_delete(_word_query_by_id(word_id_str, user))
 
     if not doc:
-        await callback.answer("Слово не найдено", show_alert=True)
+        await callback.answer(t(user.native_language, "Слово не найдено"), show_alert=True)
         return
 
     word = Word.model_validate(doc)
-    await callback.answer("Слово удалено")
+    await callback.answer(t(user.native_language, "Слово удалено"))
     if callback.message:
         await callback.message.edit_text(
             f"🗑 Слово <b>{html.escape(word.canonical_word)}</b> удалено из словаря.",
@@ -412,11 +403,11 @@ async def cb_archive_word(callback: CallbackQuery, user: User) -> None:
     )
 
     if not doc:
-        await callback.answer("Слово не найдено", show_alert=True)
+        await callback.answer(t(user.native_language, "Слово не найдено"), show_alert=True)
         return
 
     word = Word.model_validate(doc)
-    await callback.answer("Слово перенесено в архив!")
+    await callback.answer(t(user.native_language, "Слово перенесено в архив!"))
     if callback.message:
         await callback.message.edit_text(
             f"✅ Слово <b>{html.escape(word.canonical_word)}</b> перенесено в архив!",
@@ -432,12 +423,12 @@ async def cb_word_examples(callback: CallbackQuery, user: User) -> None:
     doc = await words_col.find_one(query)
 
     if not doc:
-        await callback.answer("Слово не найдено", show_alert=True)
+        await callback.answer(t(user.native_language, "Слово не найдено"), show_alert=True)
         return
 
     word = Word.model_validate(doc)
     
-    await callback.answer("💬 Придумываю примеры...")
+    await callback.answer(t(user.native_language, "💬 Придумываю примеры..."))
     try:
         res = await gemini_service.get_word_examples(
             word=word.canonical_word,
@@ -457,8 +448,8 @@ async def cb_word_examples(callback: CallbackQuery, user: User) -> None:
             await callback.message.reply(text, parse_mode="HTML")
             
     except GeminiQuotaExhaustedError:
-        await callback.answer("Лимит запросов к ИИ исчерпан. Попробуйте позже.", show_alert=True)
+        await callback.answer(t(user.native_language, "Лимит запросов к ИИ исчерпан. Попробуйте позже."), show_alert=True)
     except Exception as e:
         logger.exception("Error generating examples for word_id=%s: %s", word_id_str, e)
-        await callback.answer("Ошибка генерации примеров.", show_alert=True)
+        await callback.answer(t(user.native_language, "Ошибка генерации примеров."), show_alert=True)
 

@@ -1,9 +1,10 @@
+from bot.core.i18n import t
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup, WebAppInfo
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 from bot.core.config import settings
 
 
-def get_word_card_keyboard(word_id: int | str) -> InlineKeyboardMarkup:
+def get_word_card_keyboard(word_id: int | str, lang: str = "ru") -> InlineKeyboardMarkup:
     """
     Inline keyboard for a newly added or inspected word card:
     [🔊 Озвучить еще раз]
@@ -13,54 +14,54 @@ def get_word_card_keyboard(word_id: int | str) -> InlineKeyboardMarkup:
     builder = InlineKeyboardBuilder()
     builder.row(
         InlineKeyboardButton(
-            text="🔊 Озвучить еще раз",
+            text=t(lang, "🔊 Озвучить еще раз"),
             callback_data=f"tts:{word_id}",
         ),
     )
     builder.row(
         InlineKeyboardButton(
-            text="💬 Примеры",
+            text=t(lang, "💬 Примеры"),
             callback_data=f"examples:{word_id}",
         ),
     )
     builder.row(
         InlineKeyboardButton(
-            text="🗑 Удалить",
+            text=t(lang, "🗑 Удалить"),
             callback_data=f"delete_word:{word_id}",
         ),
         InlineKeyboardButton(
-            text="✅ Знаю (в архив)",
+            text=t(lang, "✅ Знаю (в архив)"),
             callback_data=f"archive_word:{word_id}",
         ),
     )
     return builder.as_markup()
 
 
-def get_duplicate_word_keyboard(word_id: int | str) -> InlineKeyboardMarkup:
+def get_duplicate_word_keyboard(word_id: int | str, lang: str = "ru") -> InlineKeyboardMarkup:
     """
     Keyboard when the word is already in user's dictionary.
     """
     builder = InlineKeyboardBuilder()
     builder.row(
         InlineKeyboardButton(
-            text="🎯 Повторить прямо сейчас",
+            text=t(lang, "🎯 Повторить прямо сейчас"),
             callback_data=f"quiz_word:{word_id}",
         ),
     )
     builder.row(
         InlineKeyboardButton(
-            text="🔊 Послушать",
+            text=t(lang, "🔊 Послушать"),
             callback_data=f"tts:{word_id}",
         ),
         InlineKeyboardButton(
-            text="🔙 Понятно",
+            text=t(lang, "🔙 Понятно"),
             callback_data="dismiss",
         ),
     )
     return builder.as_markup()
 
 
-def get_quiz_options_keyboard(options: list[str]) -> InlineKeyboardMarkup:
+def get_quiz_options_keyboard(options: list[str], lang: str = "ru") -> InlineKeyboardMarkup:
     """
     4 Multiple-choice buttons for quiz, plus skip/stop controls.
     """
@@ -76,89 +77,89 @@ def get_quiz_options_keyboard(options: list[str]) -> InlineKeyboardMarkup:
         )
 
     builder.row(
-        InlineKeyboardButton(text="⏭ Пропустить", callback_data="quiz_skip"),
-        InlineKeyboardButton(text="🛑 Завершить", callback_data="quiz_stop"),
+        InlineKeyboardButton(text=t(lang, "⏭ Пропустить"), callback_data="quiz_skip"),
+        InlineKeyboardButton(text=t(lang, "🛑 Завершить"), callback_data="quiz_stop"),
     )
     return builder.as_markup()
 
 
-def get_quiz_control_keyboard() -> InlineKeyboardMarkup:
+def get_quiz_control_keyboard(lang: str = "ru") -> InlineKeyboardMarkup:
     """
     Controls during text/voice quiz: skip or stop.
     """
     builder = InlineKeyboardBuilder()
     builder.row(
-        InlineKeyboardButton(text="⏭ Пропустить", callback_data="quiz_skip"),
-        InlineKeyboardButton(text="🛑 Завершить", callback_data="quiz_stop"),
+        InlineKeyboardButton(text=t(lang, "⏭ Пропустить"), callback_data="quiz_skip"),
+        InlineKeyboardButton(text=t(lang, "🛑 Завершить"), callback_data="quiz_stop"),
     )
     return builder.as_markup()
 
 
-def get_quiz_next_keyboard() -> InlineKeyboardMarkup:
+def get_quiz_next_keyboard(lang: str = "ru") -> InlineKeyboardMarkup:
     """
     Buttons shown after word quiz resolution (success or 3 attempts exhausted).
     """
     builder = InlineKeyboardBuilder()
     builder.row(
-        InlineKeyboardButton(text="➡️ Следующее слово", callback_data="quiz_next"),
-        InlineKeyboardButton(text="🛑 Завершить", callback_data="quiz_stop"),
+        InlineKeyboardButton(text=t(lang, "➡️ Следующее слово"), callback_data="quiz_next"),
+        InlineKeyboardButton(text=t(lang, "🛑 Завершить"), callback_data="quiz_stop"),
     )
     return builder.as_markup()
 
 
-def get_scheduler_notification_keyboard() -> InlineKeyboardMarkup:
+def get_scheduler_notification_keyboard(lang: str = "ru") -> InlineKeyboardMarkup:
     """
     Keyboard for scheduler push notification.
     """
     builder = InlineKeyboardBuilder()
     builder.row(
         InlineKeyboardButton(
-            text="🎯 Начать квиз",
+            text=t(lang, "🎯 Начать квиз"),
             callback_data="quiz_start_due",
         ),
     )
     return builder.as_markup()
 
 
-def get_archive_item_keyboard(word_id: int | str) -> InlineKeyboardMarkup:
+def get_archive_item_keyboard(word_id: int | str, lang: str = "ru") -> InlineKeyboardMarkup:
     """
     Button to restore an archived word.
     """
     builder = InlineKeyboardBuilder()
     builder.row(
         InlineKeyboardButton(
-            text="↩️ Вернуть в обучение",
+            text=t(lang, "↩️ Вернуть в обучение"),
             callback_data=f"unarchive_word:{word_id}",
         ),
     )
     return builder.as_markup()
 
 
-def get_settings_keyboard() -> InlineKeyboardMarkup:
+def get_settings_keyboard(lang: str = "ru") -> InlineKeyboardMarkup:
     """
     Settings menu keyboard.
     """
     builder = InlineKeyboardBuilder()
     builder.row(
-        InlineKeyboardButton(text="📚 Мои словари", callback_data="my_dictionaries"),
+        InlineKeyboardButton(text=t(lang, "📚 Мои словари"), callback_data="my_dictionaries"),
     )
     builder.row(
-        InlineKeyboardButton(text="🗣 Родной язык", callback_data="set_native_lang"),
-        InlineKeyboardButton(text="🎯 Изучаемый язык", callback_data="set_target_lang"),
+        InlineKeyboardButton(text=t(lang, "🗣 Родной язык"), callback_data="set_native_lang"),
+        InlineKeyboardButton(text=t(lang, "🎯 Изучаемый язык"), callback_data="set_target_lang"),
     )
     builder.row(
-        InlineKeyboardButton(text="🌍 Выбрать часовой пояс", callback_data="set_tz"),
+        InlineKeyboardButton(text=t(lang, "🌍 Выбрать часовой пояс"), callback_data="set_tz"),
     )
     builder.row(
-        InlineKeyboardButton(text="🌙 Настроить тихие часы", callback_data="set_quiet"),
+        InlineKeyboardButton(text=t(lang, "🌙 Настроить тихие часы"), callback_data="set_quiet"),
     )
     builder.row(
-        InlineKeyboardButton(text="🔙 Закрыть", callback_data="dismiss"),
+        InlineKeyboardButton(text=t(lang, "🔙 Закрыть"), callback_data="dismiss"),
     )
     return builder.as_markup()
 
 
-def get_timezone_presets_keyboard() -> InlineKeyboardMarkup:
+def get_timezone_presets_keyboard(lang: str = "ru") -> InlineKeyboardMarkup:
     """
     Quick timezone preset buttons.
     """
@@ -173,12 +174,12 @@ def get_timezone_presets_keyboard() -> InlineKeyboardMarkup:
     builder = InlineKeyboardBuilder()
     for title, tz in presets:
         builder.row(InlineKeyboardButton(text=title, callback_data=f"save_tz:{tz}"))
-    builder.row(InlineKeyboardButton(text="✏️ Ввести вручную", callback_data="manual_tz"))
-    builder.row(InlineKeyboardButton(text="🔙 Назад в настройки", callback_data="open_settings"))
+    builder.row(InlineKeyboardButton(text=t(lang, "✏️ Ввести вручную"), callback_data="manual_tz"))
+    builder.row(InlineKeyboardButton(text=t(lang, "🔙 Назад в настройки"), callback_data="open_settings"))
     return builder.as_markup()
 
 
-def get_quiet_hours_presets_keyboard() -> InlineKeyboardMarkup:
+def get_quiet_hours_presets_keyboard(lang: str = "ru") -> InlineKeyboardMarkup:
     """
     Quiet hours presets.
     """
@@ -191,21 +192,21 @@ def get_quiet_hours_presets_keyboard() -> InlineKeyboardMarkup:
     builder = InlineKeyboardBuilder()
     for title, data in presets:
         builder.row(InlineKeyboardButton(text=title, callback_data=data))
-    builder.row(InlineKeyboardButton(text="🔙 Назад в настройки", callback_data="open_settings"))
+    builder.row(InlineKeyboardButton(text=t(lang, "🔙 Назад в настройки"), callback_data="open_settings"))
     return builder.as_markup()
 
 
-def get_words_pagination_keyboard(page: int, total_pages: int) -> InlineKeyboardMarkup:
+def get_words_pagination_keyboard(page: int, total_pages: int, lang: str = "ru") -> InlineKeyboardMarkup:
     """
     Pagination keyboard for /words list.
     """
     builder = InlineKeyboardBuilder()
     nav_buttons = []
     if page > 1:
-        nav_buttons.append(InlineKeyboardButton(text="⬅️ Назад", callback_data=f"words_page:{page - 1}"))
+        nav_buttons.append(InlineKeyboardButton(text=t(lang, "⬅️ Назад"), callback_data=f"words_page:{page - 1}"))
     nav_buttons.append(InlineKeyboardButton(text=f"📄 {page}/{total_pages}", callback_data="noop"))
     if page < total_pages:
-        nav_buttons.append(InlineKeyboardButton(text="Вперед ➡️", callback_data=f"words_page:{page + 1}"))
+        nav_buttons.append(InlineKeyboardButton(text=t(lang, "Вперед ➡️"), callback_data=f"words_page:{page + 1}"))
 
     if nav_buttons:
         builder.row(*nav_buttons)
@@ -213,32 +214,32 @@ def get_words_pagination_keyboard(page: int, total_pages: int) -> InlineKeyboard
     if settings.webapp_url:
         builder.row(
             InlineKeyboardButton(
-                text="🌐 Открыть веб-словарь (Mini App)",
+                text=t(lang, "🌐 Открыть веб-словарь (Mini App)"),
                 web_app=WebAppInfo(url=settings.webapp_url),
             )
         )
 
     builder.row(
-        InlineKeyboardButton(text="🎯 Повторить слова (/quiz)", callback_data="quiz_start_due"),
-        InlineKeyboardButton(text="🔙 Закрыть", callback_data="dismiss"),
+        InlineKeyboardButton(text=t(lang, "🎯 Повторить слова (/quiz)"), callback_data="quiz_start_due"),
+        InlineKeyboardButton(text=t(lang, "🔙 Закрыть"), callback_data="dismiss"),
     )
     return builder.as_markup()
 
 
-def get_start_keyboard() -> InlineKeyboardMarkup:
+def get_start_keyboard(lang: str = "ru") -> InlineKeyboardMarkup:
     """Keyboard for /start greeting with direct WebApp button."""
     builder = InlineKeyboardBuilder()
     if settings.webapp_url:
         builder.row(
             InlineKeyboardButton(
-                text="📖 Открыть мой веб-словарь",
+                text=t(lang, "📖 Открыть мой веб-словарь"),
                 web_app=WebAppInfo(url=settings.webapp_url),
             )
         )
     return builder.as_markup()
 
 
-def get_language_presets_keyboard(lang_type: str) -> InlineKeyboardMarkup:
+def get_language_presets_keyboard(lang_type: str, lang: str = "ru") -> InlineKeyboardMarkup:
     """
     Quick language preset buttons.
     """
@@ -255,6 +256,6 @@ def get_language_presets_keyboard(lang_type: str) -> InlineKeyboardMarkup:
     builder = InlineKeyboardBuilder()
     for title, code in presets:
         builder.row(InlineKeyboardButton(text=title, callback_data=f"save_{lang_type}:{code}"))
-    builder.row(InlineKeyboardButton(text="✏️ Ввести вручную (код IANA)", callback_data=f"manual_{lang_type}"))
-    builder.row(InlineKeyboardButton(text="🔙 Назад в настройки", callback_data="open_settings"))
+    builder.row(InlineKeyboardButton(text=t(lang, "✏️ Ввести вручную (код IANA)"), callback_data=f"manual_{lang_type}"))
+    builder.row(InlineKeyboardButton(text=t(lang, "🔙 Назад в настройки"), callback_data="open_settings"))
     return builder.as_markup()
