@@ -232,7 +232,12 @@ async def handle_voice_input(
         audio_bytes = voice_stream.getvalue()
 
         # Send in-memory audio/ogg directly to Gemini
-        analysis = await gemini_service.analyze_voice(audio_bytes=audio_bytes, mime_type="audio/ogg")
+        analysis = await gemini_service.analyze_voice(
+            audio_bytes=audio_bytes,
+            mime_type="audio/ogg",
+            native_lang=user.native_language,
+            target_lang=user.target_language,
+        )
 
         # Check duplicate
         existing = await check_existing_word(user, analysis.canonical_word)
@@ -357,7 +362,11 @@ async def handle_text_input(
     status_msg = await message.answer("🔍 <i>Анализирую слово...</i>", parse_mode="HTML")
 
     try:
-        analysis = await gemini_service.analyze_text(text)
+        analysis = await gemini_service.analyze_text(
+            text,
+            native_lang=user.native_language,
+            target_lang=user.target_language,
+        )
 
         # Check for duplicate after canonical/lemma analysis
         existing = await check_existing_word(user, analysis.canonical_word)
@@ -531,7 +540,11 @@ async def cb_word_forms(callback: CallbackQuery, user: User) -> None:
     if not forms_data:
         await callback.answer("⏳ Извлекаю формы слова...")
         try:
-            analysis = await gemini_service.analyze_text(word.canonical_word)
+            analysis = await gemini_service.analyze_text(
+                word.canonical_word,
+                native_lang=user.native_language,
+                target_lang=user.target_language,
+            )
             if analysis.forms:
                 extra_data["forms"] = analysis.forms.model_dump()
                 word.extra_data = extra_data
@@ -575,6 +588,8 @@ async def cb_word_tenses(callback: CallbackQuery, user: User) -> None:
             lemma=word.lemma,
             pos=word.pos,
             translation=word.translation,
+            native_lang=user.native_language,
+            target_lang=user.target_language,
         )
         extra_data["tenses"] = res.model_dump()
         word.extra_data = extra_data
@@ -619,6 +634,8 @@ async def cb_word_family(callback: CallbackQuery, user: User) -> None:
             lemma=word.lemma,
             pos=word.pos,
             translation=word.translation,
+            native_lang=user.native_language,
+            target_lang=user.target_language,
         )
         extra_data["family"] = res.model_dump()
         word.extra_data = extra_data
@@ -663,6 +680,8 @@ async def cb_word_dialogue(callback: CallbackQuery, user: User) -> None:
             lemma=word.lemma,
             pos=word.pos,
             translation=word.translation,
+            native_lang=user.native_language,
+            target_lang=user.target_language,
         )
         extra_data["dialogue"] = res.model_dump()
         word.extra_data = extra_data

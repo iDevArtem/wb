@@ -355,6 +355,8 @@ async def handle_quiz_voice_answer(
             audio_bytes=audio_bytes,
             target_canonical=canonical,
             target_lemma=lemma,
+            native_lang=user.native_language,
+            target_lang=user.target_language,
         )
 
         await status_msg.delete()

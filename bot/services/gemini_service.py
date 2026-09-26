@@ -411,6 +411,8 @@ class GeminiService:
         audio_bytes: bytes,
         target_canonical: str,
         target_lemma: str,
+        native_lang: str = "ru",
+        target_lang: str = "en",
         mime_type: str = "audio/ogg",
     ) -> VoiceQuizEvaluation:
         """
