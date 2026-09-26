@@ -16,7 +16,7 @@ class User(MongoBaseModel):
     last_activity_date: date | None = None
     last_notified_at: datetime | None = None
     is_active: bool = True
-    native_language: str = "ru"
+    native_language: str = "uk"
     target_language: str = "en"
 
     @property
