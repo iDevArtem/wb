@@ -9,6 +9,7 @@ from aiogram.fsm.state import State, StatesGroup
 from aiogram.types import CallbackQuery, Message
 
 from bot.core.database import get_users_collection
+from bot.keyboards.reply import get_main_menu_keyboard
 from bot.keyboards.inline import (
     get_quiet_hours_presets_keyboard,
     get_language_presets_keyboard,
@@ -210,6 +211,10 @@ async def cb_save_native(callback: CallbackQuery, user: User) -> None:
     await get_users_collection().update_one({"tg_id": user.tg_id}, {"$set": {"native_language": code}})
     await callback.answer(t(user.native_language, "Родной язык обновлен!"))
     if callback.message:
+        await callback.message.answer(
+            f"✅ {t(user.native_language, 'Язык интерфейса обновлен!')}",
+            reply_markup=get_main_menu_keyboard(user.native_language)
+        )
         await cb_open_settings(callback, user)
 
 @router.callback_query(lambda c: c.data and c.data.startswith("save_target:"))
@@ -241,7 +246,18 @@ async def handle_custom_native_input(message: Message, user: User, state: FSMCon
     user.native_language = code
     await get_users_collection().update_one({"tg_id": user.tg_id}, {"$set": {"native_language": code}})
     await state.clear()
-    await message.answer(f"✅ {t(user.native_language, 'Родной язык сохранен:')} <code>{code}</code>", reply_markup=get_settings_keyboard(user.native_language), parse_mode="HTML")
+    
+    # Send a message to refresh the reply keyboard
+    await message.answer(
+        f"✅ {t(user.native_language, 'Язык интерфейса обновлен!')}",
+        reply_markup=get_main_menu_keyboard(user.native_language)
+    )
+    # And then show settings menu inline
+    await message.answer(
+        f"✅ {t(user.native_language, 'Родной язык сохранен:')} <code>{code}</code>", 
+        reply_markup=get_settings_keyboard(user.native_language), 
+        parse_mode="HTML"
+    )
 
 @router.message(SettingsState.waiting_for_custom_target, F.text)
 async def handle_custom_target_input(message: Message, user: User, state: FSMContext) -> None:
