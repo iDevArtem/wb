@@ -155,6 +155,9 @@ def get_settings_keyboard() -> InlineKeyboardMarkup:
     """
     builder = InlineKeyboardBuilder()
     builder.row(
+        InlineKeyboardButton(text="📚 Мои словари", callback_data="my_dictionaries"),
+    )
+    builder.row(
         InlineKeyboardButton(text="🗣 Родной язык", callback_data="set_native_lang"),
         InlineKeyboardButton(text="🎯 Изучаемый язык", callback_data="set_target_lang"),
     )
