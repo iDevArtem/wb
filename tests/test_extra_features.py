@@ -244,10 +244,7 @@ def test_word_card_keyboard_contains_new_buttons():
     buttons = [btn for row in kb.inline_keyboard for btn in row]
     callbacks = [b.callback_data for b in buttons]
 
-    assert "forms:42" in callbacks
-    assert "tenses:42" in callbacks
-    assert "family:42" in callbacks
-    assert "dialogue:42" in callbacks
+    assert "examples:42" in callbacks
     assert "tts:42" in callbacks
     assert "delete_word:42" in callbacks
     assert "archive_word:42" in callbacks

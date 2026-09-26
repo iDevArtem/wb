@@ -20,22 +20,8 @@ def get_word_card_keyboard(word_id: int | str) -> InlineKeyboardMarkup:
     )
     builder.row(
         InlineKeyboardButton(
-            text="📐 Формы",
-            callback_data=f"forms:{word_id}",
-        ),
-        InlineKeyboardButton(
-            text="⏳ Времена",
-            callback_data=f"tenses:{word_id}",
-        ),
-    )
-    builder.row(
-        InlineKeyboardButton(
-            text="🌱 Однокоренные",
-            callback_data=f"family:{word_id}",
-        ),
-        InlineKeyboardButton(
-            text="🎭 Живой диалог",
-            callback_data=f"dialogue:{word_id}",
+            text="💬 Примеры",
+            callback_data=f"examples:{word_id}",
         ),
     )
     builder.row(

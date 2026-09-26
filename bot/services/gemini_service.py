@@ -77,6 +77,10 @@ class WordAnalysis(BaseModel):
     )
 
 
+class WordExamplesResponse(BaseModel):
+    examples: list[ExampleItem] = Field(..., description="A list of exactly 5 contextually diverse example sentences")
+
+
 class TenseItem(BaseModel):
     tense_name: str = Field(..., description="Target language name of the tense or grammatical structure, e.g. 'Present Simple', 'Past Continuous'")
     aspect: str = Field(..., description="Short explanation of usage in the native language, e.g. 'Регулярное действие в настоящем'")
@@ -470,6 +474,35 @@ class GeminiService:
         if not response.text:
             raise GeminiServiceError("Gemini API returned an empty response for word tenses")
         return WordAllTensesResponse.model_validate_json(response.text)
+
+    async def get_word_examples(
+        self,
+        word: str,
+        lemma: str,
+        pos: str,
+        translation: str,
+        native_lang: str = "ru",
+        target_lang: str = "en",
+    ) -> WordExamplesResponse:
+        prompt = (
+            f"Generate 5 distinct and useful example sentences for the word '{word}'. "
+            f"Context: lemma='{lemma}', pos='{pos}', translation in native language='{translation}'. "
+            f"Target language code: {target_lang}. Native language code: {native_lang}. "
+            "Ensure the examples cover different contexts or common collocations. "
+            "Return JSON matching the schema."
+        )
+        config = types.GenerateContentConfig(
+            response_mime_type="application/json",
+            response_schema=WordExamplesResponse,
+            system_instruction="You are an expert linguist. Generate 5 contextually diverse example sentences.",
+            temperature=0.7,
+            thinking_config=types.ThinkingConfig(thinking_budget=0),
+            automatic_function_calling=types.AutomaticFunctionCallingConfig(disable=True),
+        )
+        response = await self._generate_content_with_fallback(contents=prompt, config=config)
+        if not response.text:
+            raise GeminiServiceError("Gemini API returned an empty response for examples")
+        return WordExamplesResponse.model_validate_json(response.text)
 
     async def get_word_family(
         self,

@@ -47,25 +47,17 @@ def format_word_card(analysis: WordAnalysis) -> str:
         escaped_typo = html.escape(analysis.corrected_from)
         typo_note = f"✏️ <i>Исправлена опечатка с:</i> <s>{escaped_typo}</s>\n"
 
-    examples_block = ""
-    if analysis.examples:
-        ex_lines = []
-        for ex in analysis.examples[:3]:
-            ex_lines.append(f"• {html.escape(ex.target)}\n  — <i>{html.escape(ex.native)}</i>")
-        examples_block = "\n💬 <b>Примеры:</b>\n" + "\n".join(ex_lines) + "\n"
-
-    colloc_block = ""
-    if analysis.synonyms_collocations:
-        collocs = [f"• {html.escape(c)}" for c in analysis.synonyms_collocations[:3]]
-        colloc_block = "\n🔗 <b>Коллокации / синонимы:</b>\n" + "\n".join(collocs) + "\n"
+    # Compact layout requested by user
+    lemma_note = ""
+    if analysis.lemma.lower() != analysis.canonical_word.lower():
+        lemma_note = f"\n🌱 Словарная форма: <code>{escaped_lemma}</code>"
 
     card = (
-        f"📖 <b>{escaped_word}</b> {trans_display} — <i>{escaped_pos}</i>\n"
+        f"📖 <b>{escaped_word}</b> <i>({escaped_pos})</i>\n"
         f"{typo_note}"
-        f"🌱 Словарная форма: <code>{escaped_lemma}</code>\n"
-        f"Перевод: <b>{escaped_transl}</b>\n"
-        f"{examples_block}"
-        f"{colloc_block}"
+        f"🗣 {trans_display}"
+        f"{lemma_note}\n"
+        f"💬 <b>{escaped_transl}</b>"
     )
     return card
 
@@ -295,8 +287,6 @@ async def handle_voice_input(
         )
         await message.answer_voice(
             voice=voice_file_input,
-            caption=f"🔊 Эталонное произношение: <b>{html.escape(analysis.canonical_word)}</b>",
-            parse_mode="HTML",
         )
         await message.answer(
             card_text,
@@ -427,8 +417,6 @@ async def handle_text_input(
         )
         await message.answer_voice(
             voice=voice_file_input,
-            caption=f"🔊 Произношение: <b>{html.escape(analysis.canonical_word)}</b>",
-            parse_mode="HTML",
         )
         await message.answer(
             card_text,
@@ -475,8 +463,6 @@ async def cb_repeat_tts(callback: CallbackQuery, user: User) -> None:
         if callback.message:
             await callback.message.answer_voice(
                 voice=voice_file,
-                caption=f"🔊 <b>{html.escape(word.canonical_word)}</b> [{html.escape(word.transcription)}]",
-                parse_mode="HTML",
             )
     except Exception as e:
         logger.exception("Failed to synthesize TTS in callback")
@@ -525,8 +511,8 @@ async def cb_archive_word(callback: CallbackQuery, user: User) -> None:
         )
 
 
-@router.callback_query(lambda c: c.data and c.data.startswith("forms:"))
-async def cb_word_forms(callback: CallbackQuery, user: User) -> None:
+@router.callback_query(lambda c: c.data and c.data.startswith("examples:"))
+async def cb_word_examples(callback: CallbackQuery, user: User) -> None:
     word_id_str = callback.data.split(":")[1]
     words_col = get_words_collection()
     query = _word_query_by_id(word_id_str, user)
@@ -537,57 +523,10 @@ async def cb_word_forms(callback: CallbackQuery, user: User) -> None:
         return
 
     word = Word.model_validate(doc)
-    extra_data = dict(word.extra_data or {})
-    forms_data = extra_data.get("forms")
-
-    # If legacy word without pre-generated forms, generate on-the-fly and cache
-    if not forms_data:
-        await callback.answer("⏳ Извлекаю формы слова...")
-        try:
-            analysis = await gemini_service.analyze_text(
-                word.canonical_word,
-                native_lang=user.native_language,
-                target_lang=user.target_language,
-            )
-            if analysis.forms:
-                extra_data["forms"] = analysis.forms.model_dump()
-                word.extra_data = extra_data
-                await words_col.update_one(query, {"$set": {"extra_data": extra_data, "updated_at": utc_now()}})
-        except Exception as e:
-            logger.warning("Could not backfill forms for word_id=%s: %s", word_id_str, e)
-    else:
-        await callback.answer()
-
-    msg_text = format_forms_message(word)
-    if callback.message:
-        await callback.message.reply(msg_text, parse_mode="HTML")
-
-
-@router.callback_query(lambda c: c.data and c.data.startswith("tenses:"))
-async def cb_word_tenses(callback: CallbackQuery, user: User) -> None:
-    word_id_str = callback.data.split(":")[1]
-    words_col = get_words_collection()
-    query = _word_query_by_id(word_id_str, user)
-    doc = await words_col.find_one(query)
-
-    if not doc:
-        await callback.answer("Слово не найдено", show_alert=True)
-        return
-
-    word = Word.model_validate(doc)
-    extra_data = dict(word.extra_data or {})
-    cached_tenses = extra_data.get("tenses")
-
-    if cached_tenses:
-        await callback.answer()
-        text = format_tenses_message(word, cached_tenses)
-        if callback.message:
-            await callback.message.reply(text, parse_mode="HTML")
-        return
-
-    await callback.answer("⏳ Генерирую примеры во всех временах...")
+    
+    await callback.answer("💬 Придумываю примеры...")
     try:
-        res = await gemini_service.get_word_all_tenses(
+        res = await gemini_service.get_word_examples(
             word=word.canonical_word,
             lemma=word.lemma,
             pos=word.pos,
@@ -595,108 +534,18 @@ async def cb_word_tenses(callback: CallbackQuery, user: User) -> None:
             native_lang=user.native_language,
             target_lang=user.target_language,
         )
-        extra_data["tenses"] = res.model_dump()
-        word.extra_data = extra_data
-        await words_col.update_one(query, {"$set": {"extra_data": extra_data, "updated_at": utc_now()}})
-
-        text = format_tenses_message(word, extra_data["tenses"])
+        
+        ex_lines = []
+        for ex in res.examples:
+            ex_lines.append(f"• {html.escape(ex.target)}\n  — <i>{html.escape(ex.native)}</i>")
+        text = f"💬 <b>Примеры с «{html.escape(word.canonical_word)}»:</b>\n\n" + "\n\n".join(ex_lines)
+        
         if callback.message:
             await callback.message.reply(text, parse_mode="HTML")
+            
     except GeminiQuotaExhaustedError:
         await callback.answer("Лимит запросов к ИИ исчерпан. Попробуйте позже.", show_alert=True)
     except Exception as e:
-        logger.exception("Error generating tenses for word_id=%s: %s", word_id_str, e)
-        await callback.answer("Ошибка генерации времен.", show_alert=True)
-
-
-@router.callback_query(lambda c: c.data and c.data.startswith("family:"))
-async def cb_word_family(callback: CallbackQuery, user: User) -> None:
-    word_id_str = callback.data.split(":")[1]
-    words_col = get_words_collection()
-    query = _word_query_by_id(word_id_str, user)
-    doc = await words_col.find_one(query)
-
-    if not doc:
-        await callback.answer("Слово не найдено", show_alert=True)
-        return
-
-    word = Word.model_validate(doc)
-    extra_data = dict(word.extra_data or {})
-    cached_family = extra_data.get("family")
-
-    if cached_family:
-        await callback.answer()
-        text = format_family_message(word, cached_family)
-        if callback.message:
-            await callback.message.reply(text, parse_mode="HTML")
-        return
-
-    await callback.answer("🌱 Подбираю однокоренные слова...")
-    try:
-        res = await gemini_service.get_word_family(
-            word=word.canonical_word,
-            lemma=word.lemma,
-            pos=word.pos,
-            translation=word.translation,
-            native_lang=user.native_language,
-            target_lang=user.target_language,
-        )
-        extra_data["family"] = res.model_dump()
-        word.extra_data = extra_data
-        await words_col.update_one(query, {"$set": {"extra_data": extra_data, "updated_at": utc_now()}})
-
-        text = format_family_message(word, extra_data["family"])
-        if callback.message:
-            await callback.message.reply(text, parse_mode="HTML")
-    except GeminiQuotaExhaustedError:
-        await callback.answer("Лимит запросов к ИИ исчерпан. Попробуйте позже.", show_alert=True)
-    except Exception as e:
-        logger.exception("Error generating family for word_id=%s: %s", word_id_str, e)
-        await callback.answer("Ошибка подбора однокоренных слов.", show_alert=True)
-
-
-@router.callback_query(lambda c: c.data and c.data.startswith("dialogue:"))
-async def cb_word_dialogue(callback: CallbackQuery, user: User) -> None:
-    word_id_str = callback.data.split(":")[1]
-    words_col = get_words_collection()
-    query = _word_query_by_id(word_id_str, user)
-    doc = await words_col.find_one(query)
-
-    if not doc:
-        await callback.answer("Слово не найдено", show_alert=True)
-        return
-
-    word = Word.model_validate(doc)
-    extra_data = dict(word.extra_data or {})
-    cached_dialogue = extra_data.get("dialogue")
-
-    if cached_dialogue:
-        await callback.answer()
-        text = format_dialogue_message(word, cached_dialogue)
-        if callback.message:
-            await callback.message.reply(text, parse_mode="HTML")
-        return
-
-    await callback.answer("🎭 Составляю живой диалог...")
-    try:
-        res = await gemini_service.get_word_dialogue(
-            word=word.canonical_word,
-            lemma=word.lemma,
-            pos=word.pos,
-            translation=word.translation,
-            native_lang=user.native_language,
-            target_lang=user.target_language,
-        )
-        extra_data["dialogue"] = res.model_dump()
-        word.extra_data = extra_data
-        await words_col.update_one(query, {"$set": {"extra_data": extra_data, "updated_at": utc_now()}})
-
-        text = format_dialogue_message(word, extra_data["dialogue"])
-        if callback.message:
-            await callback.message.reply(text, parse_mode="HTML")
-    except GeminiQuotaExhaustedError:
-        await callback.answer("Лимит запросов к ИИ исчерпан. Попробуйте позже.", show_alert=True)
-    except Exception as e:
-        logger.exception("Error generating dialogue for word_id=%s: %s", word_id_str, e)
-        await callback.answer("Ошибка генерации диалога.", show_alert=True)
+        logger.exception("Error generating examples for word_id=%s: %s", word_id_str, e)
+        await callback.answer("Ошибка генерации примеров.", show_alert=True)
 
