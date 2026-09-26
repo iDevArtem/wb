@@ -64,7 +64,7 @@ async def cb_open_settings(callback: CallbackQuery, user: User) -> None:
 
 
 @router.callback_query(lambda c: c.data == "set_tz")
-async def cb_set_timezone_menu(callback: CallbackQuery) -> None:
+async def cb_set_timezone_menu(callback: CallbackQuery, user: User) -> None:
     await callback.answer()
     if callback.message:
         await callback.message.edit_text(
@@ -141,7 +141,7 @@ async def handle_custom_tz_input(
 
 
 @router.callback_query(lambda c: c.data == "set_quiet")
-async def cb_set_quiet_menu(callback: CallbackQuery) -> None:
+async def cb_set_quiet_menu(callback: CallbackQuery, user: User) -> None:
     await callback.answer()
     if callback.message:
         await callback.message.edit_text(
@@ -184,7 +184,7 @@ async def cb_save_quiet_hours(
 
 
 @router.callback_query(lambda c: c.data == "set_native_lang")
-async def cb_set_native_menu(callback: CallbackQuery) -> None:
+async def cb_set_native_menu(callback: CallbackQuery, user: User) -> None:
     await callback.answer()
     if callback.message:
         await callback.message.edit_text(
@@ -194,7 +194,7 @@ async def cb_set_native_menu(callback: CallbackQuery) -> None:
         )
 
 @router.callback_query(lambda c: c.data == "set_target_lang")
-async def cb_set_target_menu(callback: CallbackQuery) -> None:
+async def cb_set_target_menu(callback: CallbackQuery, user: User) -> None:
     await callback.answer()
     if callback.message:
         await callback.message.edit_text(
