@@ -155,7 +155,7 @@ async def handle_voice_input(
             )
             await message.answer(
                 text,
-                reply_markup=get_duplicate_word_keyboard(existing.id or ""),
+                reply_markup=get_duplicate_word_keyboard(existing.id or "", user.native_language),
                 parse_mode="HTML",
             )
             return
@@ -200,7 +200,7 @@ async def handle_voice_input(
         )
         await message.answer(
             card_text,
-            reply_markup=get_word_card_keyboard(new_word.id),
+            reply_markup=get_word_card_keyboard(new_word.id, user.native_language),
             parse_mode="HTML",
         )
 
@@ -252,7 +252,7 @@ async def handle_text_input(
         )
         await message.answer(
             dup_text,
-            reply_markup=get_duplicate_word_keyboard(direct_match.id or ""),
+            reply_markup=get_duplicate_word_keyboard(direct_match.id or "", user.native_language),
             parse_mode="HTML",
         )
         return
@@ -280,7 +280,7 @@ async def handle_text_input(
             )
             await message.answer(
                 dup_text,
-                reply_markup=get_duplicate_word_keyboard(existing.id or ""),
+                reply_markup=get_duplicate_word_keyboard(existing.id or "", user.native_language),
                 parse_mode="HTML",
             )
             return
@@ -325,7 +325,7 @@ async def handle_text_input(
         )
         await message.answer(
             card_text,
-            reply_markup=get_word_card_keyboard(new_word.id or ""),
+            reply_markup=get_word_card_keyboard(new_word.id or "", user.native_language),
             parse_mode="HTML",
         )
 

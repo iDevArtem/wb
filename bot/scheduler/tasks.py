@@ -88,7 +88,7 @@ async def check_due_words_task(bot: Bot) -> None:
                 await bot.send_message(
                     chat_id=user.tg_id,
                     text=text,
-                    reply_markup=get_scheduler_notification_keyboard(),
+                    reply_markup=get_scheduler_notification_keyboard(user.native_language),
                     parse_mode="HTML",
                 )
                 await users_col.update_one(

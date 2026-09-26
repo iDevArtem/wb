@@ -36,8 +36,8 @@ async def cmd_start(message: Message, user: User) -> None:
         "• /stats — Твоя статистика и стрик повторений\n" + "• /archive — Слова, отправленные в архив\n"
         "• /settings — Смена языков, часового пояса и тихих часов\n\n" + t(user.native_language, "Отправь мне прямо сейчас любое слово текстом или голосовым! 🚀")
     )
-    await message.answer(text, reply_markup=get_start_keyboard(), parse_mode="HTML")
-    await message.answer(t(user.native_language, "Используй меню ниже для быстрой навигации 👇"), reply_markup=get_main_menu_keyboard())
+    await message.answer(text, reply_markup=get_start_keyboard(user.native_language), parse_mode="HTML")
+    await message.answer(t(user.native_language, "Используй меню ниже для быстрой навигации 👇"), reply_markup=get_main_menu_keyboard(user.native_language))
 
 
 @router.message(Command("help"))
@@ -124,7 +124,7 @@ async def cmd_archive(message: Message, user: User) -> None:
         )
         await message.answer(
             item_text,
-            reply_markup=get_archive_item_keyboard(w.id or ""),
+            reply_markup=get_archive_item_keyboard(w.id or "", user.native_language),
             parse_mode="HTML",
         )
 
@@ -238,7 +238,7 @@ async def render_words_page(
         )
 
     text = header + "\n\n".join(rows)
-    keyboard = get_words_pagination_keyboard(page, total_pages)
+    keyboard = get_words_pagination_keyboard(page, total_pages, user.native_language)
     return text, keyboard
 
 

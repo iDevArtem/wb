@@ -215,7 +215,7 @@ async def present_next_word(
             f"<i>Часть речи: {html.escape(word.pos)}</i>\n" +
             t(user.native_language, "Напиши слово на изучаемом языке в ответном сообщении (3 попытки):")
         )
-        await message.answer(prompt_text, reply_markup=get_quiz_control_keyboard(), parse_mode="HTML")
+        await message.answer(prompt_text, reply_markup=get_quiz_control_keyboard(user.native_language), parse_mode="HTML")
 
     elif mode == "multiple_choice":
         prompt_text = (
@@ -225,7 +225,7 @@ async def present_next_word(
         )
         await message.answer(
             prompt_text,
-            reply_markup=get_quiz_options_keyboard(options),
+            reply_markup=get_quiz_options_keyboard(options, user.native_language),
             parse_mode="HTML",
         )
 
@@ -238,12 +238,12 @@ async def present_next_word(
             audio = await tts_service.generate_audio(word.canonical_word, target_lang=user.target_language)
             voice_file = BufferedInputFile(audio.getvalue(), filename="listening.mp3")
             await message.answer_voice(voice=voice_file, caption=prompt_text, parse_mode="HTML")
-            await message.answer(t(user.native_language, "Введи ответ:"), reply_markup=get_quiz_control_keyboard())
+            await message.answer(t(user.native_language, "Введи ответ:"), reply_markup=get_quiz_control_keyboard(user.native_language))
         except Exception:
             # Fallback to spelling if TTS fails
             await message.answer(
                 f"✍️ Напиши перевод слова <b>{html.escape(word.translation)}</b>:",
-                reply_markup=get_quiz_control_keyboard(),
+                reply_markup=get_quiz_control_keyboard(user.native_language),
                 parse_mode="HTML",
             )
 
@@ -255,7 +255,7 @@ async def present_next_word(
             f"<i>Значение: {html.escape(word.translation)}</i>\n\n"
             "Запиши войс (voice message) с произношением:"
         )
-        await message.answer(prompt_text, reply_markup=get_quiz_control_keyboard(), parse_mode="HTML")
+        await message.answer(prompt_text, reply_markup=get_quiz_control_keyboard(user.native_language), parse_mode="HTML")
 
 
 @router.message(Command("quiz"))
@@ -319,7 +319,7 @@ async def handle_mc_choice(
             await callback.message.answer(
                 f"❌ Неверно! Осталось попыток: {attempts_left}.\n" +
                 f"💡 Подсказка: {hint}",
-                reply_markup=get_quiz_control_keyboard(),
+                reply_markup=get_quiz_control_keyboard(user.native_language),
                 parse_mode="HTML",
             )
         else:
@@ -377,7 +377,7 @@ async def handle_quiz_voice_answer(
                 f"Не совсем точно. Распознано: «{html.escape(eval_result.transcribed_text)}»\n" +
                 f"💡 {html.escape(eval_result.feedback)}\n"
                 f"Осталось попыток: {attempts_left}",
-                reply_markup=get_quiz_control_keyboard(),
+                reply_markup=get_quiz_control_keyboard(user.native_language),
                 parse_mode="HTML",
             )
             if attempts_left <= 0:
@@ -446,7 +446,7 @@ async def handle_quiz_text_answer(
                 f"❌ Неверно!\n\n" +
                 f"💡 <b>Подсказка 1:</b> {hint}\n" +
                 t(user.native_language, "Осталось 2 попытки. Попробуй еще раз:"),
-                reply_markup=get_quiz_control_keyboard(),
+                reply_markup=get_quiz_control_keyboard(user.native_language),
                 parse_mode="HTML",
             )
         elif attempts_left == 1:
@@ -456,7 +456,7 @@ async def handle_quiz_text_answer(
                 f"❌ Снова не то!\n\n" +
                 f"💡 <b>Подсказка 2 (контекст):</b>\n{hint}\n\n" +
                 t(user.native_language, "Осталась последняя попытка:"),
-                reply_markup=get_quiz_control_keyboard(),
+                reply_markup=get_quiz_control_keyboard(user.native_language),
                 parse_mode="HTML",
             )
         else:
@@ -519,7 +519,7 @@ async def on_quiz_success(
     else:
         text = f"🎉 <b>Правильно!</b> Осталось в этой сессии: <b>{len(queue)}</b>"
 
-    await message.answer(text, reply_markup=get_quiz_next_keyboard(), parse_mode="HTML")
+    await message.answer(text, reply_markup=get_quiz_next_keyboard(user.native_language), parse_mode="HTML")
 
 
 async def on_quiz_failure(
@@ -570,7 +570,7 @@ async def on_quiz_failure(
             "🔄 Интервал сброшен: слово вернется на повторение уже завтра (1 день).\n" +
             f"Осталось в этой сессии: <b>{len(queue)}</b>"
         )
-        await message.answer(text, reply_markup=get_quiz_next_keyboard(), parse_mode="HTML")
+        await message.answer(text, reply_markup=get_quiz_next_keyboard(user.native_language), parse_mode="HTML")
 
         # Send fresh pronunciation audio
         try:
@@ -586,7 +586,7 @@ async def on_quiz_failure(
     else:
         await message.answer(
             f"❌ Неверно. Осталось в этой сессии: <b>{len(queue)}</b>",
-            reply_markup=get_quiz_next_keyboard(),
+            reply_markup=get_quiz_next_keyboard(user.native_language),
             parse_mode="HTML",
         )
 

@@ -41,7 +41,7 @@ async def cmd_settings(message: Message, user: User) -> None:
         f"<i>(Уведомления отправляются только днем с {user.quiet_hours_end}:00 до {user.quiet_hours_start}:00)</i>\n\n" +
         t(user.native_language, "Выбери нужный пункт для изменения:")
     )
-    await message.answer(text, reply_markup=get_settings_keyboard(), parse_mode="HTML")
+    await message.answer(text, reply_markup=get_settings_keyboard(user.native_language), parse_mode="HTML")
 
 
 @router.callback_query(lambda c: c.data == "open_settings")
@@ -58,7 +58,7 @@ async def cb_open_settings(callback: CallbackQuery, user: User) -> None:
     if callback.message:
         await callback.message.edit_text(
             text,
-            reply_markup=get_settings_keyboard(),
+            reply_markup=get_settings_keyboard(user.native_language),
             parse_mode="HTML",
         )
 
@@ -69,7 +69,7 @@ async def cb_set_timezone_menu(callback: CallbackQuery) -> None:
     if callback.message:
         await callback.message.edit_text(
             "🌍 <b>Выбери свой часовой пояс</b> из списка или нажми «Ввести вручную»:",
-            reply_markup=get_timezone_presets_keyboard(),
+            reply_markup=get_timezone_presets_keyboard(user.native_language),
             parse_mode="HTML",
         )
 
@@ -92,7 +92,7 @@ async def cb_save_timezone(
         if callback.message:
             await callback.message.edit_text(
                 f"✅ Часовой пояс успешно изменен на: <code>{tz_str}</code>",
-                reply_markup=get_settings_keyboard(),
+                reply_markup=get_settings_keyboard(user.native_language),
                 parse_mode="HTML",
             )
     except Exception:
@@ -129,7 +129,7 @@ async def handle_custom_tz_input(
         await state.clear()
         await message.answer(
             f"✅ Часовой пояс успешно сохранен: <code>{candidate_tz}</code>",
-            reply_markup=get_settings_keyboard(),
+            reply_markup=get_settings_keyboard(user.native_language),
             parse_mode="HTML",
         )
     except Exception:
@@ -148,7 +148,7 @@ async def cb_set_quiet_menu(callback: CallbackQuery) -> None:
             "🌙 <b>Настройка тихих часов:</b>\n\n"
             "В указанный интервал бот не будет присылать напоминания о словах.\n" +
             t(user.native_language, "Выбери удобный режим:"),
-            reply_markup=get_quiet_hours_presets_keyboard(),
+            reply_markup=get_quiet_hours_presets_keyboard(user.native_language),
             parse_mode="HTML",
         )
 
@@ -178,7 +178,7 @@ async def cb_save_quiet_hours(
     if callback.message:
         await callback.message.edit_text(
             f"✅ Тихие часы сохранены: с {start_h}:00 до {end_h}:00.",
-            reply_markup=get_settings_keyboard(),
+            reply_markup=get_settings_keyboard(user.native_language),
             parse_mode="HTML",
         )
 
@@ -189,7 +189,7 @@ async def cb_set_native_menu(callback: CallbackQuery) -> None:
     if callback.message:
         await callback.message.edit_text(
             "🗣 <b>Выбери свой родной язык:</b>",
-            reply_markup=get_language_presets_keyboard("native"),
+            reply_markup=get_language_presets_keyboard("native", user.native_language),
             parse_mode="HTML",
         )
 
@@ -200,7 +200,7 @@ async def cb_set_target_menu(callback: CallbackQuery) -> None:
         await callback.message.edit_text(
             "🎯 <b>Выбери язык, который хочешь выучить:</b>\n"
             "<i>(Слова для разных языков хранятся раздельно)</i>",
-            reply_markup=get_language_presets_keyboard("target"),
+            reply_markup=get_language_presets_keyboard("target", user.native_language),
             parse_mode="HTML",
         )
 
@@ -242,7 +242,7 @@ async def handle_custom_native_input(message: Message, user: User, state: FSMCon
     user.native_language = code
     await get_users_collection().update_one({"tg_id": user.tg_id}, {"$set": {"native_language": code}})
     await state.clear()
-    await message.answer(f"✅ Родной язык сохранен: <code>{code}</code>", reply_markup=get_settings_keyboard(), parse_mode="HTML")
+    await message.answer(f"✅ Родной язык сохранен: <code>{code}</code>", reply_markup=get_settings_keyboard(user.native_language), parse_mode="HTML")
 
 @router.message(SettingsState.waiting_for_custom_target, F.text)
 async def handle_custom_target_input(message: Message, user: User, state: FSMContext) -> None:
@@ -250,7 +250,7 @@ async def handle_custom_target_input(message: Message, user: User, state: FSMCon
     user.target_language = code
     await get_users_collection().update_one({"tg_id": user.tg_id}, {"$set": {"target_language": code}})
     await state.clear()
-    await message.answer(f"✅ Изучаемый язык сохранен: <code>{code}</code>", reply_markup=get_settings_keyboard(), parse_mode="HTML")
+    await message.answer(f"✅ Изучаемый язык сохранен: <code>{code}</code>", reply_markup=get_settings_keyboard(user.native_language), parse_mode="HTML")
 
 
 @router.callback_query(lambda c: c.data == "my_dictionaries")
@@ -331,4 +331,4 @@ async def cb_switch_dict(callback: CallbackQuery, user: User) -> None:
     )
     from bot.keyboards.inline import get_settings_keyboard
     if callback.message:
-        await callback.message.edit_text(text, reply_markup=get_settings_keyboard(), parse_mode="HTML")
+        await callback.message.edit_text(text, reply_markup=get_settings_keyboard(user.native_language), parse_mode="HTML")
