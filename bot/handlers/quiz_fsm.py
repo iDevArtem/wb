@@ -124,8 +124,8 @@ async def start_quiz_session(
             return
 
         await target_message.answer(
-            "🎉 <b>" + t(user.native_language, "Все слова на сегодня повторены!") + "</b>\n\n"
-            t(user.native_language, "Интервалы SuperMemo-2 защищают тебя от зубрежки. ")
+            "🎉 <b>" + t(user.native_language, "Все слова на сегодня повторены!") + "</b>\n\n" +
+            t(user.native_language, "Интервалы SuperMemo-2 защищают тебя от зубрежки. ") +
             t(user.native_language, "Но если ты хочешь потренироваться вне графика, отправь команду: /quiz_practice"),
             parse_mode="HTML",
         )
@@ -210,7 +210,7 @@ async def present_next_word(
     if mode == "spelling":
         prompt_text = (
             "✍️ <b>" + t(user.native_language, 'Режим: Правописание (Spelling)') + "</b>\n\n" +
-            f"{t(user.native_language, 'Переведи на изучаемый язык слово:')}\n"
+            f"{t(user.native_language, 'Переведи на изучаемый язык слово:')}\n" +
             f"👉 <b>{html.escape(word.translation)}</b>\n\n" +
             f"<i>{t(user.native_language, 'Часть речи:')} {html.escape(word.pos)}</i>\n" +
             t(user.native_language, "Напиши слово на изучаемом языке в ответном сообщении (3 попытки):")
@@ -220,7 +220,7 @@ async def present_next_word(
     elif mode == "multiple_choice":
         prompt_text = (
             "🧩 <b>" + t(user.native_language, 'Режим: Выбор перевода (Multiple Choice)') + "</b>\n\n" +
-            f"{t(user.native_language, 'Каков перевод слова:')}\n"
+            f"{t(user.native_language, 'Каков перевод слова:')}\n" +
             f"👉 <b>{html.escape(word.canonical_word)}</b> [{html.escape(word.transcription)}]?"
         )
         await message.answer(
@@ -250,9 +250,9 @@ async def present_next_word(
     elif mode == "voice_mode":
         prompt_text = (
             "🗣 <b>" + t(user.native_language, 'Режим: Голосовое произношение (Voice Mode)') + "</b>\n\n" +
-            f"{t(user.native_language, 'Произнеси вслух в голосовом сообщении слово:')}\n"
+            f"{t(user.native_language, 'Произнеси вслух в голосовом сообщении слово:')}\n" +
             f"👉 <b>{html.escape(word.canonical_word)}</b> [{html.escape(word.transcription)}]\n" +
-            f"<i>{t(user.native_language, 'Значение:')} {html.escape(word.translation)}</i>\n\n"
+            f"<i>{t(user.native_language, 'Значение:')} {html.escape(word.translation)}</i>\n\n" +
             t(user.native_language, "Запиши войс (voice message) с произношением:")
         )
         await message.answer(prompt_text, reply_markup=get_quiz_control_keyboard(user.native_language), parse_mode="HTML")
@@ -512,7 +512,7 @@ async def on_quiz_success(
         praise = t(user.native_language, "🌟 Великолепно с первой попытки!") if attempts_left == 3 else t(user.native_language, "👍 Правильно!")
         text = (
             f"🎉 <b>{praise}</b>\n\n" +
-            f"{t(user.native_language, 'Слово:')} <b>{html.escape(word.canonical_word)}</b> [{html.escape(word.transcription)}] — {html.escape(word.translation)}\n"
+            f"{t(user.native_language, 'Слово:')} <b>{html.escape(word.canonical_word)}</b> [{html.escape(word.transcription)}] — {html.escape(word.translation)}\n" +
             f"📈 {t(user.native_language, 'Следующее повторение через:')} <b>{srs_res.interval}</b> {t(user.native_language, 'дн.')} ({t(user.native_language, 'шаг')} {srs_res.repetition})\n" +
             f"{t(user.native_language, 'Осталось в этой сессии:')} <b>{len(queue)}</b>"
         )
@@ -565,8 +565,8 @@ async def on_quiz_failure(
 
         text = (
             "❌ <b>" + t(user.native_language, "Все 3 попытки исчерпаны!") + "</b>\n\n" +
-            f"{t(user.native_language, 'Правильный ответ:')} <b>{html.escape(word.canonical_word)}</b> [{html.escape(word.transcription)}]\n"
-            f"{t(user.native_language, 'Перевод:')} <b>{html.escape(word.translation)}</b>\n\n"
+            f"{t(user.native_language, 'Правильный ответ:')} <b>{html.escape(word.canonical_word)}</b> [{html.escape(word.transcription)}]\n" +
+            f"{t(user.native_language, 'Перевод:')} <b>{html.escape(word.translation)}</b>\n\n" +
             "🔄 " + t(user.native_language, "Интервал сброшен: слово вернется на повторение уже завтра (1 день).") + "\n" +
             f"{t(user.native_language, 'Осталось в этой сессии:')} <b>{len(queue)}</b>"
         )

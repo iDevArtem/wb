@@ -105,8 +105,7 @@ async def cb_manual_tz(callback: CallbackQuery, state: FSMContext) -> None:
     await state.set_state(SettingsState.waiting_for_custom_tz)
     if callback.message:
         await callback.message.answer(
-            t(user.native_language, "✏️ Напиши название часового пояса в формате IANA (например, Europe/Kyiv, Europe/Warsaw, Asia/Tbilisi):")
-            
+            t(user.native_language, "✏️ Напиши название часового пояса в формате IANA (например, Europe/Kyiv, Europe/Warsaw, Asia/Tbilisi):"),
             parse_mode="HTML",
         )
 
@@ -134,7 +133,7 @@ async def handle_custom_tz_input(
         )
     except Exception:
         await message.answer(
-            f"❌ {t(user.native_language, 'Не удалось распознать часовой пояс')} «{html.escape(candidate_tz)}».\n"
+            f"❌ {t(user.native_language, 'Не удалось распознать часовой пояс')} «{html.escape(candidate_tz)}».\n" +
             t(user.native_language, "Пожалуйста, укажи валидный TZ из базы IANA (например: Europe/Berlin):"),
             parse_mode="HTML",
         )
@@ -145,7 +144,7 @@ async def cb_set_quiet_menu(callback: CallbackQuery, user: User) -> None:
     await callback.answer()
     if callback.message:
         await callback.message.edit_text(
-            "🌙 <b>" + t(user.native_language, "Настройка тихих часов:") + "</b>\n\n"
+            "🌙 <b>" + t(user.native_language, "Настройка тихих часов:") + "</b>\n\n" +
             t(user.native_language, "В указанный интервал бот не будет присылать напоминания о словах.") + "\n" +
             t(user.native_language, "Выбери удобный режим:"),
             reply_markup=get_quiet_hours_presets_keyboard(user.native_language),
@@ -198,7 +197,7 @@ async def cb_set_target_menu(callback: CallbackQuery, user: User) -> None:
     await callback.answer()
     if callback.message:
         await callback.message.edit_text(
-            "🎯 <b>" + t(user.native_language, "Выбери язык, который хочешь выучить:") + "</b>\n"
+            "🎯 <b>" + t(user.native_language, "Выбери язык, который хочешь выучить:") + "</b>\n" +
             "<i>" + t(user.native_language, "(Слова для разных языков хранятся раздельно)") + "</i>",
             reply_markup=get_language_presets_keyboard("target", user.native_language),
             parse_mode="HTML",

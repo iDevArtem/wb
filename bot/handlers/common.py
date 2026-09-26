@@ -125,8 +125,7 @@ async def cmd_archive(message: Message, user: User) -> None:
 
     if not words:
         await message.answer(
-            t(user.native_language, "📭 Твой архив пока пуст. Когда ты освоишь слово и нажмешь «✅ Знаю (в архив)», оно появится здесь.")
-            
+            t(user.native_language, "📭 Твой архив пока пуст. Когда ты освоишь слово и нажмешь «✅ Знаю (в архив)», оно появится здесь."),
             parse_mode="HTML",
         )
         return
