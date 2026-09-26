@@ -258,13 +258,14 @@ def get_language_presets_keyboard(lang_type: str) -> InlineKeyboardMarkup:
     Quick language preset buttons.
     """
     presets = [
-        ("Українська (Украинский)", "uk"),
-        ("Русский", "ru"),
+        ("Українська", "uk"),
         ("English", "en"),
-        ("Español (Испанский)", "es"),
-        ("Deutsch (Немецкий)", "de"),
-        ("Français (Французский)", "fr"),
-        ("Italiano (Итальянский)", "it"),
+        ("Русский", "ru"),
+        ("Polski", "pl"),
+        ("Italiano", "it"),
+        ("Español", "es"),
+        ("Deutsch", "de"),
+        ("Français", "fr"),
     ]
     builder = InlineKeyboardBuilder()
     for title, code in presets:
