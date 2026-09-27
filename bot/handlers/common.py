@@ -44,8 +44,7 @@ async def cmd_start(message: Message, user: User, state: FSMContext) -> None:
         "Я твой персональный AI-словарь.\n\n"
         "Оберіть вашу рідну мову\n"
         "Choose your native language\n"
-        "Выберите ваш родной язык\n"
-        "👇 👇 👇 "
+        "Выберите ваш родной язык\n\n"
     )
     await message.answer(
         text, 
