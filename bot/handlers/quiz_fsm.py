@@ -300,6 +300,7 @@ async def handle_mc_choice(
     correct_idx = data.get("correct_idx")
     word_id = data.get("current_word_id")
     canonical = data.get("canonical_word", "")
+    options = data.get("options", [])
     attempts_left = data.get("attempts_left", 3)
 
     words_col = get_words_collection()
@@ -309,7 +310,7 @@ async def handle_mc_choice(
 
     if choice_idx == correct_idx:
         # Success!
-        await on_quiz_success(callback.message, word, attempts_left, state)
+        await on_quiz_success(callback.message, user, word, attempts_left, state)
     else:
         # Multiple choice mistake
         attempts_left -= 1
@@ -320,11 +321,12 @@ async def handle_mc_choice(
             await callback.message.answer(
                 f"❌ {t(user.native_language, 'Неверно! Осталось попыток:')} {attempts_left}.\n" +
                 f"💡 {t(user.native_language, 'Подсказка:')} {hint}",
-                reply_markup=get_quiz_control_keyboard(user.native_language),
+                # Show options again so user can pick another answer
+                reply_markup=get_quiz_options_keyboard(options, user.native_language),
                 parse_mode="HTML",
             )
         else:
-            await on_quiz_failure(callback.message, word, state)
+            await on_quiz_failure(callback.message, user, word, state)
 
 
 @router.message(QuizState.answering, F.voice)
@@ -373,7 +375,7 @@ async def handle_quiz_voice_answer(
                 f"💬 {html.escape(eval_result.feedback)}",
                 parse_mode="HTML",
             )
-            await on_quiz_success(message, word, attempts_left, state)
+            await on_quiz_success(message, user, word, attempts_left, state)
         else:
             attempts_left -= 1
             await state.update_data(attempts_left=attempts_left)
@@ -385,7 +387,7 @@ async def handle_quiz_voice_answer(
                 parse_mode="HTML",
             )
             if attempts_left <= 0:
-                await on_quiz_failure(message, word, state)
+                await on_quiz_failure(message, user, word, state)
 
     except GeminiQuotaExhaustedError:
         logger.warning("Gemini quota exhausted during quiz voice evaluation")
@@ -441,7 +443,7 @@ async def handle_quiz_text_answer(
     )
 
     if is_correct:
-        await on_quiz_success(message, word, attempts_left, state)
+        await on_quiz_success(message, user, word, attempts_left, state)
     else:
         attempts_left -= 1
         await state.update_data(attempts_left=attempts_left)
@@ -468,11 +470,12 @@ async def handle_quiz_text_answer(
             )
         else:
             # Attempt 3 failed -> Exhausted
-            await on_quiz_failure(message, word, state)
+            await on_quiz_failure(message, user, word, state)
 
 
 async def on_quiz_success(
     message: Message,
+    user: User,
     word: Word | None,
     attempts_left: int,
     state: FSMContext,
@@ -485,10 +488,12 @@ async def on_quiz_success(
     if queue and word and queue[0] == str(word.id):
         queue.pop(0)
 
+    # Clear current_word_id so stray text messages don't re-answer the same word
     await state.update_data(
         queue=queue,
         completed_session=completed,
         correct_first_try=first_tries,
+        current_word_id="",
     )
 
     if word:
@@ -535,6 +540,7 @@ async def on_quiz_success(
 
 async def on_quiz_failure(
     message: Message,
+    user: User,
     word: Word | None,
     state: FSMContext,
 ) -> None:
@@ -544,9 +550,11 @@ async def on_quiz_failure(
     if queue and word and queue[0] == str(word.id):
         queue.pop(0)
 
+    # Clear current_word_id so stray text messages don't re-answer the same word
     await state.update_data(
         queue=queue,
         completed_session=completed,
+        current_word_id="",
     )
 
     if word:
@@ -597,12 +605,18 @@ async def on_quiz_failure(
             )
         except Exception:
             logger.exception("Failed to send pronunciation after failure")
+
+        # If queue is now empty, show quiz completion
+        if len(queue) == 0:
+            await present_next_word(message, user, state)
     else:
         await message.answer(
             f"❌ {t(user.native_language, 'Неверно.')} {t(user.native_language, 'Осталось в этой сессии:')} <b>{len(queue)}</b>",
             reply_markup=get_quiz_next_keyboard(user.native_language),
             parse_mode="HTML",
         )
+        if len(queue) == 0:
+            await present_next_word(message, user, state)
 
 
 @router.callback_query(lambda c: c.data == "quiz_skip")
@@ -618,7 +632,7 @@ async def cb_quiz_skip(
     query = _word_query_by_id(str(word_id), user.id)
     doc = await words_col.find_one(query)
     word = Word.model_validate(doc) if doc else None
-    await on_quiz_failure(callback.message, word, state)
+    await on_quiz_failure(callback.message, user, word, state)
 
 
 @router.callback_query(lambda c: c.data == "quiz_next")
