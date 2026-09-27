@@ -36,7 +36,13 @@ class SetupState(StatesGroup):
 @router.message(CommandStart())
 async def cmd_start(message: Message, user: User, state: FSMContext) -> None:
     await state.set_state(SetupState.choosing_native)
-    text = "👋 Выберите ваш родной язык / Choose your native language:"
+    name = message.from_user.first_name or "друг"
+    text = (
+        f"👋 <b>Вітаю / Welcome / Добро пожаловать, {name}!</b>\n\n"
+        "Я твой персональный AI-репетитор языков.\n"
+        "I am your personal AI language tutor.\n\n"
+        "👇 Выберите ваш родной язык / Choose your native language:"
+    )
     await message.answer(
         text, 
         reply_markup=get_setup_language_keyboard("native", user.native_language), 
@@ -52,7 +58,7 @@ async def cb_setup_native(callback: CallbackQuery, user: User, state: FSMContext
     
     await state.set_state(SetupState.choosing_target)
     await callback.message.edit_text(
-        "🎯 <b>" + t(user.native_language, "Отлично! Теперь выберите язык, который хотите выучить:") + "</b>",
+        "🎯 <b>" + t(user.native_language, "Выбери язык, который хочешь выучить:") + "</b>",
         reply_markup=get_setup_language_keyboard("target", user.native_language),
         parse_mode="HTML"
     )
@@ -60,7 +66,7 @@ async def cb_setup_native(callback: CallbackQuery, user: User, state: FSMContext
 @router.callback_query(lambda c: c.data == "setup_manual_native")
 async def cb_setup_manual_native(callback: CallbackQuery, state: FSMContext, user: User) -> None:
     await state.set_state(SetupState.choosing_custom_native)
-    await callback.message.edit_text(t(user.native_language, "✏️ Введи код родного языка (например, ru, en, es):"))
+    await callback.message.edit_text(t(user.native_language, "✏️ Введи код языка (например, ru, en, es):"))
 
 @router.message(SetupState.choosing_custom_native, F.text)
 async def handle_setup_custom_native(message: Message, user: User, state: FSMContext) -> None:
@@ -71,7 +77,7 @@ async def handle_setup_custom_native(message: Message, user: User, state: FSMCon
     
     await state.set_state(SetupState.choosing_target)
     await message.answer(
-        "🎯 <b>" + t(user.native_language, "Отлично! Теперь выберите язык, который хотите выучить:") + "</b>",
+        "🎯 <b>" + t(user.native_language, "Выбери язык, который хочешь выучить:") + "</b>",
         reply_markup=get_setup_language_keyboard("target", user.native_language),
         parse_mode="HTML"
     )
@@ -100,7 +106,7 @@ async def finalize_setup(message_obj: Message, user: User, target_code: str, sta
     
     text = (
         f"👋 {t(user.native_language, 'Привет')}, <b>{message_obj.chat.first_name or t(user.native_language, 'друг')}</b>!\n\n"
-        f"{t(user.native_language, 'Попробуй написать слово, которое хочешь запомнить (текстом или голосовым сообщением) 🚀')}"
+        f"{t(user.native_language, 'Отправь мне прямо сейчас любое слово текстом или голосовым! 🚀')}"
     )
     
     try:
@@ -119,6 +125,7 @@ async def finalize_setup(message_obj: Message, user: User, target_code: str, sta
 
 @router.message(Command("help"))
 @router.message(TranslatedText("❓ Помощь"))
+@router.message(F.text == "❓")
 async def cmd_help(message: Message) -> None:
     text = (
         "📖 <b>" + t(user.native_language, "Справочник возможностей бота:") + "</b>\n\n" + 
@@ -141,6 +148,7 @@ async def cmd_help(message: Message) -> None:
 
 @router.message(Command("stats"))
 @router.message(TranslatedText("📊 Статистика"))
+@router.message(F.text == "📊")
 async def cmd_stats(message: Message, user: User) -> None:
     now_utc = datetime.now(timezone.utc)
     words_col = get_words_collection()
@@ -183,6 +191,7 @@ async def cmd_stats(message: Message, user: User) -> None:
 
 @router.message(Command("archive"))
 @router.message(TranslatedText("📚 Изучено"))
+@router.message(F.text == "📚")
 async def cmd_archive(message: Message, user: User) -> None:
     words_col = get_words_collection()
     cursor = (
@@ -330,6 +339,7 @@ async def render_words_page(
 
 @router.message(Command("words"))
 @router.message(TranslatedText("📖 Мой словарь"))
+@router.message(F.text == "📖")
 async def cmd_words(message: Message, user: User) -> None:
     text, keyboard = await render_words_page(user, page=1)
     await message.answer(text, reply_markup=keyboard, parse_mode="HTML")

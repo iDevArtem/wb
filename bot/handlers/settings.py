@@ -32,6 +32,7 @@ class SettingsState(StatesGroup):
 
 @router.message(Command("settings"))
 @router.message(TranslatedText("⚙️ Настройки"))
+@router.message(F.text == "⚙️")
 async def cmd_settings(message: Message, user: User) -> None:
     text = (
         f"⚙️ <b>{t(user.native_language, 'Настройки профиля:')}</b>\n\n" +

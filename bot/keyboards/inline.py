@@ -256,7 +256,7 @@ def get_language_presets_keyboard(lang_type: str, lang: str = "ru") -> InlineKey
     builder = InlineKeyboardBuilder()
     for title, code in presets:
         builder.row(InlineKeyboardButton(text=title, callback_data=f"save_{lang_type}:{code}"))
-    builder.row(InlineKeyboardButton(text=t(lang, "✏️ Ввести вручную (код IANA)"), callback_data=f"manual_{lang_type}"))
+    builder.row(InlineKeyboardButton(text=t(lang, "✏️ Ввести вручную") + " (код IANA)", callback_data=f"manual_{lang_type}"))
     builder.row(InlineKeyboardButton(text=t(lang, "🔙 Назад в настройки"), callback_data="open_settings"))
     return builder.as_markup()
 
@@ -277,5 +277,5 @@ def get_setup_language_keyboard(lang_type: str, lang: str = "ru") -> InlineKeybo
     builder = InlineKeyboardBuilder()
     for title, code in presets:
         builder.row(InlineKeyboardButton(text=title, callback_data=f"setup_{lang_type}:{code}"))
-    builder.row(InlineKeyboardButton(text=t(lang, "✏️ Ввести вручную (код IANA)"), callback_data=f"setup_manual_{lang_type}"))
+    builder.row(InlineKeyboardButton(text=t(lang, "✏️ Ввести вручную") + " (код IANA)", callback_data=f"setup_manual_{lang_type}"))
     return builder.as_markup()

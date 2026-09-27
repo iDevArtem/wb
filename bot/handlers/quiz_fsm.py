@@ -261,6 +261,7 @@ async def present_next_word(
 
 @router.message(Command("quiz"))
 @router.message(TranslatedText("🎯 Начать квиз"))
+@router.message(F.text == "🎯")
 async def cmd_quiz(message: Message, user: User, state: FSMContext) -> None:
     await state.clear()
     await start_quiz_session(message, user, state, allow_all=False)

@@ -8,24 +8,19 @@ def get_main_menu_keyboard(lang: str) -> ReplyKeyboardMarkup:
     """
     Main menu using ReplyKeyboardMarkup.
     Layout:
-    [ 📖 Мой словарь ] [ 🎯 Начать квиз ]
-    [ 📊 Статистика ]  [ 📚 Изучено ]
-    [ ⚙️ Настройки  ] [ ❓ Помощь ]
+    [ 📖 ] [ 🎯 ]
+    [ 📊 ] [ 📚 ]
+    [ ⚙️ ] [ ❓ ]
     """
     builder = ReplyKeyboardBuilder()
     
-    # Row 1
-    builder.add(KeyboardButton(text=t(lang, "📖 Мой словарь")))
-    builder.add(KeyboardButton(text=t(lang, "🎯 Начать квиз")))
+    builder.add(KeyboardButton(text="📖"))
+    builder.add(KeyboardButton(text="🎯"))
+    builder.add(KeyboardButton(text="📊"))
+    builder.add(KeyboardButton(text="📚"))
+    builder.add(KeyboardButton(text="⚙️"))
+    builder.add(KeyboardButton(text="❓"))
     
-    # Row 2
-    builder.add(KeyboardButton(text=t(lang, "📊 Статистика")))
-    builder.add(KeyboardButton(text=t(lang, "📚 Изучено")))
-    
-    # Row 3
-    builder.add(KeyboardButton(text=t(lang, "⚙️ Настройки")))
-    builder.add(KeyboardButton(text=t(lang, "❓ Помощь")))
-    
-    builder.adjust(2, 2, 2)
+    builder.adjust(6)
     
     return builder.as_markup(resize_keyboard=True, is_persistent=True)
