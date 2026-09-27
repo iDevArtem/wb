@@ -6,6 +6,8 @@ from datetime import datetime, timezone
 from aiogram import Router, F
 from aiogram.filters import Command, CommandStart
 from aiogram.types import CallbackQuery, InlineKeyboardMarkup, Message
+from aiogram.fsm.context import FSMContext
+from aiogram.fsm.state import State, StatesGroup
 from bson import ObjectId
 
 from bot.core.database import get_words_collection
@@ -14,6 +16,7 @@ from bot.keyboards.inline import (
     get_archive_item_keyboard,
     get_start_keyboard,
     get_words_pagination_keyboard,
+    get_setup_language_keyboard,
 )
 from bot.models.base import utc_now
 from bot.models.user import User
@@ -24,28 +27,94 @@ logger = logging.getLogger(__name__)
 router = Router(name="common")
 
 
+class SetupState(StatesGroup):
+    choosing_native = State()
+    choosing_custom_native = State()
+    choosing_target = State()
+    choosing_custom_target = State()
+
 @router.message(CommandStart())
-async def cmd_start(message: Message, user: User) -> None:
-    text = (
-        f"👋 {t(user.native_language, 'Привет')}, <b>{message.from_user.first_name or t(user.native_language, 'друг')}</b>!\n\n" + 
-        t(user.native_language, "Я твой персональный AI-репетитор языков с научной системой интервальных повторений <b>SuperMemo-2 (SM-2)</b>, нейронным произношением и искусственным интеллектом Gemini.") + "\n\n" + 
-        t(user.native_language, "Сейчас ты учишь {target}, используя язык {native}.").replace("{target}", f"<b>{user.target_language}</b>").replace("{native}", f"<b>{user.native_language}</b>") + "\n\n" + 
-        "✨ <b>" + t(user.native_language, "Как добавлять слова:") + "</b>\n" +
-        t(user.native_language, "• <b>Текст на родном языке:</b> напиши любое слово — переведу на изучаемый язык.") + "\n" + 
-        t(user.native_language, "• <b>Слово с опечаткой:</b> исправлю и сохраню правильный вариант.") + "\n" +
-        t(user.native_language, "• <b>Грамматическая форма:</b> приведу к словарной форме.") + "\n" + 
-        t(user.native_language, "• <b>Голосовое сообщение:</b> надиктуй слово в войс — Gemini распознает и разберет его!") + "\n\n" +
-        "🧠 <b>" + t(user.native_language, "Основные возможности:") + "</b>\n" + 
-        t(user.native_language, "• 📖 <b>Веб-словарь:</b> отслеживай все слова, прогресс и озвучку в Mini App!") + "\n" +
-        t(user.native_language, "• /words — Список всех слов на изучении") + "\n" + 
-        t(user.native_language, "• /quiz — Начать интерактивную тренировку слов") + "\n" +
-        t(user.native_language, "• /stats — Твоя статистика и стрик повторений") + "\n" + 
-        t(user.native_language, "• /archive — Слова, отправленные в архив") + "\n" +
-        t(user.native_language, "• /settings — Смена языков, часового пояса и тихих часов") + "\n\n" + 
-        t(user.native_language, "Отправь мне прямо сейчас любое слово текстом или голосовым! 🚀")
+async def cmd_start(message: Message, user: User, state: FSMContext) -> None:
+    await state.set_state(SetupState.choosing_native)
+    text = "👋 Выберите ваш родной язык / Choose your native language:"
+    await message.answer(
+        text, 
+        reply_markup=get_setup_language_keyboard("native", user.native_language), 
+        parse_mode="HTML"
     )
-    await message.answer(text, reply_markup=get_start_keyboard(user.native_language), parse_mode="HTML")
-    await message.answer(t(user.native_language, "Используй меню ниже для быстрой навигации 👇"), reply_markup=get_main_menu_keyboard(user.native_language))
+
+@router.callback_query(lambda c: c.data and c.data.startswith("setup_native:"))
+async def cb_setup_native(callback: CallbackQuery, user: User, state: FSMContext) -> None:
+    code = callback.data.split(":")[1]
+    user.native_language = code
+    from bot.core.database import get_users_collection
+    await get_users_collection().update_one({"tg_id": user.tg_id}, {"$set": {"native_language": code}})
+    
+    await state.set_state(SetupState.choosing_target)
+    await callback.message.edit_text(
+        "🎯 <b>" + t(user.native_language, "Отлично! Теперь выберите язык, который хотите выучить:") + "</b>",
+        reply_markup=get_setup_language_keyboard("target", user.native_language),
+        parse_mode="HTML"
+    )
+
+@router.callback_query(lambda c: c.data == "setup_manual_native")
+async def cb_setup_manual_native(callback: CallbackQuery, state: FSMContext, user: User) -> None:
+    await state.set_state(SetupState.choosing_custom_native)
+    await callback.message.edit_text(t(user.native_language, "✏️ Введи код родного языка (например, ru, en, es):"))
+
+@router.message(SetupState.choosing_custom_native, F.text)
+async def handle_setup_custom_native(message: Message, user: User, state: FSMContext) -> None:
+    code = message.text.strip().lower()[:5]
+    user.native_language = code
+    from bot.core.database import get_users_collection
+    await get_users_collection().update_one({"tg_id": user.tg_id}, {"$set": {"native_language": code}})
+    
+    await state.set_state(SetupState.choosing_target)
+    await message.answer(
+        "🎯 <b>" + t(user.native_language, "Отлично! Теперь выберите язык, который хотите выучить:") + "</b>",
+        reply_markup=get_setup_language_keyboard("target", user.native_language),
+        parse_mode="HTML"
+    )
+
+@router.callback_query(lambda c: c.data and c.data.startswith("setup_target:"))
+async def cb_setup_target(callback: CallbackQuery, user: User, state: FSMContext) -> None:
+    code = callback.data.split(":")[1]
+    await finalize_setup(callback.message, user, code, state)
+    await callback.answer()
+
+@router.callback_query(lambda c: c.data == "setup_manual_target")
+async def cb_setup_manual_target(callback: CallbackQuery, state: FSMContext, user: User) -> None:
+    await state.set_state(SetupState.choosing_custom_target)
+    await callback.message.edit_text(t(user.native_language, "✏️ Введи код изучаемого языка (например, en, de):"))
+
+@router.message(SetupState.choosing_custom_target, F.text)
+async def handle_setup_custom_target(message: Message, user: User, state: FSMContext) -> None:
+    code = message.text.strip().lower()[:5]
+    await finalize_setup(message, user, code, state)
+
+async def finalize_setup(message_obj: Message, user: User, target_code: str, state: FSMContext) -> None:
+    user.target_language = target_code
+    from bot.core.database import get_users_collection
+    await get_users_collection().update_one({"tg_id": user.tg_id}, {"$set": {"target_language": target_code}})
+    await state.clear()
+    
+    text = (
+        f"👋 {t(user.native_language, 'Привет')}, <b>{message_obj.chat.first_name or t(user.native_language, 'друг')}</b>!\n\n"
+        f"{t(user.native_language, 'Попробуй написать слово, которое хочешь запомнить (текстом или голосовым сообщением) 🚀')}"
+    )
+    
+    try:
+        await message_obj.edit_text(text, reply_markup=get_start_keyboard(user.native_language), parse_mode="HTML")
+    except Exception:
+        await message_obj.answer(text, reply_markup=get_start_keyboard(user.native_language), parse_mode="HTML")
+        
+    try:
+        await message_obj.answer(
+            t(user.native_language, "Используй меню ниже для быстрой навигации 👇"), 
+            reply_markup=get_main_menu_keyboard(user.native_language)
+        )
+    except Exception:
+        pass
 
 
 @router.message(Command("help"))
