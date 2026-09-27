@@ -39,9 +39,13 @@ async def cmd_start(message: Message, user: User, state: FSMContext) -> None:
     name = message.from_user.first_name or "друг"
     text = (
         f"👋 <b>Вітаю / Welcome / Добро пожаловать, {name}!</b>\n\n"
-        "Я твой персональный AI-репетитор языков.\n"
-        "I am your personal AI language tutor.\n\n"
-        "👇 Выберите ваш родной язык / Choose your native language:"
+        "Я твій персональний AI-словник.\n"
+        "I am your personal AI-dictionary.\n"
+        "Я твой персональный AI-словарь.\n\n"
+        "Оберіть вашу рідну мову\n"
+        "Choose your native language\n"
+        "Выберите ваш родной язык\n"
+        "👇 👇 👇 "
     )
     await message.answer(
         text, 
@@ -58,7 +62,7 @@ async def cb_setup_native(callback: CallbackQuery, user: User, state: FSMContext
     
     await state.set_state(SetupState.choosing_target)
     await callback.message.edit_text(
-        "🎯 <b>" + t(user.native_language, "Выбери язык, который хочешь выучить:") + "</b>",
+        "<b>" + t(user.native_language, "🎯 Выбери язык, который хочешь выучить:") + "</b>",
         reply_markup=get_setup_language_keyboard("target", user.native_language),
         parse_mode="HTML"
     )
@@ -77,7 +81,7 @@ async def handle_setup_custom_native(message: Message, user: User, state: FSMCon
     
     await state.set_state(SetupState.choosing_target)
     await message.answer(
-        "🎯 <b>" + t(user.native_language, "Выбери язык, который хочешь выучить:") + "</b>",
+        "<b>" + t(user.native_language, "🎯 Выбери язык, который хочешь выучить:") + "</b>",
         reply_markup=get_setup_language_keyboard("target", user.native_language),
         parse_mode="HTML"
     )
