@@ -57,13 +57,13 @@ def format_word_card(analysis: WordAnalysis, lang: str = "ru") -> str:
     
     definition_block = ""
     if getattr(analysis, "definition", None):
-        definition_block = f"\n\n💡 <b>{t(lang, '💡 Смысл:')}</b> <i>{html.escape(analysis.definition)}</i>"
+        definition_block = f"\n\n<b>{t(lang, '💡 Значение:')}</b> <i>{html.escape(analysis.definition)}</i>"
         
     grammar_block = ""
     grammar_notes = getattr(analysis, "grammar_notes", [])
     if grammar_notes:
         grammar_list = " • ".join(html.escape(n) for n in grammar_notes)
-        grammar_block = f"\n📐 <b>{t(lang, '📐 Грамматика:')}</b> {grammar_list}"
+        grammar_block = f"\n<b>{t(lang, '📐 Грамматика:')}</b> {grammar_list}"
 
     card = (
         f"📖 <b>{escaped_word}</b> <i>({escaped_pos})</i>{level_display}\n" + f"{typo_note}" +
@@ -258,7 +258,7 @@ async def handle_text_input(
         return
 
     await bot.send_chat_action(message.chat.id, ChatAction.TYPING)
-    status_msg = await message.answer("🔍 <i>" + t(user.native_language, "Анализирую слово...") + "</i>", parse_mode="HTML")
+    status_msg = await message.answer("<i>" + t(user.native_language, "🔍 Анализирую слово...") + "</i>", parse_mode="HTML")
 
     try:
         analysis = await gemini_service.analyze_text(
