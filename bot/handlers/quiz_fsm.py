@@ -188,7 +188,7 @@ async def present_next_word(
     correct_idx = -1
 
     if mode == "multiple_choice":
-        distractors = await fetch_distractors(user.id, word.translation, count=3)
+        distractors = await fetch_distractors(user.id, word.translation, user.target_language, user.native_language, count=3)
         options = distractors + [word.translation]
         random.shuffle(options)
         correct_idx = options.index(word.translation)
@@ -530,8 +530,7 @@ async def on_quiz_success(
         await message.answer(text, reply_markup=get_quiz_next_keyboard(user.native_language), parse_mode="HTML")
     else:
         await message.answer(text, parse_mode="HTML")
-        from bot.handlers.quiz_fsm import _ask_next_word
-        await _ask_next_word(message, user, state)
+        await present_next_word(message, user, state)
 
 
 async def on_quiz_failure(
@@ -636,6 +635,7 @@ async def cb_quiz_next(
 @router.callback_query(lambda c: c.data == "quiz_stop")
 async def cb_quiz_stop(
     callback: CallbackQuery,
+    user: User,
     state: FSMContext,
 ) -> None:
     await callback.answer()
