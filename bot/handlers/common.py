@@ -37,17 +37,22 @@ class SetupState(StatesGroup):
 async def cmd_start(message: Message, user: User, state: FSMContext) -> None:
     await state.set_state(SetupState.choosing_native)
     name = message.from_user.first_name or "друг"
-    text = (
+    
+    greeting = (
         f"👋 <b>Вітаю / Welcome / Добро пожаловать, {name}!</b>\n\n"
         "Я твій персональний AI-словник.\n"
         "I am your personal AI-dictionary.\n"
-        "Я твой персональный AI-словарь.\n\n"
+        "Я твой персональный AI-словарь."
+    )
+    await message.answer(greeting, parse_mode="HTML")
+    
+    prompt = (
         "Оберіть вашу рідну мову\n"
         "Choose your native language\n"
-        "Выберите ваш родной язык\n\n"
+        "Выберите ваш родной язык"
     )
     await message.answer(
-        text, 
+        prompt, 
         reply_markup=get_setup_language_keyboard("native", user.native_language), 
         parse_mode="HTML"
     )
