@@ -10,6 +10,7 @@ from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
 from aiogram.types import BufferedInputFile, CallbackQuery, Message
+from aiogram.exceptions import TelegramBadRequest
 from bson import ObjectId
 
 from bot.core.database import get_words_collection
@@ -37,6 +38,41 @@ router = Router(name="quiz_fsm")
 class QuizState(StatesGroup):
     answering = State()
 
+
+
+async def clean_temp_messages(bot: Bot, chat_id: int, state: FSMContext):
+    data = await state.get_data()
+    temp_ids = data.get("temp_msg_ids", [])
+    for msg_id in temp_ids:
+        try:
+            await bot.delete_message(chat_id, msg_id)
+        except Exception:
+            pass
+    await state.update_data(temp_msg_ids=[])
+
+async def update_main_quiz_message(bot: Bot, chat_id: int, state: FSMContext, text: str, reply_markup=None):
+    data = await state.get_data()
+    quiz_msg_id = data.get("quiz_msg_id")
+    
+    if quiz_msg_id:
+        try:
+            await bot.edit_message_text(text, chat_id=chat_id, message_id=quiz_msg_id, reply_markup=reply_markup, parse_mode="HTML")
+            return
+        except TelegramBadRequest as e:
+            err = str(e).lower()
+            if "message is not modified" in err:
+                return
+            # If not modified, just return. If not found or other, we will send new below.
+            
+    # Send new
+    msg = await bot.send_message(chat_id, text, reply_markup=reply_markup, parse_mode="HTML")
+    await state.update_data(quiz_msg_id=msg.message_id)
+
+async def add_temp_message(state: FSMContext, msg_id: int):
+    data = await state.get_data()
+    temp_ids = data.get("temp_msg_ids", [])
+    temp_ids.append(msg_id)
+    await state.update_data(temp_msg_ids=temp_ids)
 
 def get_backup_distractors(lang: str) -> list[str]:
     return [
@@ -139,6 +175,9 @@ async def start_quiz_session(
         total_session=len(word_queue),
         completed_session=0,
         correct_first_try=0,
+        reviewed_words_list=[],
+        temp_msg_ids=[],
+        quiz_msg_id=None,
     )
 
     await present_next_word(target_message, user, state)
@@ -155,15 +194,21 @@ async def present_next_word(
     if not queue:
         completed = data.get("completed_session", 0)
         first_tries = data.get("correct_first_try", 0)
-        await state.clear()
-        await message.answer(
+        reviewed_words = data.get("reviewed_words_list", [])
+        words_list_text = "\n".join(reviewed_words) if reviewed_words else t(user.native_language, "Нет слов")
+        
+        text = (
             f"🏁 <b>{t(user.native_language, 'Квиз завершен!')}</b>\n\n" +
             f"🎯 {t(user.native_language, 'Повторено слов:')} <b>{completed}</b>\n"
             f"⭐ {t(user.native_language, 'С первой попытки:')} <b>{first_tries}</b>\n\n" +
-            t(user.native_language, "Отличная работа для долгосрочной памяти! 🧠"),
-            parse_mode="HTML",
+            f"📝 <b>{t(user.native_language, 'Пройденные слова:')}</b>\n{words_list_text}\n\n" +
+            t(user.native_language, "Отличная работа для долгосрочной памяти! 🧠")
         )
+        await update_main_quiz_message(message.bot, message.chat.id, state, text)
+        await state.clear()
         return
+
+    await clean_temp_messages(message.bot, message.chat.id, state)
 
     current_word_id = queue[0]
     words_col = get_words_collection()
@@ -216,7 +261,7 @@ async def present_next_word(
             f"<i>{t(user.native_language, 'Часть речи:')} {html.escape(word.pos)}</i>\n" +
             t(user.native_language, "Напиши слово на изучаемом языке в ответном сообщении (3 попытки):")
         )
-        await message.answer(prompt_text, reply_markup=get_quiz_control_keyboard(user.native_language), parse_mode="HTML")
+        await update_main_quiz_message(message.bot, message.chat.id, state, prompt_text, reply_markup=get_quiz_control_keyboard(user.native_language))
 
     elif mode == "multiple_choice":
         prompt_text = (
@@ -224,11 +269,7 @@ async def present_next_word(
             f"{t(user.native_language, 'Каков перевод слова:')}\n" +
             f"👉 <b>{html.escape(word.canonical_word)}</b> [{html.escape(word.transcription)}]?"
         )
-        await message.answer(
-            prompt_text,
-            reply_markup=get_quiz_options_keyboard(options, user.native_language),
-            parse_mode="HTML",
-        )
+        await update_main_quiz_message(message.bot, message.chat.id, state, prompt_text, reply_markup=get_quiz_options_keyboard(options, user.native_language))
 
     elif mode == "listening":
         prompt_text = (
@@ -238,14 +279,15 @@ async def present_next_word(
         try:
             audio = await tts_service.generate_audio(word.canonical_word, target_lang=user.target_language)
             voice_file = BufferedInputFile(audio.getvalue(), filename="listening.mp3")
-            await message.answer_voice(voice=voice_file, caption=prompt_text, parse_mode="HTML")
-            await message.answer(t(user.native_language, "Введи ответ:"), reply_markup=get_quiz_control_keyboard(user.native_language))
+            msg = await message.answer_voice(voice=voice_file)
+            await add_temp_message(state, msg.message_id)
+            combined_text = prompt_text + "\n\n" + t(user.native_language, "Введи ответ:")
+            await update_main_quiz_message(message.bot, message.chat.id, state, combined_text, reply_markup=get_quiz_control_keyboard(user.native_language))
         except Exception:
             # Fallback to spelling if TTS fails
-            await message.answer(
+            await update_main_quiz_message(message.bot, message.chat.id, state, 
                 f"✍️ {t(user.native_language, 'Напиши перевод слова')} <b>{html.escape(word.translation)}</b>:",
-                reply_markup=get_quiz_control_keyboard(user.native_language),
-                parse_mode="HTML",
+                reply_markup=get_quiz_control_keyboard(user.native_language)
             )
 
     elif mode == "voice_mode":
@@ -256,7 +298,7 @@ async def present_next_word(
             f"<i>{t(user.native_language, 'Значение:')} {html.escape(word.translation)}</i>\n\n" +
             t(user.native_language, "Запиши войс (voice message) с произношением:")
         )
-        await message.answer(prompt_text, reply_markup=get_quiz_control_keyboard(user.native_language), parse_mode="HTML")
+        await update_main_quiz_message(message.bot, message.chat.id, state, prompt_text, reply_markup=get_quiz_control_keyboard(user.native_language))
 
 
 @router.message(Command("quiz"))
@@ -319,12 +361,10 @@ async def handle_mc_choice(
 
         if attempts_left > 0:
             hint = SRSService.get_attempt_1_hint(canonical, user.native_language)
-            await callback.message.answer(
+            await update_main_quiz_message(callback.bot, callback.message.chat.id, state,
                 f"❌ {t(user.native_language, 'Неверно! Осталось попыток:')} {attempts_left}.\n" +
                 f"💡 {t(user.native_language, 'Подсказка:')} {hint}",
-                # Show options again so user can pick another answer
-                reply_markup=get_quiz_options_keyboard(options, user.native_language),
-                parse_mode="HTML",
+                reply_markup=get_quiz_options_keyboard(options, user.native_language)
             )
         else:
             await on_quiz_failure(callback.message, user, word, state)
@@ -337,10 +377,18 @@ async def handle_quiz_voice_answer(
     user: User,
     state: FSMContext,
 ) -> None:
+    try:
+        await message.delete()
+    except Exception:
+        pass
+    try:
+        await message.delete()
+    except Exception:
+        pass
     data = await state.get_data()
     word_id = data.get("current_word_id")
     if not word_id:
-        await message.answer(t(user.native_language, "Пожалуйста, нажми кнопку ниже:"), reply_markup=get_quiz_next_keyboard(user.native_language))
+        await update_main_quiz_message(message.bot, message.chat.id, state, t(user.native_language, "Пожалуйста, нажми кнопку ниже:"), reply_markup=get_quiz_next_keyboard(user.native_language))
         return
     canonical = data.get("canonical_word", "")
     lemma = data.get("lemma", "")
@@ -352,6 +400,7 @@ async def handle_quiz_voice_answer(
     word = Word.model_validate(doc) if doc else None
 
     status_msg = await message.answer("🎙 <i>" + t(user.native_language, "Слушаю твой ответ...") + "</i>", parse_mode="HTML")
+    await add_temp_message(state, status_msg.message_id)
 
     try:
         voice_file = await bot.get_file(message.voice.file_id)
@@ -370,22 +419,23 @@ async def handle_quiz_voice_answer(
         await status_msg.delete()
 
         if eval_result.is_correct:
-            await message.answer(
+            # We pass the feedback into a state variable so on_quiz_success can append it to the main message.
+            # But simpler: just edit main message directly here, or pass to on_quiz_success.
+            feedback_text = (
                 f"🎉 <b>{t(user.native_language, 'Отличное произношение!')}</b>\n" +
                 f"{t(user.native_language, 'Ты сказал:')} «{html.escape(eval_result.transcribed_text)}»\n"
-                f"💬 {html.escape(eval_result.feedback)}",
-                parse_mode="HTML",
+                f"💬 {html.escape(eval_result.feedback)}\n\n"
             )
+            await state.update_data(voice_feedback=feedback_text)
             await on_quiz_success(message, user, word, attempts_left, state)
         else:
             attempts_left -= 1
             await state.update_data(attempts_left=attempts_left)
-            await message.answer(
+            await update_main_quiz_message(message.bot, message.chat.id, state,
                 f"{t(user.native_language, 'Не совсем точно. Распознано:')} «{html.escape(eval_result.transcribed_text)}»\n" +
                 f"💡 {html.escape(eval_result.feedback)}\n"
                 f"{t(user.native_language, 'Осталось попыток:')} {attempts_left}",
-                reply_markup=get_quiz_control_keyboard(user.native_language),
-                parse_mode="HTML",
+                reply_markup=get_quiz_control_keyboard(user.native_language)
             )
             if attempts_left <= 0:
                 await on_quiz_failure(message, user, word, state)
@@ -420,7 +470,7 @@ async def handle_quiz_text_answer(
     data = await state.get_data()
     word_id = data.get("current_word_id")
     if not word_id:
-        await message.answer(t(user.native_language, "Пожалуйста, нажми кнопку ниже:"), reply_markup=get_quiz_next_keyboard(user.native_language))
+        await update_main_quiz_message(message.bot, message.chat.id, state, t(user.native_language, "Пожалуйста, нажми кнопку ниже:"), reply_markup=get_quiz_next_keyboard(user.native_language))
         return
     canonical = data.get("canonical_word", "")
     lemma = data.get("lemma", "")
@@ -452,22 +502,20 @@ async def handle_quiz_text_answer(
         if attempts_left == 2:
             # Hint 1: First letter + blanks
             hint = SRSService.get_attempt_1_hint(canonical, user.native_language)
-            await message.answer(
+            await update_main_quiz_message(message.bot, message.chat.id, state,
                 f"❌ {t(user.native_language, 'Неверно!')}\n\n" +
                 f"💡 <b>{t(user.native_language, 'Подсказка 1:')}</b> {hint}\n" +
                 t(user.native_language, "Осталось 2 попытки. Попробуй еще раз:"),
-                reply_markup=get_quiz_control_keyboard(user.native_language),
-                parse_mode="HTML",
+                reply_markup=get_quiz_control_keyboard(user.native_language)
             )
         elif attempts_left == 1:
             # Hint 2: Example sentence with blank
             hint = SRSService.get_attempt_2_hint(canonical, lemma, examples, user.native_language)
-            await message.answer(
+            await update_main_quiz_message(message.bot, message.chat.id, state,
                 f"❌ {t(user.native_language, 'Снова не то!')}\n\n" +
                 f"💡 <b>{t(user.native_language, 'Подсказка 2 (контекст):')}</b>\n{hint}\n\n" +
                 t(user.native_language, "Осталась последняя попытка:"),
-                reply_markup=get_quiz_control_keyboard(user.native_language),
-                parse_mode="HTML",
+                reply_markup=get_quiz_control_keyboard(user.native_language)
             )
         else:
             # Attempt 3 failed -> Exhausted
@@ -483,6 +531,10 @@ async def on_quiz_success(
 ) -> None:
     data = await state.get_data()
     completed = data.get("completed_session", 0) + 1
+    reviewed = data.get("reviewed_words_list", [])
+    if word:
+        reviewed.append(f"• <b>{html.escape(word.canonical_word)}</b> — {html.escape(word.translation)}")
+
     first_tries = data.get("correct_first_try", 0) + (1 if attempts_left == 3 else 0)
 
     queue: list[str] = data.get("queue", [])
@@ -494,6 +546,7 @@ async def on_quiz_success(
         queue=queue,
         completed_session=completed,
         correct_first_try=first_tries,
+        reviewed_words_list=reviewed,
         current_word_id="",
     )
 
@@ -523,8 +576,9 @@ async def on_quiz_success(
         )
 
         praise = t(user.native_language, "🌟 Великолепно с первой попытки!") if attempts_left == 3 else t(user.native_language, "👍 Правильно!")
+        voice_feedback = data.get("voice_feedback", "")
         text = (
-            f"🎉 <b>{praise}</b>\n\n" +
+            f"{voice_feedback}🎉 <b>{praise}</b>\n\n" +
             f"{t(user.native_language, 'Слово:')} <b>{html.escape(word.canonical_word)}</b> [{html.escape(word.transcription)}] — {html.escape(word.translation)}\n" +
             f"📈 {t(user.native_language, 'Следующее повторение через:')} <b>{srs_res.interval}</b> {t(user.native_language, 'дн.')} ({t(user.native_language, 'шаг')} {srs_res.repetition})\n" +
             f"{t(user.native_language, 'Осталось в этой сессии:')} <b>{len(queue)}</b>"
@@ -532,10 +586,14 @@ async def on_quiz_success(
     else:
         text = f"🎉 <b>{t(user.native_language, 'Правильно!')}</b> {t(user.native_language, 'Осталось в этой сессии:')} <b>{len(queue)}</b>"
 
+    # Clear voice_feedback if it was present
+    if data.get("voice_feedback"):
+        await state.update_data(voice_feedback="")
+        
     if len(queue) > 0:
-        await message.answer(text, reply_markup=get_quiz_next_keyboard(user.native_language), parse_mode="HTML")
+        await update_main_quiz_message(message.bot, message.chat.id, state, text, reply_markup=get_quiz_next_keyboard(user.native_language))
     else:
-        await message.answer(text, parse_mode="HTML")
+        await update_main_quiz_message(message.bot, message.chat.id, state, text)
         await present_next_word(message, user, state)
 
 
@@ -547,6 +605,10 @@ async def on_quiz_failure(
 ) -> None:
     data = await state.get_data()
     completed = data.get("completed_session", 0) + 1
+    reviewed = data.get("reviewed_words_list", [])
+    if word:
+        reviewed.append(f"• <b>{html.escape(word.canonical_word)}</b> — {html.escape(word.translation)}")
+
     queue: list[str] = data.get("queue", [])
     if queue and word and queue[0] == str(word.id):
         queue.pop(0)
@@ -555,6 +617,7 @@ async def on_quiz_failure(
     await state.update_data(
         queue=queue,
         completed_session=completed,
+        reviewed_words_list=reviewed,
         current_word_id="",
     )
 
@@ -591,9 +654,9 @@ async def on_quiz_failure(
             f"{t(user.native_language, 'Осталось в этой сессии:')} <b>{len(queue)}</b>"
         )
         if len(queue) > 0:
-            await message.answer(text, reply_markup=get_quiz_next_keyboard(user.native_language), parse_mode="HTML")
+            await update_main_quiz_message(message.bot, message.chat.id, state, text, reply_markup=get_quiz_next_keyboard(user.native_language))
         else:
-            await message.answer(text, parse_mode="HTML")
+            await update_main_quiz_message(message.bot, message.chat.id, state, text)
 
         # Send fresh pronunciation audio
         try:
@@ -611,10 +674,9 @@ async def on_quiz_failure(
         if len(queue) == 0:
             await present_next_word(message, user, state)
     else:
-        await message.answer(
+        await update_main_quiz_message(message.bot, message.chat.id, state,
             f"❌ {t(user.native_language, 'Неверно.')} {t(user.native_language, 'Осталось в этой сессии:')} <b>{len(queue)}</b>",
-            reply_markup=get_quiz_next_keyboard(user.native_language),
-            parse_mode="HTML",
+            reply_markup=get_quiz_next_keyboard(user.native_language)
         )
         if len(queue) == 0:
             await present_next_word(message, user, state)
@@ -657,11 +719,15 @@ async def cb_quiz_stop(
     data = await state.get_data()
     completed = data.get("completed_session", 0)
     first_tries = data.get("correct_first_try", 0)
-    await state.clear()
+    reviewed_words = data.get("reviewed_words_list", [])
+    words_list_text = "\n".join(reviewed_words) if reviewed_words else t(user.native_language, "Нет слов")
+    
     if callback.message:
-        await callback.message.answer(
+        text = (
             f"🛑 <b>{t(user.native_language, 'Квиз завершен досрочно.')}</b>\n" +
-            f"{t(user.native_language, 'Повторено слов:')} {completed} ({t(user.native_language, 'с 1-й попытки:')} {first_tries}).",
-            parse_mode="HTML",
+            f"{t(user.native_language, 'Повторено слов:')} {completed} ({t(user.native_language, 'с 1-й попытки:')} {first_tries}).\n\n" +
+            f"📝 <b>{t(user.native_language, 'Пройденные слова:')}</b>\n{words_list_text}"
         )
+        await update_main_quiz_message(callback.bot, callback.message.chat.id, state, text)
+    await state.clear()
 
