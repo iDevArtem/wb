@@ -71,9 +71,21 @@ class WordAnalysis(BaseModel):
         default=None,
         description="One short, simple sentence explaining the meaning in the target language (like a learner's dictionary)",
     )
+    definition_native: str | None = Field(
+        default=None,
+        description="Translation of the definition into the native language",
+    )
     grammar_notes: list[str] = Field(
         default_factory=list,
         description="Very short, critical grammar tags/forms. E.g. ['[C]', 'plural: tables'] for English nouns, ['der', 'pl: die Tische'] for German nouns, or ['[m]'] for romance languages.",
+    )
+    grammar_notes_native: list[str] = Field(
+        default_factory=list,
+        description="Translation of the grammar_notes into the native language",
+    )
+    pos_native: str | None = Field(
+        default=None,
+        description="Translation of the part of speech (pos) into the native language",
     )
 
 
@@ -106,10 +118,10 @@ Rules:
 2. If the input is in {target_lang} with typos (e.g. "necesary", "definately"), fix the spelling in `canonical_word`, and put the original typo in `corrected_from`. If no typo, `corrected_from` must be null.
 3. If the input is an inflected form, set `lemma` to its base dictionary headword.
 4. Phonetics: Provide strict IPA with stress marks if applicable for {target_lang}.
-5. Provide accurate, idiomatic {native_lang} translation in `translation`.
+5. Provide accurate, idiomatic {native_lang} translation in `translation`. Also provide the translated part of speech in `pos_native`.
 6. `level`: Determine the CEFR level (A1, A2, B1, B2, C1, C2) of the word.
-7. `definition`: Provide one short, simple explanation of the meaning in {target_lang}.
-8. `grammar_notes`: Provide a minimal list of crucial grammar facts. Example: for English nouns include `[C]` or `[U]`, for verbs include `[intransitive]`. For German nouns include gender `der`/`die`/`das` and plural form. Keep these tags very short (1-3 words max).
+7. `definition`: Provide one short, simple explanation of the meaning in {target_lang}. Provide its translation in `definition_native`.
+8. `grammar_notes`: Provide a minimal list of crucial grammar facts. Example: for English nouns include `[C]` or `[U]`, for verbs include `[intransitive]`. Provide translations of these notes in `grammar_notes_native`.
 """
 
 def get_voice_quiz_prompt(native_lang: str, target_lang: str) -> str:

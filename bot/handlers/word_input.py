@@ -55,20 +55,31 @@ def format_word_card(analysis: WordAnalysis, lang: str = "ru") -> str:
 
     level_display = f" • <b>{analysis.level}</b>" if getattr(analysis, "level", None) else ""
     
+    pos_native = getattr(analysis, "pos_native", None)
+    pos_native_display = f" <i>({html.escape(pos_native)})</i>" if pos_native else ""
+    transl_line = f"💬 <b>{escaped_transl}</b>{pos_native_display}{level_display}"
+    
     definition_block = ""
     if getattr(analysis, "definition", None):
-        definition_block = f"\n\n<b>{t(lang, '💡 Значение:')}</b> <i>{html.escape(analysis.definition)}</i>"
+        definition_block = f"\n\n<b>{t(lang, '💡 Значение:')}</b>\n<i>{html.escape(analysis.definition)}</i>"
+        definition_native = getattr(analysis, "definition_native", None)
+        if definition_native:
+            definition_block += f"\n<span class=\"tg-spoiler\"><i>{html.escape(definition_native)}</i></span>"
         
     grammar_block = ""
     grammar_notes = getattr(analysis, "grammar_notes", [])
     if grammar_notes:
         grammar_list = " • ".join(html.escape(n) for n in grammar_notes)
-        grammar_block = f"\n<b>{t(lang, '📐 Грамматика:')}</b> {grammar_list}"
+        grammar_block = f"\n\n<b>{t(lang, '📐 Грамматика:')}</b>\n{grammar_list}"
+        grammar_notes_native = getattr(analysis, "grammar_notes_native", [])
+        if grammar_notes_native:
+            grammar_list_native = " • ".join(html.escape(n) for n in grammar_notes_native)
+            grammar_block += f"\n<span class=\"tg-spoiler\">{grammar_list_native}</span>"
 
     card = (
         f"📖 <b>{escaped_word}</b> <i>({escaped_pos})</i>{level_display}\n" + f"{typo_note}" +
         f"🗣 {trans_display}"
-        f"{lemma_note}\n" + f"💬 <b>{escaped_transl}</b>" +
+        f"{lemma_note}\n" + f"{transl_line}" +
         f"{definition_block}"
         f"{grammar_block}"
     )

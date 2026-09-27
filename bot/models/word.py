@@ -22,7 +22,10 @@ class Word(MongoBaseModel):
     corrected_from: str | None = None
     level: str | None = None
     definition: str | None = None
+    definition_native: str | None = None
+    pos_native: str | None = None
     grammar_notes: list[str] = Field(default_factory=list)
+    grammar_notes_native: list[str] = Field(default_factory=list)
     # Legacy fields
     examples: list[dict[str, str]] = Field(default_factory=list)
     synonyms_collocations: list[str] = Field(default_factory=list)
