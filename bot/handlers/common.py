@@ -133,8 +133,8 @@ async def finalize_setup(message_obj: Message, user: User, target_code: str, sta
 
 @router.message(Command("help"))
 @router.message(TranslatedText("❓ Помощь"))
-@router.message(F.text == "❓")
-async def cmd_help(message: Message) -> None:
+@router.message(F.text.in_({"❓", "❓\ufe0f"}))
+async def cmd_help(message: Message, user: User) -> None:
     text = (
         "📖 <b>" + t(user.native_language, "Справочник возможностей бота:") + "</b>\n\n" + 
         "1️⃣ <b>" + t(user.native_language, "Добавление слов (Universal Input):") + "</b>\n" +
@@ -156,7 +156,7 @@ async def cmd_help(message: Message) -> None:
 
 @router.message(Command("stats"))
 @router.message(TranslatedText("📊 Статистика"))
-@router.message(F.text == "📊")
+@router.message(F.text.in_({"📊", "📊\ufe0f"}))
 async def cmd_stats(message: Message, user: User) -> None:
     now_utc = datetime.now(timezone.utc)
     words_col = get_words_collection()
@@ -199,7 +199,7 @@ async def cmd_stats(message: Message, user: User) -> None:
 
 @router.message(Command("archive"))
 @router.message(TranslatedText("📚 Изучено"))
-@router.message(F.text == "📚")
+@router.message(F.text.in_({"📚", "📚\ufe0f"}))
 async def cmd_archive(message: Message, user: User) -> None:
     words_col = get_words_collection()
     cursor = (
@@ -347,7 +347,7 @@ async def render_words_page(
 
 @router.message(Command("words"))
 @router.message(TranslatedText("📖 Мой словарь"))
-@router.message(F.text == "📖")
+@router.message(F.text.in_({"📖", "📖\ufe0f"}))
 async def cmd_words(message: Message, user: User) -> None:
     text, keyboard = await render_words_page(user, page=1)
     await message.answer(text, reply_markup=keyboard, parse_mode="HTML")
