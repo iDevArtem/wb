@@ -204,6 +204,7 @@ async def present_next_word(
             f"📝 <b>{t(user.native_language, 'Пройденные слова:')}</b>\n{words_list_text}\n\n" +
             t(user.native_language, "Отличная работа для долгосрочной памяти! 🧠")
         )
+        await clean_temp_messages(message.bot, message.chat.id, state)
         await update_main_quiz_message(message.bot, message.chat.id, state, text)
         await state.clear()
         return
@@ -381,14 +382,11 @@ async def handle_quiz_voice_answer(
         await message.delete()
     except Exception:
         pass
-    try:
-        await message.delete()
-    except Exception:
-        pass
     data = await state.get_data()
     word_id = data.get("current_word_id")
     if not word_id:
-        await update_main_quiz_message(message.bot, message.chat.id, state, t(user.native_language, "Пожалуйста, нажми кнопку ниже:"), reply_markup=get_quiz_next_keyboard(user.native_language))
+        msg = await message.answer(t(user.native_language, "Пожалуйста, нажми кнопку ниже:"))
+        await add_temp_message(state, msg.message_id)
         return
     canonical = data.get("canonical_word", "")
     lemma = data.get("lemma", "")
@@ -467,10 +465,15 @@ async def handle_quiz_text_answer(
     user: User,
     state: FSMContext,
 ) -> None:
+    try:
+        await message.delete()
+    except Exception:
+        pass
     data = await state.get_data()
     word_id = data.get("current_word_id")
     if not word_id:
-        await update_main_quiz_message(message.bot, message.chat.id, state, t(user.native_language, "Пожалуйста, нажми кнопку ниже:"), reply_markup=get_quiz_next_keyboard(user.native_language))
+        msg = await message.answer(t(user.native_language, "Пожалуйста, нажми кнопку ниже:"))
+        await add_temp_message(state, msg.message_id)
         return
     canonical = data.get("canonical_word", "")
     lemma = data.get("lemma", "")
@@ -662,11 +665,12 @@ async def on_quiz_failure(
         try:
             audio = await tts_service.generate_audio(word.canonical_word, target_lang=user.target_language)
             voice_file = BufferedInputFile(audio.getvalue(), filename=f"{word.canonical_word}.mp3")
-            await message.answer_voice(
+            msg = await message.answer_voice(
                 voice=voice_file,
                 caption=f"🔊 {t(user.native_language, 'Запомни произношение:')} <b>{html.escape(word.canonical_word)}</b>",
                 parse_mode="HTML",
             )
+            await add_temp_message(state, msg.message_id)
         except Exception:
             logger.exception("Failed to send pronunciation after failure")
 
@@ -728,6 +732,7 @@ async def cb_quiz_stop(
             f"{t(user.native_language, 'Повторено слов:')} {completed} ({t(user.native_language, 'с 1-й попытки:')} {first_tries}).\n\n" +
             f"📝 <b>{t(user.native_language, 'Пройденные слова:')}</b>\n{words_list_text}"
         )
+        await clean_temp_messages(callback.bot, callback.message.chat.id, state)
         await update_main_quiz_message(callback.bot, callback.message.chat.id, state, text)
     await state.clear()
 
