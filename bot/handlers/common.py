@@ -278,7 +278,7 @@ WORDS_PAGE_SIZE = 10
 async def render_words_page(
     user: User,
     page: int = 1,
-) -> tuple[str, InlineKeyboardMarkup | None]:
+) -> tuple[InputRichMessage | str, InlineKeyboardMarkup | None]:
     now_utc = datetime.now(timezone.utc)
     words_col = get_words_collection()
 
@@ -313,10 +313,12 @@ async def render_words_page(
     words = [Word.model_validate(doc) async for doc in cursor]
 
     header = (
-        f"📚 <b>{t(user.native_language, 'Слова на изучении')}</b>\n" + f"{t(user.native_language, 'Всего слов:')} <b>{total_count}</b> • {t(user.native_language, 'Страница')} <b>{page}</b> {t(user.native_language, 'из')} <b>{total_pages}</b>\n" +
-        f"<i>{t(user.native_language, '(Сортировка: сначала слова, готовые к повторению)')}</i>\n\n"
+        f"<h3>📚 {t(user.native_language, 'Слова на изучении')}</h3>" +
+        f"<p>{t(user.native_language, 'Всего слов:')} <b>{total_count}</b> • {t(user.native_language, 'Страница')} <b>{page}</b> {t(user.native_language, 'из')} <b>{total_pages}</b><br/>" +
+        f"<i>{t(user.native_language, '(Сортировка: сначала слова, готовые к повторению)')}</i></p>"
     )
 
+    table = "<table compact><tr><th>" + t(user.native_language, "Слово") + "</th><th>" + t(user.native_language, "Перевод") + "</th><th>" + t(user.native_language, "Статус") + "</th></tr>"
     rows = []
     for idx, w in enumerate(words, start=offset + 1):
         review_time = w.next_review_at
@@ -335,12 +337,13 @@ async def render_words_page(
                 status = f"🟢 {t(user.native_language, 'через')} {days} {t(user.native_language, 'дн.')}"
 
         short_transl = w.translation.split(",")[0].strip()
-        transcription_str = f" [{html.escape(w.transcription)}]" if w.transcription else ""
+        transcription_str = f" <span class=\"tg-spoiler\">[{html.escape(w.transcription)}]</span>" if w.transcription else ""
         rows.append(
-            f"{idx}. <b>{html.escape(w.canonical_word)}</b>{transcription_str} — {html.escape(short_transl)}\n" + f"   ↳ ⏳ {w.interval} {t(user.native_language, 'дн.')} ({t(user.native_language, 'шаг')} {w.repetition}) • {status}"
+            f"<tr><td><b>{html.escape(w.canonical_word)}</b>{transcription_str}</td><td>{html.escape(short_transl)}</td><td>{status}</td></tr>"
         )
 
-    text = header + "\n\n".join(rows)
+    html_content = header + table + "".join(rows) + "</table>"
+    text = InputRichMessage(html=html_content)
     keyboard = get_words_pagination_keyboard(page, total_pages, user.native_language)
     return text, keyboard
 
@@ -350,7 +353,10 @@ async def render_words_page(
 @router.message(F.text.in_({"📖", "📖\ufe0f"}))
 async def cmd_words(message: Message, user: User) -> None:
     text, keyboard = await render_words_page(user, page=1)
-    await message.answer(text, reply_markup=keyboard, parse_mode="HTML")
+    if isinstance(text, InputRichMessage):
+        await message.bot.send_rich_message(chat_id=message.chat.id, rich_message=text, reply_markup=keyboard)
+    else:
+        await message.answer(text, reply_markup=keyboard, parse_mode="HTML")
 
 
 @router.callback_query(lambda c: c.data and c.data.startswith("words_page:"))
@@ -359,7 +365,10 @@ async def cb_words_page(callback: CallbackQuery, user: User) -> None:
     text, keyboard = await render_words_page(user, page=page)
     await callback.answer()
     if callback.message:
-        await callback.message.edit_text(text, reply_markup=keyboard, parse_mode="HTML")
+        if isinstance(text, InputRichMessage):
+            await callback.message.edit_text(text=None, rich_message=text, reply_markup=keyboard)
+        else:
+            await callback.message.edit_text(text, reply_markup=keyboard, parse_mode="HTML")
 
 
 @router.callback_query(lambda c: c.data == "noop")
