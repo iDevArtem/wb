@@ -337,9 +337,8 @@ async def render_words_page(
                 status = f"🟢 {t(user.native_language, 'через')} {days} {t(user.native_language, 'дн.')}"
 
         short_transl = w.translation.split(",")[0].strip()
-        transcription_str = f" <span class=\"tg-spoiler\">[{html.escape(w.transcription)}]</span>" if w.transcription else ""
         rows.append(
-            f"<tr><td><b>{html.escape(w.canonical_word)}</b>{transcription_str}</td><td>{html.escape(short_transl)}</td><td>{status}</td></tr>"
+            f"<tr><td><b>{html.escape(w.canonical_word)}</b></td><td>{html.escape(short_transl)}</td><td>{status}</td></tr>"
         )
 
     html_content = header + table + "".join(rows) + "</table>"
