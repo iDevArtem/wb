@@ -166,7 +166,7 @@ async def handle_voice_input(
             card_text = format_word_card(existing, user.native_language)
             text = (
                 f"{card_text}\n\n"
-                f"💡 <i>{t(user.native_language, 'Ты уже учишь это слово!')} "
+                f"<i>{t(user.native_language, '💡 Ты уже учишь слово')}  "
                 f"{t(user.native_language, 'Интервал повторения:')} <b>{existing.interval}</b> {t(user.native_language, 'дн.')}</i>\n"
                 f"{t(user.native_language, 'Хочешь повторить прямо сейчас?')}"
             )
@@ -267,7 +267,7 @@ async def handle_text_input(
         card_text = format_word_card(direct_match, user.native_language)
         dup_text = (
             f"{card_text}\n\n"
-            f"💡 <i>{t(user.native_language, 'Ты уже учишь это слово!')} "
+            f"<i>{t(user.native_language, '💡 Ты уже учишь слово')}  "
             f"{t(user.native_language, 'Интервал повторения:')} <b>{direct_match.interval}</b> {t(user.native_language, 'дн.')}</i>\n"
             f"{t(user.native_language, 'Хочешь повторить прямо сейчас?')}"
         )
@@ -295,9 +295,12 @@ async def handle_text_input(
 
         if existing:
             await status_msg.delete()
+            card_text = format_word_card(existing, user.native_language)
             dup_text = (
-                f"💡 {t(user.native_language, 'Ты уже учишь слово')} <b>{html.escape(existing.canonical_word)}</b> " +
-                f"({t(user.native_language, '(форма/перевод:')} <i>{html.escape(text)}</i>)!\n" + f"{t(user.native_language, 'Интервал повторения:')} <b>{existing.interval}</b> {t(user.native_language, 'дн.')}\n" + t(user.native_language, "Хочешь повторить прямо сейчас?")
+                f"<i>{t(user.native_language, '💡 Ты уже учишь слово')}  \n\n"
+                f"{card_text}\n\n"
+                f"{t(user.native_language, 'Интервал повторения:')} <b>{existing.interval}</b> {t(user.native_language, 'дн.')}</i>\n"
+                f"{t(user.native_language, 'Хочешь повторить прямо сейчас?')}"
             )
             await message.answer(
                 dup_text,
