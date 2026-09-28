@@ -10,7 +10,7 @@ from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
 from bson import ObjectId
 
-from bot.core.database import get_words_collection
+from bot.core.config import settings\nfrom bot.core.database import get_words_collection
 from bot.keyboards.reply import get_main_menu_keyboard
 from bot.keyboards.inline import (
     get_archive_item_keyboard,
@@ -342,9 +342,28 @@ async def render_words_page(
         )
 
     html_content = header + table + "".join(rows) + "</table>"
+    
+    # Let's append some rich buttons to html_content!
+    html_content += "\n<tg-button-row align=\"center\">"
+    if page > 1:
+        html_content += f"<tg-button type=\"callback_data\" style=\"primary\" data=\"words_page:{page - 1}\">⬅️ Назад</tg-button>"
+    html_content += f"<tg-button type=\"callback_data\" style=\"link\" data=\"noop\">📄 {page}/{total_pages}</tg-button>"
+    if page < total_pages:
+        html_content += f"<tg-button type=\"callback_data\" style=\"primary\" data=\"words_page:{page + 1}\">Вперед ➡️</tg-button>"
+    html_content += "</tg-button-row>"
+    
+    if settings.webapp_url:
+        html_content += "<tg-button-row align=\"center\">"
+        html_content += f"<tg-button type=\"web_app\" style=\"link\" url=\"{settings.webapp_url}\">🌐 Открыть веб-словарь</tg-button>"
+        html_content += "</tg-button-row>"
+    
+    html_content += "<tg-button-row align=\"center\">"
+    html_content += "<tg-button type=\"callback_data\" style=\"success\" data=\"quiz_start_due\">🧠 Повторить слова</tg-button>"
+    html_content += "<tg-button type=\"callback_data\" style=\"danger\" data=\"dismiss\">🔙 Закрыть</tg-button>"
+    html_content += "</tg-button-row>"
+    
     text = InputRichMessage(html=html_content)
-    keyboard = get_words_pagination_keyboard(page, total_pages, user.native_language)
-    return text, keyboard
+    return text, None
 
 
 @router.message(Command("words"))
