@@ -10,7 +10,8 @@ from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
 from bson import ObjectId
 
-from bot.core.config import settings\nfrom bot.core.database import get_words_collection
+from bot.core.config import settings
+from bot.core.database import get_words_collection
 from bot.keyboards.reply import get_main_menu_keyboard
 from bot.keyboards.inline import (
     get_archive_item_keyboard,
