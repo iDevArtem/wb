@@ -31,16 +31,18 @@ logger = logging.getLogger(__name__)
 router = Router(name="word_input")
 
 
-def format_word_card(analysis: WordAnalysis, lang: str = "ru") -> str:
+def format_word_card(analysis: WordAnalysis | Word, lang: str = "ru") -> str:
     escaped_word = html.escape(analysis.canonical_word)
     escaped_pos = html.escape(analysis.pos)
     escaped_lemma = html.escape(analysis.lemma)
     escaped_transl = html.escape(analysis.translation)
 
-    if analysis.transcription_uk and analysis.transcription_us and analysis.transcription_uk != analysis.transcription_us:
-        trans_display = f"<code>{html.escape(analysis.transcription_uk)}</code> | <code>{html.escape(analysis.transcription_us)}</code>"
+    trans_uk = getattr(analysis, "transcription_uk", None)
+    trans_us = getattr(analysis, "transcription_us", None)
+    if trans_uk and trans_us and trans_uk != trans_us:
+        trans_display = f"<code>{html.escape(trans_uk)}</code> | <code>{html.escape(trans_us)}</code>"
     else:
-        raw_trans = analysis.transcription or analysis.transcription_us or analysis.transcription_uk or ""
+        raw_trans = getattr(analysis, "transcription", None) or trans_us or trans_uk or ""
         trans_display = f"[{html.escape(raw_trans)}]"
 
     typo_note = ""
@@ -161,8 +163,12 @@ async def handle_voice_input(
 
         if existing:
             await status_msg.delete()
+            card_text = format_word_card(existing, user.native_language)
             text = (
-                f"💡 {t(user.native_language, 'Ты уже учишь слово')} <b>{html.escape(existing.canonical_word)}</b>!\n" + f"{t(user.native_language, 'Интервал повторения:')} <b>{existing.interval}</b> {t(user.native_language, 'дн.')}\n" + t(user.native_language, "Хочешь повторить прямо сейчас?")
+                f"{card_text}\n\n"
+                f"💡 <i>{t(user.native_language, 'Ты уже учишь это слово!')} "
+                f"{t(user.native_language, 'Интервал повторения:')} <b>{existing.interval}</b> {t(user.native_language, 'дн.')}</i>\n"
+                f"{t(user.native_language, 'Хочешь повторить прямо сейчас?')}"
             )
             await message.answer(
                 text,
@@ -258,8 +264,12 @@ async def handle_text_input(
     # Check for direct local duplicate before making an API call
     direct_match = await check_existing_word(user, text)
     if direct_match:
+        card_text = format_word_card(direct_match, user.native_language)
         dup_text = (
-            f"💡 {t(user.native_language, 'Ты уже учишь слово')} <b>{html.escape(direct_match.canonical_word)}</b>!\n" + f"{t(user.native_language, 'Интервал повторения:')} <b>{direct_match.interval}</b> {t(user.native_language, 'дн.')}\n" + t(user.native_language, "Хочешь повторить прямо сейчас?")
+            f"{card_text}\n\n"
+            f"💡 <i>{t(user.native_language, 'Ты уже учишь это слово!')} "
+            f"{t(user.native_language, 'Интервал повторения:')} <b>{direct_match.interval}</b> {t(user.native_language, 'дн.')}</i>\n"
+            f"{t(user.native_language, 'Хочешь повторить прямо сейчас?')}"
         )
         await message.answer(
             dup_text,

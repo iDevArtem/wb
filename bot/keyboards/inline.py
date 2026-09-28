@@ -50,12 +50,12 @@ def get_duplicate_word_keyboard(word_id: int | str, lang: str = "ru") -> InlineK
     )
     builder.row(
         InlineKeyboardButton(
-            text=t(lang, "🔊 Послушать"),
+            text=t(lang, "🔊 Озвучить еще раз"),
             callback_data=f"tts:{word_id}",
         ),
         InlineKeyboardButton(
-            text=t(lang, "🔙 Понятно"),
-            callback_data="dismiss",
+            text=t(lang, "💬 Примеры"),
+            callback_data=f"examples:{word_id}",
         ),
     )
     builder.row(
