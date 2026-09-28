@@ -126,12 +126,8 @@ cp .env.example .env
 - `BOT_TOKEN` — токен вашего Telegram-бота от [@BotFather](https://t.me/BotFather).
 - `GEMINI_API_KEY` — API-ключ от [Google AI Studio](https://aistudio.google.com/).
 
-### 3. Применение миграций базы данных
-```bash
-alembic upgrade head
-```
-
-### 4. Запуск бота локально
+### 3. Запуск бота локально
+Убедитесь, что у вас запущен локальный сервер MongoDB (например, через Docker: `docker run -d -p 27017:27017 mongo`), затем запустите бота:
 ```bash
 python main.py
 ```
@@ -153,7 +149,7 @@ docker compose up -d --build
 docker compose logs -f
 ```
 
-База данных SQLite будет сохраняться в локальную директорию `./data/english_bot.db`.
+Данные MongoDB будут сохраняться в volume, настроенный в `docker-compose.yml`.
 
 ---
 

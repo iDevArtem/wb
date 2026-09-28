@@ -58,6 +58,16 @@ def get_duplicate_word_keyboard(word_id: int | str, lang: str = "ru") -> InlineK
             callback_data="dismiss",
         ),
     )
+    builder.row(
+        InlineKeyboardButton(
+            text=t(lang, "🗑 Удалить"),
+            callback_data=f"delete_word:{word_id}",
+        ),
+        InlineKeyboardButton(
+            text=t(lang, "✅ Знаю (в архив)"),
+            callback_data=f"archive_word:{word_id}",
+        ),
+    )
     return builder.as_markup()
 
 
