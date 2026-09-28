@@ -397,8 +397,7 @@ async def handle_quiz_voice_answer(
     doc = await words_col.find_one(query)
     word = Word.model_validate(doc) if doc else None
 
-    status_msg = await message.answer("🎙 <i>" + t(user.native_language, "Слушаю твой ответ...") + "</i>", parse_mode="HTML")
-    await add_temp_message(state, status_msg.message_id)
+    await message.bot.send_chat_action(message.chat.id, "record_voice")
 
     try:
         voice_file = await bot.get_file(message.voice.file_id)
@@ -414,7 +413,6 @@ async def handle_quiz_voice_answer(
             target_lang=user.target_language,
         )
 
-        await status_msg.delete()
 
         if eval_result.is_correct:
             # We pass the feedback into a state variable so on_quiz_success can append it to the main message.
@@ -440,20 +438,20 @@ async def handle_quiz_voice_answer(
 
     except GeminiQuotaExhaustedError:
         logger.warning("Gemini quota exhausted during quiz voice evaluation")
-        await status_msg.edit_text(
+        await message.answer(
             "⏳ <b>" + t(user.native_language, "Сервис ИИ временно перегружен (исчерпан дневной лимит запросов к моделям).") + "</b>\n\n" +
             t(user.native_language, "Пожалуйста, повторите голосовой ответ через минуту или введите слово текстом."),
             parse_mode="HTML",
         )
     except GeminiServiceError:
         logger.exception("Gemini service error evaluating quiz voice")
-        await status_msg.edit_text(
+        await message.answer(
             t(user.native_language, "⚠️ Не удалось проверить произношение с помощью ИИ. Попробуйте записать еще раз."),
             parse_mode="HTML",
         )
     except Exception:
         logger.exception("Error evaluating quiz voice")
-        await status_msg.edit_text(
+        await message.answer(
             t(user.native_language, "⚠️ Произошла ошибка при проверке голосового ответа. Попробуйте еще раз."),
             parse_mode="HTML",
         )

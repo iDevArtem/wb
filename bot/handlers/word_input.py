@@ -141,13 +141,12 @@ async def handle_voice_input(
         return
 
     await bot.send_chat_action(message.chat.id, ChatAction.RECORD_VOICE)
-    status_msg = await message.answer(t(user.native_language, '🎙 <i>Слушаю и анализирую произношение...</i>'), parse_mode="HTML")
 
     try:
         # Download voice directly into in-memory stream
         voice_file = await bot.get_file(message.voice.file_id)
         if not voice_file.file_path:
-            await status_msg.edit_text(t(user.native_language, "❌ Не удалось загрузить голосовое сообщение из Telegram."))
+            await message.answer(t(user.native_language, "❌ Не удалось загрузить голосовое сообщение из Telegram."))
             return
 
         voice_stream = io.BytesIO()
@@ -168,7 +167,6 @@ async def handle_voice_input(
             existing = await check_existing_word(user, analysis.lemma)
 
         if existing:
-            await status_msg.delete()
             card_text = format_word_card(analysis, user.native_language)
             text = (
                 f"{card_text}\n\n"
@@ -217,8 +215,6 @@ async def handle_voice_input(
         insert_res = await words_col.insert_one(new_word.to_mongo())
         new_word.id = str(insert_res.inserted_id)
 
-        await status_msg.delete()
-
         # Send card text
         card_text = format_word_card(analysis, user.native_language)
         voice_file_input = BufferedInputFile(
@@ -236,19 +232,19 @@ async def handle_voice_input(
 
     except GeminiQuotaExhaustedError:
         logger.warning("Gemini quota exhausted during voice input")
-        await status_msg.edit_text(
+        await message.answer(
             "⏳ <b>" + t(user.native_language, "Сервис ИИ временно перегружен (исчерпан дневной лимит запросов к моделям).") + "</b>\n\n" + t(user.native_language, "Пожалуйста, подождите немного или повторите попытку позже."),
             parse_mode="HTML",
         )
     except GeminiServiceError:
         logger.exception("Gemini service error processing voice input")
-        await status_msg.edit_text(
+        await message.answer(
             t(user.native_language, "⚠️ Не удалось распознать голосовое сообщение с помощью ИИ. Попробуйте записать еще раз."),
             parse_mode="HTML",
         )
     except Exception:
         logger.exception("Error processing voice input")
-        await status_msg.edit_text(
+        await message.answer(
             t(user.native_language, "⚠️ Произошла непредвиденная ошибка при обработке голосового сообщения. Попробуйте позже."),
             parse_mode="HTML",
         )
@@ -292,7 +288,6 @@ async def handle_text_input(
         return
 
     await bot.send_chat_action(message.chat.id, ChatAction.TYPING)
-    status_msg = await message.answer("<i>" + t(user.native_language, "🔍 Анализирую слово...") + "</i>", parse_mode="HTML")
 
     try:
         analysis = await gemini_service.analyze_text(
@@ -307,7 +302,6 @@ async def handle_text_input(
             existing = await check_existing_word(user, analysis.lemma)
 
         if existing:
-            await status_msg.delete()
             card_text = format_word_card(analysis, user.native_language)
             dup_text = (
                 f"<i>{t(user.native_language, '💡 Ты уже учишь слово')}\n\n"
@@ -355,7 +349,6 @@ async def handle_text_input(
         insert_res = await words_col.insert_one(new_word.to_mongo())
         new_word.id = str(insert_res.inserted_id)
 
-        await status_msg.delete()
 
         # Send voice and card
         card_text = format_word_card(analysis, user.native_language)
@@ -374,19 +367,19 @@ async def handle_text_input(
 
     except GeminiQuotaExhaustedError:
         logger.warning("Gemini quota exhausted during text input")
-        await status_msg.edit_text(
+        await message.answer(
             "⏳ <b>" + t(user.native_language, "Сервис ИИ временно перегружен (исчерпан дневной лимит запросов к моделям).") + "</b>\n\n" + t(user.native_language, "Пожалуйста, подождите немного или повторите попытку позже."),
             parse_mode="HTML",
         )
     except GeminiServiceError:
         logger.exception("Gemini service error analyzing text word")
-        await status_msg.edit_text(
+        await message.answer(
             t(user.native_language, "⚠️ Не удалось проанализировать слово с помощью ИИ. Пожалуйста, попробуйте снова через несколько секунд."),
             parse_mode="HTML",
         )
     except Exception:
         logger.exception("Error analyzing text word")
-        await status_msg.edit_text(
+        await message.answer(
             t(user.native_language, "⚠️ Произошла непредвиденная ошибка при анализе слова. Попробуйте позже."),
             parse_mode="HTML",
         )
