@@ -8,14 +8,14 @@ def get_main_menu_keyboard(lang: str) -> ReplyKeyboardMarkup:
     """
     Main menu using ReplyKeyboardMarkup.
     Layout:
-    [ 📖 ] [ 🎯 ]
+    [ 📖 ] [ 🧠 ]
     [ 📊 ] [ 📚 ]
     [ ⚙️ ] [ ❓ ]
     """
     builder = ReplyKeyboardBuilder()
     
     builder.add(KeyboardButton(text="📖"))
-    builder.add(KeyboardButton(text="🎯"))
+    builder.add(KeyboardButton(text="🧠"))
     builder.add(KeyboardButton(text="📊"))
     builder.add(KeyboardButton(text="📚"))
     builder.add(KeyboardButton(text="⚙️"))

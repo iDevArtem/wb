@@ -199,7 +199,7 @@ async def present_next_word(
         
         text = (
             f"🏁 <b>{t(user.native_language, 'Квиз завершен!')}</b>\n\n" +
-            f"🎯 {t(user.native_language, 'Повторено слов:')} <b>{completed}</b>\n"
+            f"🧠 {t(user.native_language, 'Повторено слов:')} <b>{completed}</b>\n"
             f"⭐ {t(user.native_language, 'С первой попытки:')} <b>{first_tries}</b>\n\n" +
             f"📝 <b>{t(user.native_language, 'Пройденные слова:')}</b>\n{words_list_text}\n\n" +
             t(user.native_language, "Отличная работа для долгосрочной памяти! 🧠")
@@ -303,8 +303,8 @@ async def present_next_word(
 
 
 @router.message(Command("quiz"))
-@router.message(TranslatedText("🎯 Начать квиз"))
-@router.message(F.text.in_({"🎯", "🎯\ufe0f"}))
+@router.message(TranslatedText("🧠 Начать квиз"))
+@router.message(F.text.in_({"🧠", "🧠\ufe0f"}))
 async def cmd_quiz(message: Message, user: User, state: FSMContext) -> None:
     await state.clear()
     await start_quiz_session(message, user, state, allow_all=False)

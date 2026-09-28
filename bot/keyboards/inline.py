@@ -44,7 +44,7 @@ def get_duplicate_word_keyboard(word_id: int | str, lang: str = "ru") -> InlineK
     builder = InlineKeyboardBuilder()
     builder.row(
         InlineKeyboardButton(
-            text=t(lang, "🎯 Повторить прямо сейчас"),
+            text=t(lang, "🧠 Повторить прямо сейчас"),
             callback_data=f"quiz_word:{word_id}",
         ),
     )
@@ -114,7 +114,7 @@ def get_scheduler_notification_keyboard(lang: str = "ru") -> InlineKeyboardMarku
     builder = InlineKeyboardBuilder()
     builder.row(
         InlineKeyboardButton(
-            text=t(lang, "🎯 Начать квиз"),
+            text=t(lang, "🧠 Начать квиз"),
             callback_data="quiz_start_due",
         ),
     )
@@ -145,7 +145,7 @@ def get_settings_keyboard(lang: str = "ru") -> InlineKeyboardMarkup:
     )
     builder.row(
         InlineKeyboardButton(text=t(lang, "🗣 Родной язык"), callback_data="set_native_lang"),
-        InlineKeyboardButton(text=t(lang, "🎯 Изучаемый язык"), callback_data="set_target_lang"),
+        InlineKeyboardButton(text=t(lang, "🧠 Изучаемый язык"), callback_data="set_target_lang"),
     )
     builder.row(
         InlineKeyboardButton(text=t(lang, "🌍 Выбрать часовой пояс"), callback_data="set_tz"),
@@ -220,7 +220,7 @@ def get_words_pagination_keyboard(page: int, total_pages: int, lang: str = "ru")
         )
 
     builder.row(
-        InlineKeyboardButton(text=t(lang, "🎯 Повторить слова (/quiz)"), callback_data="quiz_start_due"),
+        InlineKeyboardButton(text=t(lang, "🧠 Повторить слова (/quiz)"), callback_data="quiz_start_due"),
         InlineKeyboardButton(text=t(lang, "🔙 Закрыть"), callback_data="dismiss"),
     )
     return builder.as_markup()

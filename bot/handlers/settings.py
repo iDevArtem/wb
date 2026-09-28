@@ -37,7 +37,7 @@ async def cmd_settings(message: Message, user: User) -> None:
     text = (
         f"⚙️ <b>{t(user.native_language, 'Настройки профиля:')}</b>\n\n" +
         f"🗣 <b>{t(user.native_language, 'Родной язык:')}</b> <code>{user.native_language}</code>\n" +
-        f"🎯 <b>{t(user.native_language, 'Изучаемый язык:')}</b> <code>{user.target_language}</code>\n" +
+        f"🧠 <b>{t(user.native_language, 'Изучаемый язык:')}</b> <code>{user.target_language}</code>\n" +
         f"🌍 <b>{t(user.native_language, 'Часовой пояс:')}</b> <code>{user.timezone}</code>\n" +
         f"🌙 <b>{t(user.native_language, 'Тихие часы:')}</b> {t(user.native_language, 'с')} {user.quiet_hours_start}:00 {t(user.native_language, 'до')} {user.quiet_hours_end}:00\n" +
         f"<i>({t(user.native_language, 'Уведомления отправляются только днем с')} {user.quiet_hours_end}:00 {t(user.native_language, 'до')} {user.quiet_hours_start}:00)</i>\n\n" +
@@ -52,7 +52,7 @@ async def cb_open_settings(callback: CallbackQuery, user: User) -> None:
     text = (
         f"⚙️ <b>{t(user.native_language, 'Настройки профиля:')}</b>\n\n" +
         f"🗣 <b>{t(user.native_language, 'Родной язык:')}</b> <code>{user.native_language}</code>\n" +
-        f"🎯 <b>{t(user.native_language, 'Изучаемый язык:')}</b> <code>{user.target_language}</code>\n" +
+        f"🧠 <b>{t(user.native_language, 'Изучаемый язык:')}</b> <code>{user.target_language}</code>\n" +
         f"🌍 <b>{t(user.native_language, 'Часовой пояс:')}</b> <code>{user.timezone}</code>\n" +
         f"🌙 <b>{t(user.native_language, 'Тихие часы:')}</b> {t(user.native_language, 'с')} {user.quiet_hours_start}:00 {t(user.native_language, 'до')} {user.quiet_hours_end}:00\n\n" +
         t(user.native_language, "Выбери нужный пункт для изменения:")
@@ -199,7 +199,7 @@ async def cb_set_target_menu(callback: CallbackQuery, user: User) -> None:
     await callback.answer()
     if callback.message:
         await callback.message.edit_text(
-            "🎯 <b>" + t(user.native_language, "Выбери язык, который хочешь выучить:") + "</b>\n" +
+            "🧠 <b>" + t(user.native_language, "Выбери язык, который хочешь выучить:") + "</b>\n" +
             "<i>" + t(user.native_language, "(Слова для разных языков хранятся раздельно)") + "</i>",
             reply_markup=get_language_presets_keyboard("target", user.native_language),
             parse_mode="HTML",
@@ -339,7 +339,7 @@ async def cb_switch_dict(callback: CallbackQuery, user: User) -> None:
     text = (
         f"⚙️ <b>{t(user.native_language, 'Настройки профиля:')}</b>\n\n" +
         f"🗣 <b>{t(user.native_language, 'Родной язык:')}</b> <code>{user.native_language}</code>\n" +
-        f"🎯 <b>{t(user.native_language, 'Изучаемый язык:')}</b> <code>{user.target_language}</code>\n" +
+        f"🧠 <b>{t(user.native_language, 'Изучаемый язык:')}</b> <code>{user.target_language}</code>\n" +
         f"🌍 <b>{t(user.native_language, 'Часовой пояс:')}</b> <code>{user.timezone}</code>\n" +
         f"🌙 <b>{t(user.native_language, 'Тихие часы:')}</b> {t(user.native_language, 'с')} {user.quiet_hours_start}:00 {t(user.native_language, 'до')} {user.quiet_hours_end}:00\n" +
         f"<i>({t(user.native_language, 'Уведомления отправляются только днем с')} {user.quiet_hours_end}:00 {t(user.native_language, 'до')} {user.quiet_hours_start}:00)</i>\n\n" +

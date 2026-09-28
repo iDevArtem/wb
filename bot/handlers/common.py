@@ -66,7 +66,7 @@ async def cb_setup_native(callback: CallbackQuery, user: User, state: FSMContext
     
     await state.set_state(SetupState.choosing_target)
     await callback.message.edit_text(
-        "<b>" + t(user.native_language, "🎯 Выбери язык, который хочешь выучить:") + "</b>",
+        "<b>" + t(user.native_language, "🧠 Выбери язык, который хочешь выучить:") + "</b>",
         reply_markup=get_setup_language_keyboard("target", user.native_language),
         parse_mode="HTML"
     )
@@ -85,7 +85,7 @@ async def handle_setup_custom_native(message: Message, user: User, state: FSMCon
     
     await state.set_state(SetupState.choosing_target)
     await message.answer(
-        "<b>" + t(user.native_language, "🎯 Выбери язык, который хочешь выучить:") + "</b>",
+        "<b>" + t(user.native_language, "🧠 Выбери язык, который хочешь выучить:") + "</b>",
         reply_markup=get_setup_language_keyboard("target", user.native_language),
         parse_mode="HTML"
     )
@@ -188,7 +188,7 @@ async def cmd_stats(message: Message, user: User) -> None:
         f"📚 <b>{t(user.native_language, 'Всего слов в словаре:')}</b> {total_words}\n" +
         f"⚡ <b>{t(user.native_language, 'Слов на изучении:')}</b> {active_words}\n" +
         f"✅ <b>{t(user.native_language, 'Выучено (в архиве):')}</b> {archived_words}\n" +
-        f"🎯 <b>{t(user.native_language, 'Готово к повторению сегодня:')}</b> {due_words}\n" +
+        f"🧠 <b>{t(user.native_language, 'Готово к повторению сегодня:')}</b> {due_words}\n" +
         f"📈 <b>{t(user.native_language, 'Средний интервал памяти:')}</b> {avg_interval:.1f} {t(user.native_language, 'дн.')}\n\n" +
         f"🌍 <b>{t(user.native_language, 'Часовой пояс:')}</b> <code>{user.timezone}</code>\n" +
         f"🌙 <b>{t(user.native_language, 'Тихие часы:')}</b> {user.quiet_hours_start}:00 — {user.quiet_hours_end}:00\n\n" +
