@@ -39,6 +39,12 @@ def format_word_card(analysis: WordAnalysis | Word, lang: str = "ru") -> str:
 
     trans_uk = getattr(analysis, "transcription_uk", None)
     trans_us = getattr(analysis, "transcription_us", None)
+    
+    # Try extra_data for DB Word models
+    if hasattr(analysis, "extra_data") and isinstance(analysis.extra_data, dict):
+        trans_uk = trans_uk or analysis.extra_data.get("transcription_uk")
+        trans_us = trans_us or analysis.extra_data.get("transcription_us")
+
     if trans_uk and trans_us and trans_uk != trans_us:
         trans_display = f"<code>{html.escape(trans_uk)}</code> | <code>{html.escape(trans_us)}</code>"
     else:
@@ -163,7 +169,7 @@ async def handle_voice_input(
 
         if existing:
             await status_msg.delete()
-            card_text = format_word_card(existing, user.native_language)
+            card_text = format_word_card(analysis, user.native_language)
             text = (
                 f"{card_text}\n\n"
                 f"<i>{t(user.native_language, '💡 Ты уже учишь слово')}  "
@@ -193,7 +199,14 @@ async def handle_voice_input(
             corrected_from=analysis.corrected_from,
             level=getattr(analysis, "level", None),
             definition=getattr(analysis, "definition", None),
+            definition_native=getattr(analysis, "definition_native", None),
+            pos_native=getattr(analysis, "pos_native", None),
             grammar_notes=getattr(analysis, "grammar_notes", []),
+            grammar_notes_native=getattr(analysis, "grammar_notes_native", []),
+            extra_data={
+                "transcription_uk": getattr(analysis, "transcription_uk", None),
+                "transcription_us": getattr(analysis, "transcription_us", None)
+            },
             repetition=0,
             interval=1,
             ease_factor=2.5,
@@ -295,12 +308,11 @@ async def handle_text_input(
 
         if existing:
             await status_msg.delete()
-            card_text = format_word_card(existing, user.native_language)
+            card_text = format_word_card(analysis, user.native_language)
             dup_text = (
-                f"<i>{t(user.native_language, '💡 Ты уже учишь слово')}  \n\n"
+                f"<i>{t(user.native_language, '💡 Ты уже учишь слово')}\n\n"
                 f"{card_text}\n\n"
                 f"{t(user.native_language, 'Интервал повторения:')} <b>{existing.interval}</b> {t(user.native_language, 'дн.')}</i>\n"
-                f"{t(user.native_language, 'Хочешь повторить прямо сейчас?')}"
             )
             await message.answer(
                 dup_text,
@@ -325,7 +337,14 @@ async def handle_text_input(
             corrected_from=analysis.corrected_from,
             level=getattr(analysis, "level", None),
             definition=getattr(analysis, "definition", None),
+            definition_native=getattr(analysis, "definition_native", None),
+            pos_native=getattr(analysis, "pos_native", None),
             grammar_notes=getattr(analysis, "grammar_notes", []),
+            grammar_notes_native=getattr(analysis, "grammar_notes_native", []),
+            extra_data={
+                "transcription_uk": getattr(analysis, "transcription_uk", None),
+                "transcription_us": getattr(analysis, "transcription_us", None)
+            },
             repetition=0,
             interval=1,
             ease_factor=2.5,
