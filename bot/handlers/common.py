@@ -256,10 +256,10 @@ async def cb_unarchive_word(callback: CallbackQuery, user: User) -> None:
     word = Word.model_validate(doc)
     await callback.answer(t(user.native_language, "Слово возвращено в активные повторения!"), show_alert=False)
     if callback.message:
-        await callback.message.edit_text(
-            f"↩️ {t(user.native_language, 'Слово')} <b>{word.canonical_word}</b> {t(user.native_language, 'возвращено в обучение!')}",
-            parse_mode="HTML",
-        )
+        try:
+            await callback.message.delete()
+        except Exception:
+            pass
 
 
 @router.callback_query(lambda c: c.data == "dismiss")
