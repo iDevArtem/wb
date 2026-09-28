@@ -484,7 +484,7 @@ async def cb_word_examples(callback: CallbackQuery, user: User) -> None:
         
         ex_lines = []
         for ex in res.examples:
-            ex_lines.append(f"• {html.escape(ex.target)}\n  — <i>{html.escape(ex.native)}</i>")
+            ex_lines.append(f"• {html.escape(ex.target)}\n  — <span class=\"tg-spoiler\"><i>{html.escape(ex.native)}</i></span>")
         text = f"💬 <b>{t(user.native_language, 'Примеры с')} «{html.escape(word.canonical_word)}»:</b>\n\n" + "\n\n".join(ex_lines)
         
         if callback.message:
