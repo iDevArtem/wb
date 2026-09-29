@@ -19,16 +19,7 @@ def get_main_menu_keyboard(lang: str) -> ReplyKeyboardMarkup:
         builder.add(KeyboardButton(text="📖", web_app=WebAppInfo(url=f"{base_url}/?filter=all")))
     else:
         builder.add(KeyboardButton(text="📖"))
-        
-    # 3. 📊
-    builder.add(KeyboardButton(text="📊"))
-        
-    # 4. ⚙️
-    builder.add(KeyboardButton(text="⚙️"))
     
-    # 5. ❓
-    builder.add(KeyboardButton(text="❓"))
-    
-    builder.adjust(5)
+    builder.adjust(2)
     
     return builder.as_markup(resize_keyboard=True, is_persistent=True)
