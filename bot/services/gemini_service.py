@@ -122,7 +122,7 @@ Rules:
 2. If the input is in {target_lang} with typos (e.g. "necesary", "definately"), fix the spelling in `canonical_word`, and put the original typo in `corrected_from`. If no typo, `corrected_from` must be null.
 3. If the input is an inflected form, set `lemma` to its base dictionary headword.
 4. Phonetics: Provide strict IPA with stress marks if applicable for {target_lang}.
-5. Provide accurate, idiomatic {native_lang} translation in `translation`. Also provide the translated part of speech in `pos_native`.
+5. Provide a short, precise {native_lang} translation in `translation` (max 1-3 words). Also provide the translated part of speech in `pos_native` (e.g. "существительное"). Do not add any explanations in these fields.
 6. `level`: Determine the CEFR level (A1, A2, B1, B2, C1, C2) of the word.
 7. `definition`: Provide one short, simple explanation of the meaning in {target_lang}. Provide its translation in `definition_native`.
 8. `grammar_notes`: Provide a minimal list of crucial grammar facts. Example: for English nouns include `[C]` or `[U]`, for verbs include `[intransitive]`. Provide translations of these notes in `grammar_notes_native`.

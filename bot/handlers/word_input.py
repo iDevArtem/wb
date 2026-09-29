@@ -40,7 +40,6 @@ def format_word_card(analysis: WordAnalysis | Word, lang: str = "ru") -> str:
     trans_uk = getattr(analysis, "transcription_uk", None)
     trans_us = getattr(analysis, "transcription_us", None)
     
-    # Try extra_data for DB Word models
     if hasattr(analysis, "extra_data") and isinstance(analysis.extra_data, dict):
         trans_uk = trans_uk or analysis.extra_data.get("transcription_uk")
         trans_us = trans_us or analysis.extra_data.get("transcription_us")
@@ -66,27 +65,21 @@ def format_word_card(analysis: WordAnalysis | Word, lang: str = "ru") -> str:
     pos_native_display = f" <i>({html.escape(pos_native)})</i>" if pos_native else ""
     transl_line = f"💬 <b>{escaped_transl}</b>{pos_native_display}{level_display}"
     
-    blocks = []
-    
+    definition_block = ""
     if getattr(analysis, "definition", None):
-        def_text = f"<b>{t(lang, '💡 Значение:')}</b>\n<i>{html.escape(analysis.definition)}</i>"
+        definition_block = f"\n\n<b>{t(lang, '💡 Значение:')}</b>\n<i>{html.escape(analysis.definition)}</i>"
         definition_native = getattr(analysis, "definition_native", None)
         if definition_native:
-            def_text += f"\n<span class=\"tg-spoiler\"><i>{html.escape(definition_native)}</i></span>"
-        blocks.append(def_text)
+            definition_block += f"\n<span class=\"tg-spoiler\"><i>{html.escape(definition_native)}</i></span>"
         
+    grammar_block = ""
     if getattr(analysis, "grammar_notes", []):
         grammar_list = " • ".join(html.escape(n) for n in analysis.grammar_notes)
-        gram_text = f"<b>{t(lang, '📐 Грамматика:')}</b>\n{grammar_list}"
+        grammar_block = f"\n\n<b>{t(lang, '📐 Грамматика:')}</b>\n{grammar_list}"
         grammar_notes_native = getattr(analysis, "grammar_notes_native", [])
         if grammar_notes_native:
             grammar_list_native = " • ".join(html.escape(n) for n in grammar_notes_native)
-            gram_text += f"\n<span class=\"tg-spoiler\">{grammar_list_native}</span>"
-        blocks.append(gram_text)
-
-    blockquote = ""
-    if blocks:
-        blockquote = "\n\n<blockquote>" + "\n\n".join(blocks) + "</blockquote>"
+            grammar_block += f"\n<span class=\"tg-spoiler\">{grammar_list_native}</span>"
 
     examples_block = ""
     examples = getattr(analysis, "examples", [])
@@ -101,13 +94,14 @@ def format_word_card(analysis: WordAnalysis | Word, lang: str = "ru") -> str:
                 native = getattr(ex, "native", "")
             ex_lines.append(f"• {html.escape(target)}\n  — <span class=\"tg-spoiler\"><i>{html.escape(native)}</i></span>")
         
-        examples_block = f"\n\n<blockquote expandable><b>{t(lang, 'Посмотреть примеры')}</b>\n\n" + "\n\n".join(ex_lines) + "</blockquote>"
+        examples_block = f"\n\n<blockquote expandable><b>💬 {t(lang, 'Примеры')}</b>\n\n" + "\n\n".join(ex_lines) + "</blockquote>"
 
     card = (
         f"📖 <b>{escaped_word}</b> <i>({escaped_pos})</i>{level_display}\n" + f"{typo_note}" +
         f"🗣 {trans_display}"
         f"{lemma_note}\n" + f"{transl_line}" +
-        f"{blockquote}" +
+        f"{definition_block}" +
+        f"{grammar_block}" +
         f"{examples_block}"
     )
     return card
@@ -241,11 +235,9 @@ async def handle_voice_input(
             tts_audio.getvalue(),
             filename=f"{analysis.canonical_word}.mp3",
         )
-        await message.answer_audio(
-            audio=voice_file_input,
+        await message.answer_voice(
+            voice=voice_file_input,
             caption=card_text,
-            title=analysis.canonical_word,
-            performer=user.target_language.upper(),
             reply_markup=get_word_card_keyboard(new_word.id, user.native_language),
             parse_mode="HTML",
         )
@@ -377,11 +369,9 @@ async def handle_text_input(
             tts_audio.getvalue(),
             filename=f"{analysis.canonical_word}.mp3",
         )
-        await message.answer_audio(
-            audio=voice_file_input,
+        await message.answer_voice(
+            voice=voice_file_input,
             caption=card_text,
-            title=analysis.canonical_word,
-            performer=user.target_language.upper(),
             reply_markup=get_word_card_keyboard(new_word.id or "", user.native_language),
             parse_mode="HTML",
         )
