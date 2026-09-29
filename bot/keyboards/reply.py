@@ -15,7 +15,8 @@ def get_main_menu_keyboard(lang: str) -> ReplyKeyboardMarkup:
     
     # 2. 📖 Словарь
     if settings.webapp_url:
-        builder.add(KeyboardButton(text="📖", web_app=WebAppInfo(url=f"{settings.webapp_url}?filter=all")))
+        base_url = settings.webapp_url.rstrip("/")
+        builder.add(KeyboardButton(text="📖", web_app=WebAppInfo(url=f"{base_url}/?filter=all")))
     else:
         builder.add(KeyboardButton(text="📖"))
         
