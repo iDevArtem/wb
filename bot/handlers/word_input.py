@@ -50,7 +50,6 @@ def format_word_card(analysis: WordAnalysis | Word, lang: str = "ru", include_au
     escaped_word = html.escape(analysis.canonical_word)
     escaped_pos = html.escape(analysis.pos)
     escaped_lemma = html.escape(analysis.lemma)
-    escaped_transl = html.escape(analysis.translation)
 
     typo_note = ""
     if analysis.corrected_from:
@@ -63,13 +62,22 @@ def format_word_card(analysis: WordAnalysis | Word, lang: str = "ru", include_au
     
     blocks = []
     
-    pos_display = f"<i>({escaped_pos})</i>"
+    pos_display = f"<i>{escaped_pos}</i>"
     pos_native = getattr(analysis, "pos_native", None)
     if pos_native:
-        pos_display += f" <i>({html.escape(pos_native)})</i>"
+        pos_display += f"/<i>{html.escape(pos_native)}</i>"
         
-    level_display = f" • <b>{analysis.level}</b>" if getattr(analysis, "level", None) else ""
-    blocks.append(f"{pos_display}{level_display}")
+    level_display = f"<br/><b>{analysis.level}</b>" if getattr(analysis, "level", None) else ""
+
+    gram_text = ""
+    if getattr(analysis, "grammar_notes", []):
+        gram_text = " • ".join(html.escape(n) for n in analysis.grammar_notes)
+        grammar_notes_native = getattr(analysis, "grammar_notes_native", [])
+        if grammar_notes_native:
+            grammar_list_native = " • ".join(html.escape(n) for n in grammar_notes_native)
+            gram_text += f"<br/><tg-spoiler>{grammar_list_native}</tg-spoiler>"
+
+    extend_info = f"{level_display} • {pos_display} • {gram_text}"
     
     if getattr(analysis, "definition", None):
         def_text = f"<b>{t(lang, '💡 Значение:')}</b><br/><i>{html.escape(analysis.definition)}</i>"
@@ -77,21 +85,10 @@ def format_word_card(analysis: WordAnalysis | Word, lang: str = "ru", include_au
         if definition_native:
             def_text += f"<br/><tg-spoiler><i>{html.escape(definition_native)}</i></tg-spoiler>"
         blocks.append(def_text)
-        
-    if getattr(analysis, "grammar_notes", []):
-        grammar_list = " • ".join(html.escape(n) for n in analysis.grammar_notes)
-        gram_text = f"<b>{t(lang, '📐 Грамматика:')}</b><br/>{grammar_list}"
-        grammar_notes_native = getattr(analysis, "grammar_notes_native", [])
-        if grammar_notes_native:
-            grammar_list_native = " • ".join(html.escape(n) for n in grammar_notes_native)
-            gram_text += f"<br/><tg-spoiler>{grammar_list_native}</tg-spoiler>"
-        blocks.append(gram_text)
 
     blockquote = ""
-    blockquote_1 = ""
     if blocks:
-        blockquote = "<br/><br/>".join(blocks)
-        blockquote_1 = "<blockquote>" + "<br/><br/>".join(blocks) + "</blockquote>"
+        blockquote = "<blockquote>" + "<br/><br/>".join(blocks) + "</blockquote>"
 
     examples_block = ""
     examples = getattr(analysis, "examples", [])
@@ -104,24 +101,18 @@ def format_word_card(analysis: WordAnalysis | Word, lang: str = "ru", include_au
             else:
                 target = getattr(ex, "target", "")
                 native = getattr(ex, "native", "")
-            ex_lines.append(f"• {html.escape(target)}<br/>- <tg-spoiler><i>{html.escape(native)}</i></tg-spoiler>")
+            ex_lines.append(f"• {html.escape(target)}<br/>  — <tg-spoiler><i>{html.escape(native)}</i></tg-spoiler>")
         
-        examples_block = f"<details><summary>💬 {t(lang, 'Посмотреть примеры')}</summary>" + "<br/><br/>".join(ex_lines) + "</details>"
-        examples_block_1 = f"<blockquote><details><summary>💬 {t(lang, 'Посмотреть примеры')}</summary>" + "<br/><br/>".join(ex_lines) + "</details></blockquote>"
-        examples_block_2 = f"<blockquote expandable>💬 {t(lang, 'Посмотреть примеры')}" + "<br/><br/>".join(ex_lines) + "</blockquote>"
+        examples_block = f"<blockquote><details><summary>💬 {t(lang, 'Посмотреть примеры')}</summary>" + "<br/><br/>".join(ex_lines) + "</details></blockquote>"
 
     card = (
         f"<h1>{escaped_word}</h1>" +
-        (f"<p>{typo_note}</p>" if typo_note else "") +
-        (f"<p>{lemma_note}</p>" if lemma_note else "") +
-        f"<p>{escaped_transl}</p>" +
         (f"<audio src=\"tg://audio?id=audio1\"></audio>" if include_audio else "") +
-        f"{blockquote}" +
-        f"{blockquote_1}" +
         f"{examples_block}" +
-        f"{examples_block_1}" +
-        f"{examples_block_2}" +
-        "<aside>Pull quote<cite>The Author</cite></aside>"
+        f"{blockquote}" +
+        f"{extend_info}" +
+        (f"<p>{typo_note}</p>" if typo_note else "") +
+        (f"<p>{lemma_note}</p>" if lemma_note else "")
     )
     return card
 
