@@ -88,9 +88,10 @@ def format_word_card(analysis: WordAnalysis | Word, lang: str = "ru", include_au
         blocks.append(gram_text)
 
     blockquote = ""
+    blockquote_1 = ""
     if blocks:
         blockquote = "<br/><br/>".join(blocks)
-        blockquote =+ ("<blockquote>" + "<br/><br/>".join(blocks) + "</blockquote>")
+        blockquote_1 = "<blockquote>" + "<br/><br/>".join(blocks) + "</blockquote>"
 
     examples_block = ""
     examples = getattr(analysis, "examples", [])
@@ -106,8 +107,8 @@ def format_word_card(analysis: WordAnalysis | Word, lang: str = "ru", include_au
             ex_lines.append(f"• {html.escape(target)}<br/>- <tg-spoiler><i>{html.escape(native)}</i></tg-spoiler>")
         
         examples_block = f"<details><summary>💬 {t(lang, 'Посмотреть примеры')}</summary>" + "<br/><br/>".join(ex_lines) + "</details>"
-        examples_block += f"<blockquote><details><summary>💬 {t(lang, 'Посмотреть примеры')}</summary>" + "<br/><br/>".join(ex_lines) + "</details></blockquote>"
-        examples_block += f"<blockquote expandable>💬 {t(lang, 'Посмотреть примеры')}" + "<br/><br/>".join(ex_lines) + "</blockquote>"
+        examples_block_1 = f"<blockquote><details><summary>💬 {t(lang, 'Посмотреть примеры')}</summary>" + "<br/><br/>".join(ex_lines) + "</details></blockquote>"
+        examples_block_2 = f"<blockquote expandable>💬 {t(lang, 'Посмотреть примеры')}" + "<br/><br/>".join(ex_lines) + "</blockquote>"
 
     card = (
         f"<h1>{escaped_word}</h1>" +
@@ -116,7 +117,10 @@ def format_word_card(analysis: WordAnalysis | Word, lang: str = "ru", include_au
         f"<p>{escaped_transl}</p>" +
         (f"<audio src=\"tg://audio?id=audio1\"></audio>" if include_audio else "") +
         f"{blockquote}" +
-        f"{examples_block}"
+        f"{blockquote_1}" +
+        f"{examples_block}" +
+        f"{examples_block_1}" +
+        f"{examples_block_2}"
     )
     return card
 
