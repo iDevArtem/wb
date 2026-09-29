@@ -50,6 +50,7 @@ def format_word_card(analysis: WordAnalysis | Word, lang: str = "ru", include_au
     escaped_word = html.escape(analysis.canonical_word)
     escaped_pos = html.escape(analysis.pos)
     escaped_lemma = html.escape(analysis.lemma)
+    escaped_transl = html.escape(analysis.translation)
 
     typo_note = ""
     if analysis.corrected_from:
@@ -60,35 +61,25 @@ def format_word_card(analysis: WordAnalysis | Word, lang: str = "ru", include_au
     if analysis.lemma.lower() != analysis.canonical_word.lower():
         lemma_note = f"🌱 {t(lang, 'Словарная форма:')} <code>{escaped_lemma}</code>"
     
-    blocks = []
+    level_display = f"<b>{analysis.level}</b>" if getattr(analysis, "level", None) else ""
     
-    pos_display = f"<i>{escaped_pos}</i>"
-    pos_native = getattr(analysis, "pos_native", None)
-    if pos_native:
-        pos_display += f"/<i>{html.escape(pos_native)}</i>"
-        
-    level_display = f"<br/><b>{analysis.level}</b>" if getattr(analysis, "level", None) else ""
+    pos_native = f"<i>{html.escape(analysis.pos_native)}</i>" if getattr(analysis, "pos_native", None) else ""        
 
-    gram_text = ""
-    if getattr(analysis, "grammar_notes", []):
-        gram_text = " • ".join(html.escape(n) for n in analysis.grammar_notes)
-        grammar_notes_native = getattr(analysis, "grammar_notes_native", [])
-        if grammar_notes_native:
-            grammar_list_native = " • ".join(html.escape(n) for n in grammar_notes_native)
-            gram_text += f"<br/><tg-spoiler>{grammar_list_native}</tg-spoiler>"
+    gram_text = " • ".join(html.escape(n) for n in analysis.grammar_notes) if getattr(analysis, "grammar_notes", []) else ""
+    gram_native_text = " • ".join(html.escape(n) for n in analysis.grammar_notes_native) if getattr(analysis, "grammar_notes_native", []) else ""
 
-    extend_info = f"{level_display} • {pos_display} • {gram_text}"
+    extend_info = f"<blockquote>{level_display} • {escaped_pos} • {gram_text}<br/><tg-spoiler>{pos_native} • {gram_native_text}</tg-spoiler></blockquote>"
     
-    if getattr(analysis, "definition", None):
-        def_text = f"<b>{t(lang, '💡 Значение:')}</b><br/><i>{html.escape(analysis.definition)}</i>"
-        definition_native = getattr(analysis, "definition_native", None)
-        if definition_native:
-            def_text += f"<br/><tg-spoiler><i>{html.escape(definition_native)}</i></tg-spoiler>"
-        blocks.append(def_text)
+    def_text = f"<i>{html.escape(analysis.definition)}</i>" if getattr(analysis, "definition", None) else ""
+    definition_native = f"<i>{html.escape(definition_native)}</i>" if getattr(analysis, "definition_native", None) else ""
 
     blockquote = ""
-    if blocks:
-        blockquote = "<blockquote>" + "<br/><br/>".join(blocks) + "</blockquote>"
+    if def_text or definition_native:
+        blockquote = (
+            f"<b>{t(lang, '💡 Значение:')}</b><br/>" +
+            "{def_text}<br/>" +
+            "<tg-spoiler>{definition_native}</tg-spoiler>"
+        )
 
     examples_block = ""
     examples = getattr(analysis, "examples", [])
@@ -103,14 +94,15 @@ def format_word_card(analysis: WordAnalysis | Word, lang: str = "ru", include_au
                 native = getattr(ex, "native", "")
             ex_lines.append(f"• {html.escape(target)}<br/>  — <tg-spoiler><i>{html.escape(native)}</i></tg-spoiler>")
         
-        examples_block = f"<blockquote><details><summary>💬 {t(lang, 'Посмотреть примеры')}</summary>" + "<br/><br/>".join(ex_lines) + "</details></blockquote>"
+        examples_block = f"<details><summary>💬 {t(lang, 'Посмотреть примеры')}</summary>" + "<br/><br/>".join(ex_lines) + "</details>"
 
     card = (
         f"<h1>{escaped_word}</h1>" +
+        f"<p>{escaped_transl}</p>" +
         (f"<audio src=\"tg://audio?id=audio1\"></audio>" if include_audio else "") +
+        f"{extend_info}" +
         f"{examples_block}" +
         f"{blockquote}" +
-        f"{extend_info}" +
         (f"<p>{typo_note}</p>" if typo_note else "") +
         (f"<p>{lemma_note}</p>" if lemma_note else "")
     )
