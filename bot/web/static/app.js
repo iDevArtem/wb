@@ -19,9 +19,6 @@ const state = {
 
 // DOM Elements
 const el = {
-  userAvatar: document.getElementById("user-avatar"),
-  userName: document.getElementById("user-name"),
-  userHandle: document.getElementById("user-handle"),
   userStreak: document.getElementById("user-streak"),
   statTotal: document.getElementById("stat-total"),
   statDue: document.getElementById("stat-due"),
@@ -29,6 +26,8 @@ const el = {
   statMastered: document.getElementById("stat-mastered"),
   searchInput: document.getElementById("search-input"),
   searchClear: document.getElementById("search-clear"),
+  filterToggleBtn: document.getElementById("filter-toggle-btn"),
+  filtersRow: document.getElementById("filters-row"),
   filterChips: document.querySelectorAll(".chip"),
   sortSelect: document.getElementById("sort-select"),
   wordsContainer: document.getElementById("words-container"),
@@ -160,10 +159,6 @@ async function loadWords() {
 // --- Rendering ---
 function renderUserProfile() {
   if (!state.user) return;
-  const name = state.user.first_name || state.user.username || "Пользователь";
-  el.userName.textContent = name;
-  el.userHandle.textContent = state.user.username ? `@${state.user.username}` : `ID: ${state.user.tg_id}`;
-  el.userAvatar.textContent = name.charAt(0).toUpperCase();
   el.userStreak.textContent = `🔥 ${state.user.streak || 0} дн.`;
 }
 
@@ -259,10 +254,12 @@ function createWordCardHtml(word) {
   return `
     <div class="word-card" id="word-${word.id}">
       <div class="word-card-header">
-        <div class="word-title-group">
+        <div class="word-title-group" onclick="this.closest('.word-card').classList.toggle('expanded')">
           <span class="word-canonical">${escapeHtml(word.canonical_word)}</span>
           ${word.pos ? `<span class="word-pos">${escapeHtml(word.pos)}</span>` : ""}
-          ${word.transcription ? `<span class="word-transcription">[${escapeHtml(word.transcription)}]</span>` : ""}
+          <svg class="expand-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-left: 4px; color: var(--hint-color); transition: transform 0.2s;">
+            <polyline points="6 9 12 15 18 9"></polyline>
+          </svg>
         </div>
         <button class="audio-btn" data-word="${escapeHtml(word.canonical_word)}" title="Произношение">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -274,14 +271,18 @@ function createWordCardHtml(word) {
       </div>
 
       <div class="word-translation">${escapeHtml(word.translation)}</div>
-      ${examplesHtml}
-      ${tagsHtml}
-
-      <div class="word-footer">
+      
+      <div class="word-details-collapsible">
+        ${word.transcription ? `<div class="word-transcription-row">Транскрипция: [${escapeHtml(word.transcription)}]</div>` : ""}
+        ${examplesHtml}
+        ${tagsHtml}
         <div class="sm2-status">
           <div class="retention-bars" title="Уровень запоминания: ${rep}/5">${barsHtml}</div>
           <span style="color: var(--hint-color);">интервал: ${interval} дн.</span>
         </div>
+      </div>
+
+      <div class="word-footer">
         <span class="next-review-badge ${dueBadgeClass}">${dueBadgeText}</span>
       </div>
     </div>
@@ -357,6 +358,16 @@ function setupEventListeners() {
     state.searchQuery = "";
     el.searchClear.style.display = "none";
     loadWords();
+  });
+
+  el.filterToggleBtn.addEventListener("click", () => {
+    if (el.filtersRow.style.display === "none") {
+      el.filtersRow.style.display = "flex";
+      el.filterToggleBtn.classList.add("active");
+    } else {
+      el.filtersRow.style.display = "none";
+      el.filterToggleBtn.classList.remove("active");
+    }
   });
 
   // Filter chips
