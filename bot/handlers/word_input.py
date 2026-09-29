@@ -68,17 +68,23 @@ def format_word_card(analysis: WordAnalysis | Word, lang: str = "ru", include_au
     gram_text = " • ".join(html.escape(n) for n in analysis.grammar_notes) if getattr(analysis, "grammar_notes", []) else ""
     gram_native_text = " • ".join(html.escape(n) for n in analysis.grammar_notes_native) if getattr(analysis, "grammar_notes_native", []) else ""
 
-    extend_info = f"<blockquote>{level_display} • {escaped_pos} • {gram_text}<br/><tg-spoiler>{pos_native} • {gram_native_text}</tg-spoiler></blockquote>"
+    extend_info = f"<details><summary>{t(lang, '📐 Грамматика')}</summary><b>{level_display}<br/>{escaped_pos} • {gram_text}<br/><tg-spoiler>{pos_native} • {gram_native_text}</tg-spoiler></b></details>"
     
     def_text = f"<i>{html.escape(analysis.definition)}</i>" if getattr(analysis, "definition", None) else ""
     definition_native = f"<i>{html.escape(analysis.definition_native)}</i>" if getattr(analysis, "definition_native", None) else ""
 
     blockquote = ""
     if def_text or definition_native:
+        content_lines = []
+        if def_text:
+            content_lines.append(f"• {def_text}")
+        if definition_native:
+            content_lines.append(f"- <tg-spoiler>{definition_native}</tg-spoiler>")
+            
         blockquote = (
-            f"<b>{t(lang, '💡 Значение:')}</b><br/>" +
-            "{def_text}<br/>" +
-            "<tg-spoiler>{definition_native}</tg-spoiler>"
+            f"<details><summary>{t(lang, '💡 Значение:')}</summary>" +
+            "<br/>".join(content_lines) +
+            "</details>"
         )
 
     examples_block = ""
@@ -101,8 +107,8 @@ def format_word_card(analysis: WordAnalysis | Word, lang: str = "ru", include_au
         f"<p>{escaped_transl}</p>" +
         (f"<audio src=\"tg://audio?id=audio1\"></audio>" if include_audio else "") +
         f"{extend_info}" +
-        f"{examples_block}" +
         f"{blockquote}" +
+        f"{examples_block}" +
         (f"<p>{typo_note}</p>" if typo_note else "") +
         (f"<p>{lemma_note}</p>" if lemma_note else "")
     )
@@ -184,10 +190,9 @@ async def handle_voice_input(
         if existing:
             card_text = format_word_card(analysis, user.native_language, include_audio=False)
             text = (
-                f"{card_text}<br/><br/>"
+                f"{card_text}<br/>"
                 f"<i>{t(user.native_language, '💡 Ты уже учишь слово')}  "
                 f"{t(user.native_language, 'Интервал повторения:')} <b>{existing.interval}</b> {t(user.native_language, 'дн.')}</i><br/>"
-                f"{t(user.native_language, 'Хочешь повторить прямо сейчас?')}"
             )
             await message.bot.send_rich_message(
                 chat_id=message.chat.id,
@@ -303,7 +308,6 @@ async def handle_text_input(
             f"{card_text}<br/><br/>"
             f"<i>{t(user.native_language, '💡 Ты уже учишь слово')}  "
             f"{t(user.native_language, 'Интервал повторения:')} <b>{direct_match.interval}</b> {t(user.native_language, 'дн.')}</i><br/>"
-            f"{t(user.native_language, 'Хочешь повторить прямо сейчас?')}"
         )
         await message.bot.send_rich_message(
             chat_id=message.chat.id,
@@ -329,8 +333,8 @@ async def handle_text_input(
         if existing:
             card_text = format_word_card(analysis, user.native_language, include_audio=False)
             dup_text = (
-                f"<i>{t(user.native_language, '💡 Ты уже учишь слово')}</i><br/><br/>"
-                f"{card_text}<br/><br/>"
+                f"{card_text}<br/>"
+                f"<i>{t(user.native_language, '💡 Ты уже учишь слово')}</i><br/>"
                 f"<i>{t(user.native_language, 'Интервал повторения:')} <b>{existing.interval}</b> {t(user.native_language, 'дн.')}</i><br/>"
             )
             await message.bot.send_rich_message(

@@ -41,7 +41,6 @@
   "Пожалуйста, подождите немного или повторите попытку позже.": "Please wait a moment or try again later.",
   "Слово перенесено в архив!": "Word moved to archive!",
   "Слово удалено": "Word deleted",
-  "Хочешь повторить прямо сейчас?": "Do you want to review it right now?",
   "⚠️ Не удалось проанализировать слово с помощью ИИ. Пожалуйста, попробуйте снова через несколько секунд.": "⚠️ Failed to analyze the word using AI. Please try again in a few seconds.",
   "⚠️ Не удалось распознать голосовое сообщение с помощью ИИ. Попробуйте записать еще раз.": "⚠️ Failed to recognize the voice message using AI. Try recording again.",
   "⚠️ Произошла непредвиденная ошибка при анализе слова. Попробуйте позже.": "⚠️ An unexpected error occurred while analyzing the word. Try again later.",
@@ -74,7 +73,7 @@
   "Интервальное повторение активирует долговременную память. ": "Spaced repetition activates long-term memory. ",
   "Пройди быстрый квиз прямо сейчас:": "Take a quick quiz right now:",
   "💡 Значение:": "💡 Meaning:",
-  "📐 Грамматика:": "📐 Grammar:",
+  "📐 Грамматика": "📐 Grammar:",
   "🌱 Словарная форма:": "🌱 Dictionary form:",
   "✏️ Исправлена опечатка с:": "✏️ Typo corrected from:",
   "Настройки профиля:": "Profile settings:",
@@ -193,5 +192,5 @@
   "букв": "letters",
   "Контекст:": "Context:",
   "родной": "native",
-  "🧠 Учить": "🧠\u00A0Learn"
+  "🧠 Учить": "🧠 Learn"
 }
