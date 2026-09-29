@@ -6,7 +6,7 @@ from datetime import datetime, timedelta, timezone
 from aiogram import Bot, F, Router
 from aiogram.enums import ChatAction
 from aiogram.fsm.context import FSMContext
-from aiogram.types import BufferedInputFile, CallbackQuery, Message, InputRichMessage, InputRichMessageMedia, InputMediaVoiceNote
+from aiogram.types import BufferedInputFile, CallbackQuery, Message, InputRichMessage, InputRichMessageMedia, InputMediaAudio
 import re
 from bson import ObjectId
 from bot.core.database import get_words_collection
@@ -243,7 +243,7 @@ async def handle_voice_input(
         )
         media = InputRichMessageMedia(
             id="audio1",
-            media=InputMediaVoiceNote(media=voice_file_input)
+            media=InputMediaAudio(media=voice_file_input)
         )
         rich_msg = InputRichMessage(
             html=card_text,
@@ -384,7 +384,7 @@ async def handle_text_input(
         )
         media = InputRichMessageMedia(
             id="audio1",
-            media=InputMediaVoiceNote(media=voice_file_input)
+            media=InputMediaAudio(media=voice_file_input)
         )
         rich_msg = InputRichMessage(
             html=card_text,
