@@ -303,7 +303,7 @@ async def present_next_word(
 
 
 @router.message(Command("quiz"))
-@router.message(TranslatedText("🧠 Повторить"))
+@router.message(TranslatedText("🧠 Учить"))
 @router.message(F.text.in_({"🧠", "🧠\ufe0f"}))
 async def cmd_quiz(message: Message, user: User, state: FSMContext) -> None:
     await state.clear()

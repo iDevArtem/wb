@@ -11,11 +11,11 @@ def get_main_menu_keyboard(lang: str) -> ReplyKeyboardMarkup:
     builder = ReplyKeyboardBuilder()
     
     # 1. 🧠 Повторить
-    builder.add(KeyboardButton(text=t(lang, "🧠 Повторить")))
-        
-    # 2. 📊
+    builder.add(KeyboardButton(text=t(lang, "🧠 Учить")))
+
+    # 2. 📊 Статистика
     builder.add(KeyboardButton(text="📊"))
-    
+        
     # 3. 📖 Словарь
     if settings.webapp_url:
         base_url = settings.webapp_url.rstrip("/")
