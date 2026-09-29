@@ -31,41 +31,45 @@ logger = logging.getLogger(__name__)
 router = Router(name="word_input")
 
 
+def _get_us_transcription(analysis: WordAnalysis | Word) -> str:
+    trans_us = getattr(analysis, "transcription_us", None)
+    if not trans_us and hasattr(analysis, "extra_data") and isinstance(analysis.extra_data, dict):
+        trans_us = analysis.extra_data.get("transcription_us")
+    
+    if trans_us:
+        return trans_us
+        
+    raw_trans = getattr(analysis, "transcription", None) or ""
+    if "🇺🇸" in raw_trans:
+        parts = raw_trans.split("🇺🇸")
+        if len(parts) > 1:
+            return parts[1].strip()
+    return raw_trans.strip()
+
 def format_word_card(analysis: WordAnalysis | Word, lang: str = "ru", include_audio: bool = True) -> str:
     escaped_word = html.escape(analysis.canonical_word)
     escaped_pos = html.escape(analysis.pos)
     escaped_lemma = html.escape(analysis.lemma)
     escaped_transl = html.escape(analysis.translation)
 
-    trans_uk = getattr(analysis, "transcription_uk", None)
-    trans_us = getattr(analysis, "transcription_us", None)
-    
-    if hasattr(analysis, "extra_data") and isinstance(analysis.extra_data, dict):
-        trans_uk = trans_uk or analysis.extra_data.get("transcription_uk")
-        trans_us = trans_us or analysis.extra_data.get("transcription_us")
-
-    if trans_uk and trans_us and trans_uk != trans_us:
-        trans_display = f"<code>{html.escape(trans_uk)}</code> | <code>{html.escape(trans_us)}</code>"
-    else:
-        raw_trans = getattr(analysis, "transcription", None) or trans_us or trans_uk or ""
-        trans_display = f"[{html.escape(raw_trans)}]"
-
     typo_note = ""
     if analysis.corrected_from:
         escaped_typo = html.escape(analysis.corrected_from)
-        typo_note = f"{t(lang, '✏️ Исправлена опечатка с:')} <s>{escaped_typo}</s><br/>"
+        typo_note = f"{t(lang, '✏️ Исправлена опечатка с:')} <s>{escaped_typo}</s>"
 
     lemma_note = ""
     if analysis.lemma.lower() != analysis.canonical_word.lower():
-        lemma_note = f"<br/>🌱 {t(lang, 'Словарная форма:')} <code>{escaped_lemma}</code>"
-
-    level_display = f" • <b>{analysis.level}</b>" if getattr(analysis, "level", None) else ""
-    
-    pos_native = getattr(analysis, "pos_native", None)
-    pos_native_display = f" <i>({html.escape(pos_native)})</i>" if pos_native else ""
-    transl_line = f"💬 <b>{escaped_transl}</b>{pos_native_display}{level_display}"
+        lemma_note = f"🌱 {t(lang, 'Словарная форма:')} <code>{escaped_lemma}</code>"
     
     blocks = []
+    
+    pos_display = f"<i>({escaped_pos})</i>"
+    pos_native = getattr(analysis, "pos_native", None)
+    if pos_native:
+        pos_display += f" <i>({html.escape(pos_native)})</i>"
+        
+    level_display = f" • <b>{analysis.level}</b>" if getattr(analysis, "level", None) else ""
+    blocks.append(f"{pos_display}{level_display}")
     
     if getattr(analysis, "definition", None):
         def_text = f"<b>{t(lang, '💡 Значение:')}</b><br/><i>{html.escape(analysis.definition)}</i>"
@@ -103,11 +107,10 @@ def format_word_card(analysis: WordAnalysis | Word, lang: str = "ru", include_au
         examples_block = f"<details><summary>💬 {t(lang, 'Посмотреть примеры')}</summary>" + "<br/><br/>".join(ex_lines) + "</details>"
 
     card = (
-        f"<p>📖 <b>{escaped_word}</b> <i>({escaped_pos})</i>{level_display}<br/>" +
-        f"{typo_note}" +
-        f"🗣 {trans_display}" +
-        f"{lemma_note}<br/>" +
-        f"{transl_line}</p>" +
+        f"<h1>{escaped_word}</h1>" +
+        (f"<p>{typo_note}</p>" if typo_note else "") +
+        (f"<p>{lemma_note}</p>" if lemma_note else "") +
+        f"<p>{escaped_transl}</p>" +
         (f"<audio src=\"tg://audio?id=audio1\"></audio>" if include_audio else "") +
         f"{blockquote}" +
         f"{examples_block}"
@@ -245,7 +248,11 @@ async def handle_voice_input(
         )
         media = InputRichMessageMedia(
             id="audio1",
-            media=InputMediaAudio(media=voice_file_input)
+            media=InputMediaAudio(
+                media=voice_file_input,
+                title=_get_us_transcription(analysis),
+                performer=analysis.canonical_word
+            )
         )
         rich_msg = InputRichMessage(
             html=card_text,
@@ -386,7 +393,11 @@ async def handle_text_input(
         )
         media = InputRichMessageMedia(
             id="audio1",
-            media=InputMediaAudio(media=voice_file_input)
+            media=InputMediaAudio(
+                media=voice_file_input,
+                title=_get_us_transcription(analysis),
+                performer=analysis.canonical_word
+            )
         )
         rich_msg = InputRichMessage(
             html=card_text,
