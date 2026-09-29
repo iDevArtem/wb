@@ -35,6 +35,15 @@ class SetupState(StatesGroup):
 
 @router.message(CommandStart())
 async def cmd_start(message: Message, user: User, state: FSMContext) -> None:
+    current_state = await state.get_state()
+    data = await state.get_data()
+    last_start = data.get("last_start", 0)
+    now = message.date.timestamp()
+    
+    if current_state == SetupState.choosing_native.state and (now - last_start) < 2:
+        return
+        
+    await state.update_data(last_start=now)
     await state.set_state(SetupState.choosing_native)
     name = message.from_user.first_name or "друг"
     
@@ -115,9 +124,15 @@ async def finalize_setup(message_obj: Message, user: User, target_code: str, sta
     text = f"{t(user.native_language, 'Отправь мне прямо сейчас любое слово текстом или голосовым! 🚀')}"
     
     try:
-        await message_obj.edit_text(text, parse_mode="HTML")
+        await message_obj.edit_reply_markup(reply_markup=None)
     except Exception:
-        await message_obj.answer(text, parse_mode="HTML")
+        pass
+        
+    await message_obj.answer(
+        text, 
+        parse_mode="HTML", 
+        reply_markup=get_main_menu_keyboard(user.native_language)
+    )
 
 
 @router.message(Command("help"))
@@ -140,7 +155,7 @@ async def cmd_help(message: Message, user: User) -> None:
         t(user.native_language, "— Напоминания приходят только в удобное для тебя время (по умолчанию с 10:00 до 21:00).") + "\n" +
         t(user.native_language, "— Настрой свой часовой пояс в /settings.")
     )
-    await message.answer(text, parse_mode="HTML")
+    await message.answer(text, parse_mode="HTML", reply_markup=get_main_menu_keyboard(user.native_language))
 
 
 @router.message(Command("stats"))
