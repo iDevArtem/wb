@@ -53,11 +53,11 @@ def format_word_card(analysis: WordAnalysis | Word, lang: str = "ru", include_au
     typo_note = ""
     if analysis.corrected_from:
         escaped_typo = html.escape(analysis.corrected_from)
-        typo_note = f"{t(lang, '✏️ Исправлена опечатка с:')} <s>{escaped_typo}</s>\n"
+        typo_note = f"{t(lang, '✏️ Исправлена опечатка с:')} <s>{escaped_typo}</s><br/>"
 
     lemma_note = ""
     if analysis.lemma.lower() != analysis.canonical_word.lower():
-        lemma_note = f"\n{t(lang, '🌱 Словарная форма:')} <code>{escaped_lemma}</code>"
+        lemma_note = f"<br/>🌱 {t(lang, 'Словарная форма:')} <code>{escaped_lemma}</code>"
 
     level_display = f" • <b>{analysis.level}</b>" if getattr(analysis, "level", None) else ""
     
@@ -68,24 +68,24 @@ def format_word_card(analysis: WordAnalysis | Word, lang: str = "ru", include_au
     blocks = []
     
     if getattr(analysis, "definition", None):
-        def_text = f"<b>{t(lang, '💡 Значение:')}</b>\n<i>{html.escape(analysis.definition)}</i>"
+        def_text = f"<b>{t(lang, '💡 Значение:')}</b><br/><i>{html.escape(analysis.definition)}</i>"
         definition_native = getattr(analysis, "definition_native", None)
         if definition_native:
-            def_text += f"\n<span class=\"tg-spoiler\"><i>{html.escape(definition_native)}</i></span>"
+            def_text += f"<br/><tg-spoiler><i>{html.escape(definition_native)}</i></tg-spoiler>"
         blocks.append(def_text)
         
     if getattr(analysis, "grammar_notes", []):
         grammar_list = " • ".join(html.escape(n) for n in analysis.grammar_notes)
-        gram_text = f"<b>{t(lang, '📐 Грамматика:')}</b>\n{grammar_list}"
+        gram_text = f"<b>{t(lang, '📐 Грамматика:')}</b><br/>{grammar_list}"
         grammar_notes_native = getattr(analysis, "grammar_notes_native", [])
         if grammar_notes_native:
             grammar_list_native = " • ".join(html.escape(n) for n in grammar_notes_native)
-            gram_text += f"\n<span class=\"tg-spoiler\">{grammar_list_native}</span>"
+            gram_text += f"<br/><tg-spoiler>{grammar_list_native}</tg-spoiler>"
         blocks.append(gram_text)
 
     blockquote = ""
     if blocks:
-        blockquote = "\n\n<blockquote>" + "\n\n".join(blocks) + "</blockquote>"
+        blockquote = "<blockquote>" + "<br/><br/>".join(blocks) + "</blockquote>"
 
     examples_block = ""
     examples = getattr(analysis, "examples", [])
@@ -98,15 +98,17 @@ def format_word_card(analysis: WordAnalysis | Word, lang: str = "ru", include_au
             else:
                 target = getattr(ex, "target", "")
                 native = getattr(ex, "native", "")
-            ex_lines.append(f"• {html.escape(target)}\n  — <span class=\"tg-spoiler\"><i>{html.escape(native)}</i></span>")
+            ex_lines.append(f"• {html.escape(target)}<br/>  — <tg-spoiler><i>{html.escape(native)}</i></tg-spoiler>")
         
-        examples_block = f"\n\n<blockquote expandable><b>💬 {t(lang, 'Примеры')}</b>\n\n" + "\n\n".join(ex_lines) + "</blockquote>"
+        examples_block = f"<details><summary>💬 {t(lang, 'Посмотреть примеры')}</summary>" + "<br/><br/>".join(ex_lines) + "</details>"
 
     card = (
-        f"📖 <b>{escaped_word}</b> <i>({escaped_pos})</i>{level_display}\n" + f"{typo_note}" +
-        f"🗣 {trans_display}"
-        f"{lemma_note}\n" + f"{transl_line}" +
-        (f"\n\n<audio src=\"tg://audio?id=audio1\"></audio>" if include_audio else "") +
+        f"<p>📖 <b>{escaped_word}</b> <i>({escaped_pos})</i>{level_display}<br/>" +
+        f"{typo_note}" +
+        f"🗣 {trans_display}" +
+        f"{lemma_note}<br/>" +
+        f"{transl_line}</p>" +
+        (f"<audio src=\"tg://audio?id=audio1\"></audio>" if include_audio else "") +
         f"{blockquote}" +
         f"{examples_block}"
     )
@@ -188,15 +190,15 @@ async def handle_voice_input(
         if existing:
             card_text = format_word_card(analysis, user.native_language, include_audio=False)
             text = (
-                f"{card_text}\n\n"
+                f"{card_text}<br/><br/>"
                 f"<i>{t(user.native_language, '💡 Ты уже учишь слово')}  "
-                f"{t(user.native_language, 'Интервал повторения:')} <b>{existing.interval}</b> {t(user.native_language, 'дн.')}</i>\n"
+                f"{t(user.native_language, 'Интервал повторения:')} <b>{existing.interval}</b> {t(user.native_language, 'дн.')}</i><br/>"
                 f"{t(user.native_language, 'Хочешь повторить прямо сейчас?')}"
             )
-            await message.answer(
-                text,
+            await message.bot.send_rich_message(
+                chat_id=message.chat.id,
+                rich_message=InputRichMessage(html=text),
                 reply_markup=get_duplicate_word_keyboard(existing.id or "", user.native_language),
-                parse_mode="HTML",
             )
             return
 
@@ -300,15 +302,15 @@ async def handle_text_input(
     if direct_match:
         card_text = format_word_card(direct_match, user.native_language, include_audio=False)
         dup_text = (
-            f"{card_text}\n\n"
+            f"{card_text}<br/><br/>"
             f"<i>{t(user.native_language, '💡 Ты уже учишь слово')}  "
-            f"{t(user.native_language, 'Интервал повторения:')} <b>{direct_match.interval}</b> {t(user.native_language, 'дн.')}</i>\n"
+            f"{t(user.native_language, 'Интервал повторения:')} <b>{direct_match.interval}</b> {t(user.native_language, 'дн.')}</i><br/>"
             f"{t(user.native_language, 'Хочешь повторить прямо сейчас?')}"
         )
-        await message.answer(
-            dup_text,
+        await message.bot.send_rich_message(
+            chat_id=message.chat.id,
+            rich_message=InputRichMessage(html=dup_text),
             reply_markup=get_duplicate_word_keyboard(direct_match.id or "", user.native_language),
-            parse_mode="HTML",
         )
         return
 
@@ -329,14 +331,14 @@ async def handle_text_input(
         if existing:
             card_text = format_word_card(analysis, user.native_language, include_audio=False)
             dup_text = (
-                f"<i>{t(user.native_language, '💡 Ты уже учишь слово')}\n\n"
-                f"{card_text}\n\n"
-                f"{t(user.native_language, 'Интервал повторения:')} <b>{existing.interval}</b> {t(user.native_language, 'дн.')}</i>\n"
+                f"<i>{t(user.native_language, '💡 Ты уже учишь слово')}</i><br/><br/>"
+                f"{card_text}<br/><br/>"
+                f"<i>{t(user.native_language, 'Интервал повторения:')} <b>{existing.interval}</b> {t(user.native_language, 'дн.')}</i><br/>"
             )
-            await message.answer(
-                dup_text,
+            await message.bot.send_rich_message(
+                chat_id=message.chat.id,
+                rich_message=InputRichMessage(html=dup_text),
                 reply_markup=get_duplicate_word_keyboard(existing.id or "", user.native_language),
-                parse_mode="HTML",
             )
             return
 
