@@ -120,7 +120,8 @@ def format_word_card(analysis: WordAnalysis | Word, lang: str = "ru", include_au
         f"{blockquote_1}" +
         f"{examples_block}" +
         f"{examples_block_1}" +
-        f"{examples_block_2}"
+        f"{examples_block_2}" +
+        "<aside>Pull quote<cite>The Author</cite></aside>"
     )
     return card
 
