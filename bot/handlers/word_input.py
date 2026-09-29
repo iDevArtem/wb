@@ -89,7 +89,8 @@ def format_word_card(analysis: WordAnalysis | Word, lang: str = "ru", include_au
 
     blockquote = ""
     if blocks:
-        blockquote = "<blockquote>" + "<br/><br/>".join(blocks) + "</blockquote>"
+        blockquote = "<br/><br/>".join(blocks)
+        blockquote =+ ("<blockquote>" + "<br/><br/>".join(blocks) + "</blockquote>")
 
     examples_block = ""
     examples = getattr(analysis, "examples", [])
@@ -102,9 +103,11 @@ def format_word_card(analysis: WordAnalysis | Word, lang: str = "ru", include_au
             else:
                 target = getattr(ex, "target", "")
                 native = getattr(ex, "native", "")
-            ex_lines.append(f"• {html.escape(target)}<br/>  — <tg-spoiler><i>{html.escape(native)}</i></tg-spoiler>")
+            ex_lines.append(f"• {html.escape(target)}<br/>- <tg-spoiler><i>{html.escape(native)}</i></tg-spoiler>")
         
         examples_block = f"<details><summary>💬 {t(lang, 'Посмотреть примеры')}</summary>" + "<br/><br/>".join(ex_lines) + "</details>"
+        examples_block += f"<blockquote><details><summary>💬 {t(lang, 'Посмотреть примеры')}</summary>" + "<br/><br/>".join(ex_lines) + "</details></blockquote>"
+        examples_block += f"<blockquote expandable>💬 {t(lang, 'Посмотреть примеры')}" + "<br/><br/>".join(ex_lines) + "</blockquote>"
 
     card = (
         f"<h1>{escaped_word}</h1>" +
