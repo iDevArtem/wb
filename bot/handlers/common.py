@@ -15,7 +15,6 @@ from bot.core.database import get_words_collection
 from bot.keyboards.reply import get_main_menu_keyboard
 from bot.keyboards.inline import (
     get_archive_item_keyboard,
-    get_start_keyboard,
     get_words_pagination_keyboard,
     get_setup_language_keyboard,
 )
@@ -113,23 +112,12 @@ async def finalize_setup(message_obj: Message, user: User, target_code: str, sta
     await get_users_collection().update_one({"tg_id": user.tg_id}, {"$set": {"target_language": target_code}})
     await state.clear()
     
-    text = (
-        f"👋 {t(user.native_language, 'Привет')}, <b>{message_obj.chat.first_name or t(user.native_language, 'друг')}</b>!\n\n"
-        f"{t(user.native_language, 'Отправь мне прямо сейчас любое слово текстом или голосовым! 🚀')}"
-    )
+    text = f"{t(user.native_language, 'Отправь мне прямо сейчас любое слово текстом или голосовым! 🚀')}"
     
     try:
-        await message_obj.edit_text(text, reply_markup=get_start_keyboard(user.native_language), parse_mode="HTML")
+        await message_obj.edit_text(text, parse_mode="HTML")
     except Exception:
-        await message_obj.answer(text, reply_markup=get_start_keyboard(user.native_language), parse_mode="HTML")
-        
-    try:
-        await message_obj.answer(
-            t(user.native_language, "Используй меню ниже для быстрой навигации 👇"), 
-            reply_markup=get_main_menu_keyboard(user.native_language)
-        )
-    except Exception:
-        pass
+        await message_obj.answer(text, parse_mode="HTML")
 
 
 @router.message(Command("help"))
