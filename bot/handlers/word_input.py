@@ -71,7 +71,7 @@ def format_word_card(analysis: WordAnalysis | Word, lang: str = "ru", include_au
     extend_info = f"<blockquote>{level_display} • {escaped_pos} • {gram_text}<br/><tg-spoiler>{pos_native} • {gram_native_text}</tg-spoiler></blockquote>"
     
     def_text = f"<i>{html.escape(analysis.definition)}</i>" if getattr(analysis, "definition", None) else ""
-    definition_native = f"<i>{html.escape(definition_native)}</i>" if getattr(analysis, "definition_native", None) else ""
+    definition_native = f"<i>{html.escape(analysis.definition_native)}</i>" if getattr(analysis, "definition_native", None) else ""
 
     blockquote = ""
     if def_text or definition_native:
