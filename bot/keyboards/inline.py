@@ -7,23 +7,9 @@ from bot.core.config import settings
 def get_word_card_keyboard(word_id: int | str, lang: str = "ru") -> InlineKeyboardMarkup:
     """
     Inline keyboard for a newly added or inspected word card:
-    [🔊 Озвучить еще раз]
-    [💬 Примеры]
     [🗑 Удалить] [✅ Знаю (в архив)]
     """
     builder = InlineKeyboardBuilder()
-    builder.row(
-        InlineKeyboardButton(
-            text=t(lang, "🔊 Озвучить еще раз"),
-            callback_data=f"tts:{word_id}",
-        ),
-    )
-    builder.row(
-        InlineKeyboardButton(
-            text=t(lang, "💬 Примеры"),
-            callback_data=f"examples:{word_id}",
-        ),
-    )
     builder.row(
         InlineKeyboardButton(
             text=t(lang, "🗑 Удалить"),

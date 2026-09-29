@@ -79,6 +79,10 @@ class WordAnalysis(BaseModel):
         default_factory=list,
         description="Very short, critical grammar tags/forms. E.g. ['[C]', 'plural: tables'] for English nouns, ['der', 'pl: die Tische'] for German nouns, or ['[m]'] for romance languages.",
     )
+    examples: list[ExampleItem] = Field(
+        default_factory=list,
+        description="2-3 diverse example sentences using the word",
+    )
     grammar_notes_native: list[str] = Field(
         default_factory=list,
         description="Translation of the grammar_notes into the native language",
@@ -122,6 +126,7 @@ Rules:
 6. `level`: Determine the CEFR level (A1, A2, B1, B2, C1, C2) of the word.
 7. `definition`: Provide one short, simple explanation of the meaning in {target_lang}. Provide its translation in `definition_native`.
 8. `grammar_notes`: Provide a minimal list of crucial grammar facts. Example: for English nouns include `[C]` or `[U]`, for verbs include `[intransitive]`. Provide translations of these notes in `grammar_notes_native`.
+9. `examples`: Provide 2-3 diverse example sentences using the word, and their translations into the native language.
 """
 
 def get_voice_quiz_prompt(native_lang: str, target_lang: str) -> str:

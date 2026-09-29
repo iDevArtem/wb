@@ -56,7 +56,6 @@ def format_word_card(analysis: WordAnalysis | Word, lang: str = "ru") -> str:
         escaped_typo = html.escape(analysis.corrected_from)
         typo_note = f"{t(lang, '✏️ Исправлена опечатка с:')} <s>{escaped_typo}</s>\n"
 
-    # Compact layout requested by user
     lemma_note = ""
     if analysis.lemma.lower() != analysis.canonical_word.lower():
         lemma_note = f"\n{t(lang, '🌱 Словарная форма:')} <code>{escaped_lemma}</code>"
@@ -67,29 +66,49 @@ def format_word_card(analysis: WordAnalysis | Word, lang: str = "ru") -> str:
     pos_native_display = f" <i>({html.escape(pos_native)})</i>" if pos_native else ""
     transl_line = f"💬 <b>{escaped_transl}</b>{pos_native_display}{level_display}"
     
-    definition_block = ""
+    blocks = []
+    
     if getattr(analysis, "definition", None):
-        definition_block = f"\n\n<b>{t(lang, '💡 Значение:')}</b>\n<i>{html.escape(analysis.definition)}</i>"
+        def_text = f"<b>{t(lang, '💡 Значение:')}</b>\n<i>{html.escape(analysis.definition)}</i>"
         definition_native = getattr(analysis, "definition_native", None)
         if definition_native:
-            definition_block += f"\n<span class=\"tg-spoiler\"><i>{html.escape(definition_native)}</i></span>"
+            def_text += f"\n<span class=\"tg-spoiler\"><i>{html.escape(definition_native)}</i></span>"
+        blocks.append(def_text)
         
-    grammar_block = ""
-    grammar_notes = getattr(analysis, "grammar_notes", [])
-    if grammar_notes:
-        grammar_list = " • ".join(html.escape(n) for n in grammar_notes)
-        grammar_block = f"\n\n<b>{t(lang, '📐 Грамматика:')}</b>\n{grammar_list}"
+    if getattr(analysis, "grammar_notes", []):
+        grammar_list = " • ".join(html.escape(n) for n in analysis.grammar_notes)
+        gram_text = f"<b>{t(lang, '📐 Грамматика:')}</b>\n{grammar_list}"
         grammar_notes_native = getattr(analysis, "grammar_notes_native", [])
         if grammar_notes_native:
             grammar_list_native = " • ".join(html.escape(n) for n in grammar_notes_native)
-            grammar_block += f"\n<span class=\"tg-spoiler\">{grammar_list_native}</span>"
+            gram_text += f"\n<span class=\"tg-spoiler\">{grammar_list_native}</span>"
+        blocks.append(gram_text)
+
+    blockquote = ""
+    if blocks:
+        blockquote = "\n\n<blockquote>" + "\n\n".join(blocks) + "</blockquote>"
+
+    examples_block = ""
+    examples = getattr(analysis, "examples", [])
+    if examples:
+        ex_lines = []
+        for ex in examples:
+            if isinstance(ex, dict):
+                target = ex.get("target", "")
+                native = ex.get("native", "")
+            else:
+                target = getattr(ex, "target", "")
+                native = getattr(ex, "native", "")
+            ex_lines.append(f"• {html.escape(target)}\n  — <span class=\"tg-spoiler\"><i>{html.escape(native)}</i></span>")
+        
+        examples_block = f"\n\n<blockquote expandable><b>{t(lang, 'Посмотреть примеры')}</b>\n\n" + "\n\n".join(ex_lines) + "</blockquote>"
 
     card = (
         f"📖 <b>{escaped_word}</b> <i>({escaped_pos})</i>{level_display}\n" + f"{typo_note}" +
         f"🗣 {trans_display}"
         f"{lemma_note}\n" + f"{transl_line}" +
-        f"{definition_block}"
-        f"{grammar_block}"
+        f"{blockquote}" +
+        f"{examples_block}"
     )
     return card
 
@@ -201,6 +220,7 @@ async def handle_voice_input(
             pos_native=getattr(analysis, "pos_native", None),
             grammar_notes=getattr(analysis, "grammar_notes", []),
             grammar_notes_native=getattr(analysis, "grammar_notes_native", []),
+            examples=[{"target": ex.target, "native": ex.native} for ex in getattr(analysis, "examples", [])] if getattr(analysis, "examples", None) else [],
             extra_data={
                 "transcription_uk": getattr(analysis, "transcription_uk", None),
                 "transcription_us": getattr(analysis, "transcription_us", None)
@@ -221,11 +241,11 @@ async def handle_voice_input(
             tts_audio.getvalue(),
             filename=f"{analysis.canonical_word}.mp3",
         )
-        await message.answer_voice(
-            voice=voice_file_input,
-        )
-        await message.answer(
-            card_text,
+        await message.answer_audio(
+            audio=voice_file_input,
+            caption=card_text,
+            title=analysis.canonical_word,
+            performer=user.target_language.upper(),
             reply_markup=get_word_card_keyboard(new_word.id, user.native_language),
             parse_mode="HTML",
         )
@@ -335,6 +355,7 @@ async def handle_text_input(
             pos_native=getattr(analysis, "pos_native", None),
             grammar_notes=getattr(analysis, "grammar_notes", []),
             grammar_notes_native=getattr(analysis, "grammar_notes_native", []),
+            examples=[{"target": ex.target, "native": ex.native} for ex in getattr(analysis, "examples", [])] if getattr(analysis, "examples", None) else [],
             extra_data={
                 "transcription_uk": getattr(analysis, "transcription_uk", None),
                 "transcription_us": getattr(analysis, "transcription_us", None)
@@ -356,11 +377,11 @@ async def handle_text_input(
             tts_audio.getvalue(),
             filename=f"{analysis.canonical_word}.mp3",
         )
-        await message.answer_voice(
-            voice=voice_file_input,
-        )
-        await message.answer(
-            card_text,
+        await message.answer_audio(
+            audio=voice_file_input,
+            caption=card_text,
+            title=analysis.canonical_word,
+            performer=user.target_language.upper(),
             reply_markup=get_word_card_keyboard(new_word.id or "", user.native_language),
             parse_mode="HTML",
         )
@@ -383,30 +404,6 @@ async def handle_text_input(
             t(user.native_language, "⚠️ Произошла непредвиденная ошибка при анализе слова. Попробуйте позже."),
             parse_mode="HTML",
         )
-
-
-@router.callback_query(lambda c: c.data and c.data.startswith("tts:"))
-async def cb_repeat_tts(callback: CallbackQuery, user: User) -> None:
-    word_id_str = callback.data.split(":")[1]
-    words_col = get_words_collection()
-    doc = await words_col.find_one(_word_query_by_id(word_id_str, user))
-
-    if not doc:
-        await callback.answer(t(user.native_language, "Слово не найдено"), show_alert=True)
-        return
-
-    word = Word.model_validate(doc)
-    await callback.answer(t(user.native_language, "Генерирую озвучку..."))
-    try:
-        audio = await tts_service.generate_audio(word.canonical_word, target_lang=user.target_language)
-        voice_file = BufferedInputFile(audio.getvalue(), filename=f"{word.canonical_word}.mp3")
-        if callback.message:
-            await callback.message.answer_voice(
-                voice=voice_file,
-            )
-    except Exception as e:
-        logger.exception("Failed to synthesize TTS in callback")
-        await callback.answer(t(user.native_language, "Ошибка синтеза речи"), show_alert=True)
 
 
 @router.callback_query(lambda c: c.data and c.data.startswith("delete_word:"))
@@ -450,42 +447,4 @@ async def cb_archive_word(callback: CallbackQuery, user: User) -> None:
         except Exception:
             pass
 
-
-@router.callback_query(lambda c: c.data and c.data.startswith("examples:"))
-async def cb_word_examples(callback: CallbackQuery, user: User) -> None:
-    word_id_str = callback.data.split(":")[1]
-    words_col = get_words_collection()
-    query = _word_query_by_id(word_id_str, user)
-    doc = await words_col.find_one(query)
-
-    if not doc:
-        await callback.answer(t(user.native_language, "Слово не найдено"), show_alert=True)
-        return
-
-    word = Word.model_validate(doc)
-    
-    await callback.answer(t(user.native_language, "💬 Придумываю примеры..."))
-    try:
-        res = await gemini_service.get_word_examples(
-            word=word.canonical_word,
-            lemma=word.lemma,
-            pos=word.pos,
-            translation=word.translation,
-            native_lang=user.native_language,
-            target_lang=user.target_language,
-        )
-        
-        ex_lines = []
-        for ex in res.examples:
-            ex_lines.append(f"• {html.escape(ex.target)}\n  — <span class=\"tg-spoiler\"><i>{html.escape(ex.native)}</i></span>")
-        text = f"💬 <b>{t(user.native_language, 'Примеры с')} «{html.escape(word.canonical_word)}»:</b>\n\n" + "\n\n".join(ex_lines)
-        
-        if callback.message:
-            await callback.message.reply(text, parse_mode="HTML")
-            
-    except GeminiQuotaExhaustedError:
-        await callback.answer(t(user.native_language, "Лимит запросов к ИИ исчерпан. Попробуйте позже."), show_alert=True)
-    except Exception as e:
-        logger.exception("Error generating examples for word_id=%s: %s", word_id_str, e)
-        await callback.answer(t(user.native_language, "Ошибка генерации примеров."), show_alert=True)
 
