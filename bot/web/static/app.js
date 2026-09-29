@@ -2,13 +2,16 @@
 
 const tg = window.Telegram?.WebApp;
 
+const urlParams = new URLSearchParams(window.location.search);
+const initialFilter = urlParams.get('filter') || "all";
+
 const state = {
   token: localStorage.getItem("english_bot_token") || "",
   user: null,
   stats: null,
   words: [],
   searchQuery: "",
-  activeFilter: "all",
+  activeFilter: initialFilter,
   activeSort: "next_review",
   selectedPos: "",
   isLoading: false,
@@ -327,6 +330,15 @@ function playPronunciation(word, btnEl) {
 
 // --- Event Handlers & Search Debounce ---
 function setupEventListeners() {
+  // Initialize filter chips state
+  el.filterChips.forEach((chip) => {
+    if (chip.dataset.filter === state.activeFilter) {
+      chip.classList.add("active");
+    } else {
+      chip.classList.remove("active");
+    }
+  });
+
   // Search
   let searchTimer = null;
   el.searchInput.addEventListener("input", (e) => {
