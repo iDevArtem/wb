@@ -12,14 +12,17 @@ def get_main_menu_keyboard(lang: str) -> ReplyKeyboardMarkup:
     
     # 1. 🧠 Повторить
     builder.add(KeyboardButton(text=t(lang, "🧠 Повторить")))
+        
+    # 2. 📊
+    builder.add(KeyboardButton(text="📊"))
     
-    # 2. 📖 Словарь
+    # 3. 📖 Словарь
     if settings.webapp_url:
         base_url = settings.webapp_url.rstrip("/")
         builder.add(KeyboardButton(text="📖", web_app=WebAppInfo(url=f"{base_url}/?filter=all")))
     else:
         builder.add(KeyboardButton(text="📖"))
     
-    builder.adjust(2)
+    builder.adjust(3)
     
     return builder.as_markup(resize_keyboard=True, is_persistent=True)
