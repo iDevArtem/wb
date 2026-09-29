@@ -72,8 +72,7 @@
   "🛑 Завершить": "🛑 Finish",
   "Интервальное повторение активирует долговременную память. ": "Spaced repetition activates long-term memory. ",
   "Пройди быстрый квиз прямо сейчас:": "Take a quick quiz right now:",
-  "💡 Значение:": "💡 Meaning:",
-  "📐 Грамматика": "📐 Grammar:",
+  "📐 Грамматика": "📐 Grammar",
   "🌱 Словарная форма:": "🌱 Dictionary form:",
   "✏️ Исправлена опечатка с:": "✏️ Typo corrected from:",
   "Настройки профиля:": "Profile settings:",
@@ -192,5 +191,7 @@
   "букв": "letters",
   "Контекст:": "Context:",
   "родной": "native",
-  "🧠 Учить": "🧠 Learn"
+  "🧠 Учить": "🧠 Learn",
+  "Уровень": "Level",
+  "💡 Значение": "💡 Meaning"
 }

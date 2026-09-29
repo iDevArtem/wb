@@ -72,8 +72,7 @@
   "🛑 Завершить": "🛑 Terminer",
   "Интервальное повторение активирует долговременную память. ": "La répétition espacée active la mémoire à long terme. ",
   "Пройди быстрый квиз прямо сейчас:": "Fais un quiz rapide dès maintenant :",
-  "💡 Значение:": "💡 Sens :",
-  "📐 Грамматика": "📐 Grammaire :",
+  "📐 Грамматика": "📐 Grammaire",
   "🌱 Словарная форма:": "🌱 Forme du dictionnaire :",
   "✏️ Исправлена опечатка с:": "✏️ Faute de frappe corrigée depuis :",
   "Настройки профиля:": "Paramètres du profil :",
@@ -192,5 +191,7 @@
   "букв": "lettres",
   "Контекст:": "Contexte :",
   "родной": "langue maternelle",
-  "🧠 Учить": "🧠 Quiz"
+  "🧠 Учить": "🧠 Quiz",
+  "Уровень": "Niveau",
+  "💡 Значение": "💡 Sens"
 }

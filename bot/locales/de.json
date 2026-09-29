@@ -72,8 +72,7 @@
   "🛑 Завершить": "🛑 Beenden",
   "Интервальное повторение активирует долговременную память. ": "Intervallwiederholung aktiviert das Langzeitgedächtnis. ",
   "Пройди быстрый квиз прямо сейчас:": "Mach jetzt ein kurzes Quiz:",
-  "💡 Значение:": "💡 Bedeutung:",
-  "📐 Грамматика": "📐 Grammatik:",
+  "📐 Грамматика": "📐 Grammatik",
   "🌱 Словарная форма:": "🌱 Wörterbuchform:",
   "✏️ Исправлена опечатка с:": "✏️ Tippfehler korrigiert von:",
   "Настройки профиля:": "Profileinstellungen:",
@@ -192,5 +191,7 @@
   "букв": "Buchstaben",
   "Контекст:": "Kontext:",
   "родной": "Muttersprache",
-  "🧠 Учить": "🧠 Quiz"
+  "🧠 Учить": "🧠 Quiz",
+  "Уровень": "Level",
+  "💡 Значение": "💡 Bedeutung"
 }
