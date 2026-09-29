@@ -6,7 +6,7 @@ from datetime import datetime, timedelta, timezone
 from aiogram import Bot, F, Router
 from aiogram.enums import ChatAction
 from aiogram.fsm.context import FSMContext
-from aiogram.types import BufferedInputFile, CallbackQuery, Message
+from aiogram.types import BufferedInputFile, CallbackQuery, Message, InputRichMessage, InputRichMessageMedia, InputMediaVoiceNote
 import re
 from bson import ObjectId
 from bot.core.database import get_words_collection
@@ -31,7 +31,7 @@ logger = logging.getLogger(__name__)
 router = Router(name="word_input")
 
 
-def format_word_card(analysis: WordAnalysis | Word, lang: str = "ru") -> str:
+def format_word_card(analysis: WordAnalysis | Word, lang: str = "ru", include_audio: bool = True) -> str:
     escaped_word = html.escape(analysis.canonical_word)
     escaped_pos = html.escape(analysis.pos)
     escaped_lemma = html.escape(analysis.lemma)
@@ -65,21 +65,27 @@ def format_word_card(analysis: WordAnalysis | Word, lang: str = "ru") -> str:
     pos_native_display = f" <i>({html.escape(pos_native)})</i>" if pos_native else ""
     transl_line = f"💬 <b>{escaped_transl}</b>{pos_native_display}{level_display}"
     
-    definition_block = ""
+    blocks = []
+    
     if getattr(analysis, "definition", None):
-        definition_block = f"\n\n<b>{t(lang, '💡 Значение:')}</b>\n<i>{html.escape(analysis.definition)}</i>"
+        def_text = f"<b>{t(lang, '💡 Значение:')}</b>\n<i>{html.escape(analysis.definition)}</i>"
         definition_native = getattr(analysis, "definition_native", None)
         if definition_native:
-            definition_block += f"\n<span class=\"tg-spoiler\"><i>{html.escape(definition_native)}</i></span>"
+            def_text += f"\n<span class=\"tg-spoiler\"><i>{html.escape(definition_native)}</i></span>"
+        blocks.append(def_text)
         
-    grammar_block = ""
     if getattr(analysis, "grammar_notes", []):
         grammar_list = " • ".join(html.escape(n) for n in analysis.grammar_notes)
-        grammar_block = f"\n\n<b>{t(lang, '📐 Грамматика:')}</b>\n{grammar_list}"
+        gram_text = f"<b>{t(lang, '📐 Грамматика:')}</b>\n{grammar_list}"
         grammar_notes_native = getattr(analysis, "grammar_notes_native", [])
         if grammar_notes_native:
             grammar_list_native = " • ".join(html.escape(n) for n in grammar_notes_native)
-            grammar_block += f"\n<span class=\"tg-spoiler\">{grammar_list_native}</span>"
+            gram_text += f"\n<span class=\"tg-spoiler\">{grammar_list_native}</span>"
+        blocks.append(gram_text)
+
+    blockquote = ""
+    if blocks:
+        blockquote = "\n\n<blockquote>" + "\n\n".join(blocks) + "</blockquote>"
 
     examples_block = ""
     examples = getattr(analysis, "examples", [])
@@ -100,8 +106,8 @@ def format_word_card(analysis: WordAnalysis | Word, lang: str = "ru") -> str:
         f"📖 <b>{escaped_word}</b> <i>({escaped_pos})</i>{level_display}\n" + f"{typo_note}" +
         f"🗣 {trans_display}"
         f"{lemma_note}\n" + f"{transl_line}" +
-        f"{definition_block}" +
-        f"{grammar_block}" +
+        (f"\n\n<audio src=\"tg://audio?id=audio1\"></audio>" if include_audio else "") +
+        f"{blockquote}" +
         f"{examples_block}"
     )
     return card
@@ -180,7 +186,7 @@ async def handle_voice_input(
             existing = await check_existing_word(user, analysis.lemma)
 
         if existing:
-            card_text = format_word_card(analysis, user.native_language)
+            card_text = format_word_card(analysis, user.native_language, include_audio=False)
             text = (
                 f"{card_text}\n\n"
                 f"<i>{t(user.native_language, '💡 Ты уже учишь слово')}  "
@@ -235,11 +241,18 @@ async def handle_voice_input(
             tts_audio.getvalue(),
             filename=f"{analysis.canonical_word}.mp3",
         )
-        await message.answer_voice(
-            voice=voice_file_input,
-            caption=card_text,
+        media = InputRichMessageMedia(
+            id="audio1",
+            media=InputMediaVoiceNote(media=voice_file_input)
+        )
+        rich_msg = InputRichMessage(
+            html=card_text,
+            media=[media]
+        )
+        await message.bot.send_rich_message(
+            chat_id=message.chat.id,
+            rich_message=rich_msg,
             reply_markup=get_word_card_keyboard(new_word.id, user.native_language),
-            parse_mode="HTML",
         )
 
     except GeminiQuotaExhaustedError:
@@ -285,7 +298,7 @@ async def handle_text_input(
     # Check for direct local duplicate before making an API call
     direct_match = await check_existing_word(user, text)
     if direct_match:
-        card_text = format_word_card(direct_match, user.native_language)
+        card_text = format_word_card(direct_match, user.native_language, include_audio=False)
         dup_text = (
             f"{card_text}\n\n"
             f"<i>{t(user.native_language, '💡 Ты уже учишь слово')}  "
@@ -314,7 +327,7 @@ async def handle_text_input(
             existing = await check_existing_word(user, analysis.lemma)
 
         if existing:
-            card_text = format_word_card(analysis, user.native_language)
+            card_text = format_word_card(analysis, user.native_language, include_audio=False)
             dup_text = (
                 f"<i>{t(user.native_language, '💡 Ты уже учишь слово')}\n\n"
                 f"{card_text}\n\n"
@@ -369,11 +382,18 @@ async def handle_text_input(
             tts_audio.getvalue(),
             filename=f"{analysis.canonical_word}.mp3",
         )
-        await message.answer_voice(
-            voice=voice_file_input,
-            caption=card_text,
+        media = InputRichMessageMedia(
+            id="audio1",
+            media=InputMediaVoiceNote(media=voice_file_input)
+        )
+        rich_msg = InputRichMessage(
+            html=card_text,
+            media=[media]
+        )
+        await message.bot.send_rich_message(
+            chat_id=message.chat.id,
+            rich_message=rich_msg,
             reply_markup=get_word_card_keyboard(new_word.id or "", user.native_language),
-            parse_mode="HTML",
         )
 
     except GeminiQuotaExhaustedError:
