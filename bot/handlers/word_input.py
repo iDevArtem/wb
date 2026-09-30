@@ -158,7 +158,8 @@ async def _send_duplicate_word_message(
         id="audio1",
         media=InputMediaAudio(
             media=voice_file_input,
-            title=_get_us_transcription(word_data) or word_data.canonical_word
+            title=_get_us_transcription(word_data),
+            performer=word_data.canonical_word
         )
     )
     card_text = format_word_card(word_data, user.native_language)
@@ -267,7 +268,8 @@ async def handle_voice_input(
             id="audio1",
             media=InputMediaAudio(
                 media=voice_file_input,
-                title=_get_us_transcription(analysis) or analysis.canonical_word
+                title=_get_us_transcription(analysis),
+                performer=analysis.canonical_word
             )
         )
         rich_msg = InputRichMessage(
@@ -390,7 +392,8 @@ async def handle_text_input(
             id="audio1",
             media=InputMediaAudio(
                 media=voice_file_input,
-                title=_get_us_transcription(analysis) or analysis.canonical_word
+                title=_get_us_transcription(analysis),
+                performer=analysis.canonical_word
             )
         )
         rich_msg = InputRichMessage(
