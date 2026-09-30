@@ -13,7 +13,7 @@ from bot.core.database import get_words_collection
 from bot.models.base import utc_now
 
 from bot.keyboards.inline import (
-    get_duplicate_word_keyboard,
+
     get_word_card_keyboard,
 )
 from bot.models.user import User
@@ -143,6 +143,36 @@ async def check_existing_word(
     return Word.model_validate(doc) if doc else None
 
 
+async def _send_duplicate_word_message(
+    message: Message,
+    user: User,
+    word_data,
+    existing_word
+) -> None:
+    tts_audio = await tts_service.generate_audio(word_data.canonical_word, target_lang=user.target_language)
+    voice_file_input = BufferedInputFile(
+        tts_audio.getvalue(),
+        filename=f"{word_data.canonical_word}.mp3",
+    )
+    media = InputRichMessageMedia(
+        id="audio1",
+        media=InputMediaAudio(
+            media=voice_file_input,
+            title=_get_us_transcription(word_data)
+        )
+    )
+    card_text = format_word_card(word_data, user.native_language)
+    dup_text = (
+        f"{card_text}<br/><br/>"
+        f"<i>{t(user.native_language, '💡 Ты уже учишь слово')}  "
+        f"{t(user.native_language, 'Интервал повторения:')} <b>{existing_word.interval}</b> {t(user.native_language, 'дн.')}</i><br/>"
+    )
+    await message.bot.send_rich_message(
+        chat_id=message.chat.id,
+        rich_message=InputRichMessage(html=dup_text, media=[media]),
+        reply_markup=get_word_card_keyboard(existing_word.id or "", user.native_language),
+    )
+
 @router.message(F.voice)
 async def handle_voice_input(
     message: Message,
@@ -189,17 +219,7 @@ async def handle_voice_input(
             existing = await check_existing_word(user, analysis.lemma)
 
         if existing:
-            card_text = format_word_card(analysis, user.native_language, include_audio=False)
-            text = (
-                f"{card_text}<br/>"
-                f"<i>{t(user.native_language, '💡 Ты уже учишь слово')}  "
-                f"{t(user.native_language, 'Интервал повторения:')} <b>{existing.interval}</b> {t(user.native_language, 'дн.')}</i><br/>"
-            )
-            await message.bot.send_rich_message(
-                chat_id=message.chat.id,
-                rich_message=InputRichMessage(html=text),
-                reply_markup=get_duplicate_word_keyboard(existing.id or "", user.native_language),
-            )
+            await _send_duplicate_word_message(message, user, analysis, existing)
             return
 
         # Synthesize audio with edge-tts in memory
@@ -303,17 +323,7 @@ async def handle_text_input(
     # Check for direct local duplicate before making an API call
     direct_match = await check_existing_word(user, text)
     if direct_match:
-        card_text = format_word_card(direct_match, user.native_language, include_audio=False)
-        dup_text = (
-            f"{card_text}<br/><br/>"
-            f"<i>{t(user.native_language, '💡 Ты уже учишь слово')}  "
-            f"{t(user.native_language, 'Интервал повторения:')} <b>{direct_match.interval}</b> {t(user.native_language, 'дн.')}</i><br/>"
-        )
-        await message.bot.send_rich_message(
-            chat_id=message.chat.id,
-            rich_message=InputRichMessage(html=dup_text),
-            reply_markup=get_duplicate_word_keyboard(direct_match.id or "", user.native_language),
-        )
+        await _send_duplicate_word_message(message, user, direct_match, direct_match)
         return
 
     await bot.send_chat_action(message.chat.id, ChatAction.TYPING)
@@ -331,17 +341,7 @@ async def handle_text_input(
             existing = await check_existing_word(user, analysis.lemma)
 
         if existing:
-            card_text = format_word_card(analysis, user.native_language, include_audio=False)
-            dup_text = (
-                f"{card_text}<br/>"
-                f"<i>{t(user.native_language, '💡 Ты уже учишь слово')}</i><br/>"
-                f"<i>{t(user.native_language, 'Интервал повторения:')} <b>{existing.interval}</b> {t(user.native_language, 'дн.')}</i><br/>"
-            )
-            await message.bot.send_rich_message(
-                chat_id=message.chat.id,
-                rich_message=InputRichMessage(html=dup_text),
-                reply_markup=get_duplicate_word_keyboard(existing.id or "", user.native_language),
-            )
+            await _send_duplicate_word_message(message, user, analysis, existing)
             return
 
         # In-memory neural TTS

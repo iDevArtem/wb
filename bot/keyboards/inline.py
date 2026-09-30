@@ -23,39 +23,6 @@ def get_word_card_keyboard(word_id: int | str, lang: str = "ru") -> InlineKeyboa
     return builder.as_markup()
 
 
-def get_duplicate_word_keyboard(word_id: int | str, lang: str = "ru") -> InlineKeyboardMarkup:
-    """
-    Keyboard when the word is already in user's dictionary.
-    """
-    builder = InlineKeyboardBuilder()
-    builder.row(
-        InlineKeyboardButton(
-            text=t(lang, "🧠 Повторить прямо сейчас"),
-            callback_data=f"quiz_word:{word_id}",
-        ),
-    )
-    builder.row(
-        InlineKeyboardButton(
-            text=t(lang, "🔊 Озвучить еще раз"),
-            callback_data=f"tts:{word_id}",
-        ),
-        InlineKeyboardButton(
-            text=t(lang, "💬 Примеры"),
-            callback_data=f"examples:{word_id}",
-        ),
-    )
-    builder.row(
-        InlineKeyboardButton(
-            text=t(lang, "🗑 Удалить"),
-            callback_data=f"delete_word:{word_id}",
-        ),
-        InlineKeyboardButton(
-            text=t(lang, "✅ Знаю (в архив)"),
-            callback_data=f"archive_word:{word_id}",
-        ),
-    )
-    return builder.as_markup()
-
 
 def get_quiz_options_keyboard(options: list[str], lang: str = "ru") -> InlineKeyboardMarkup:
     """
