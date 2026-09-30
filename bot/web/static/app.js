@@ -194,109 +194,43 @@ function renderWords() {
 }
 
 function createWordCardHtml(word) {
-  // SM-2 calculations
   const rep = word.repetition || 0;
-  const interval = word.interval || 1;
-  const nextReview = word.next_review_at ? new Date(word.next_review_at) : new Date();
-  const now = new Date();
-  
-  const diffMs = nextReview - now;
-  const isDue = diffMs <= 0;
-  const diffDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
-
-  let dueBadgeText = "";
-  let dueBadgeClass = "";
-  if (isDue) {
-    dueBadgeText = "Пора повторить";
-    dueBadgeClass = "due";
-  } else if (diffDays <= 1) {
-    dueBadgeText = "Завтра";
-    dueBadgeClass = "soon";
-  } else {
-    dueBadgeText = `Через ${diffDays} дн.`;
-    dueBadgeClass = "future";
-  }
-
-  // Retention visual bars (up to 5)
   const maxBars = 5;
   const filledBars = Math.min(maxBars, rep);
   let barColorClass = rep >= 3 ? "" : rep >= 1 ? "medium" : "low";
 
   let barsHtml = "";
   for (let i = 0; i < maxBars; i++) {
-    const isFilled = (maxBars - 1 - i) < filledBars; // reverse order so bottom is filled first
+    const isFilled = i < filledBars;
     barsHtml += `<div class="retention-scale-segment ${isFilled ? `filled ${barColorClass}` : ""}"></div>`;
-  }
-
-  // Examples
-  let examplesHtml = "";
-  if (word.examples && word.examples.length > 0) {
-    const ex = word.examples[0];
-    const enText = typeof ex === "string" ? ex : ex.en || "";
-    const ruText = typeof ex === "object" ? ex.ru || "" : "";
-
-    // Highlight canonical word in example
-    const regex = new RegExp(`(${escapeRegExp(word.canonical_word)}|${escapeRegExp(word.lemma || "")})`, "gi");
-    const highlightedEn = enText.replace(regex, "<strong>$1</strong>");
-
-    examplesHtml = `
-      <div class="word-examples">
-        <div class="example-en">${highlightedEn}</div>
-        ${ruText ? `<div class="example-ru">${ruText}</div>` : ""}
-      </div>
-    `;
-  }
-
-  // Synonyms/Collocations
-  let tagsHtml = "";
-  if (word.synonyms_collocations && word.synonyms_collocations.length > 0) {
-    tagsHtml = `
-      <div class="tags-row">
-        ${word.synonyms_collocations.slice(0, 4).map((t) => `<span class="tag-pill">${escapeHtml(t)}</span>`).join("")}
-      </div>
-    `;
   }
 
   return `
     <div class="word-card" id="word-${word.id}">
-      <div class="retention-scale-y" title="Уровень запоминания: ${rep}/5">
+      <div class="retention-scale-x" title="Уровень запоминания: ${rep}/5">
         ${barsHtml}
       </div>
       
-      <div class="word-card-header">
-        <div class="word-title-group" onclick="this.closest('.word-card').classList.toggle('expanded')">
-          <span class="word-canonical">${escapeHtml(word.canonical_word)}</span>
-          <svg class="expand-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-left: 4px; color: var(--hint-color); transition: transform 0.2s;">
-            <polyline points="6 9 12 15 18 9"></polyline>
-          </svg>
-        </div>
-        <button class="audio-btn" data-word="${escapeHtml(word.canonical_word)}" title="Произношение">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
-            <path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path>
-            <path d="M19.07 4.93a10 10 0 0 1 0 14.14"></path>
-          </svg>
-        </button>
-      </div>
-
-      <div class="word-translation">${escapeHtml(word.translation)}</div>
-      
-      <div class="word-details-collapsible">
-        <div class="word-badges-row" style="display: flex; gap: 8px; margin-bottom: 12px; align-items: center; flex-wrap: wrap;">
-          ${word.pos ? `<span class="word-pos">${escapeHtml(word.pos)}</span>` : ""}
-          <span class="next-review-badge ${dueBadgeClass}">${dueBadgeText}</span>
+      <div class="word-card-inner">
+        <div class="word-card-left">
+          <div class="word-canonical">${escapeHtml(word.canonical_word)}</div>
+          <div class="word-translation">${escapeHtml(word.translation)}</div>
         </div>
         
-        ${word.transcription ? `<div class="word-transcription-row">Транскрипция: [${escapeHtml(word.transcription)}]</div>` : ""}
-        ${examplesHtml}
-        ${tagsHtml}
-        <div class="sm2-status" style="margin-top: 12px; font-size: 0.8rem; display: flex; justify-content: space-between; align-items: center;">
-          <span style="color: var(--hint-color);">Интервал повторения: ${interval} дн.</span>
-          <button class="open-full-card-btn" data-id="${word.id}" style="background: none; border: none; color: var(--link-color); font-size: 0.9rem; cursor: pointer; display: flex; align-items: center; gap: 4px;">
-            Подробнее
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <line x1="5" y1="12" x2="19" y2="12"></line>
-              <polyline points="12 5 19 12 12 19"></polyline>
+        <div class="word-card-right">
+          <button class="audio-btn" data-word="${escapeHtml(word.canonical_word)}" title="Произношение">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+              <path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path>
+              <path d="M19.07 4.93a10 10 0 0 1 0 14.14"></path>
+            </svg>
+          </button>
+          
+          <button class="open-full-card-btn" data-id="${word.id}" title="Подробнее">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
+              <polyline points="15 3 21 3 21 9"></polyline>
+              <line x1="10" y1="14" x2="21" y2="3"></line>
             </svg>
           </button>
         </div>
@@ -437,8 +371,8 @@ function escapeRegExp(string) {
 document.addEventListener("click", (e) => {
   const btn = e.target.closest(".open-full-card-btn");
   if (btn) {
-    const id = parseInt(btn.dataset.id, 10);
-    const word = state.words.find(w => w.id === id);
+    const id = btn.dataset.id;
+    const word = state.words.find(w => String(w.id) === String(id));
     if (word) openFullWordModal(word);
   }
 });

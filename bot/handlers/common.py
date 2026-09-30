@@ -3,6 +3,7 @@ import html
 import logging
 import math
 from datetime import datetime, timezone
+import random
 from aiogram import Router, F
 from aiogram.filters import Command, CommandStart
 from aiogram.types import CallbackQuery, InlineKeyboardMarkup, Message, InputRichMessage
@@ -144,7 +145,7 @@ async def cmd_stats(message: Message, user: User) -> None:
 
     text = (
         f"📊 <b>{t(user.native_language, 'Твой прогресс в изучении:')}</b>\n\n" +
-        f"🔥 <b>{t(user.native_language, 'Текущий стрик:')}</b>\xa0{user.streak}\xa0{t(user.native_language, 'дн.')}\n" +
+        f"🔥 <b>{t(user.native_language, random.choice(STREAK_TITLES))}</b>\xa0{user.streak}\xa0{t(user.native_language, 'дн.')}\n" +
         f"📚 <b>{t(user.native_language, 'Всего слов в словаре:')}</b>\xa0{total_words}\n" +
         f"   ├ ⚡ <i>{t(user.native_language, 'Слов на изучении:')}</i>\xa0{active_words}\n" +
         f"   └ ✅ <i>{t(user.native_language, 'Выучено (в архиве):')}</i>\xa0{archived_words}\n" +

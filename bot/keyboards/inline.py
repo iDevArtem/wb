@@ -7,7 +7,7 @@ from bot.core.config import settings
 def get_word_card_keyboard(word_id: int | str, lang: str = "ru", is_pending: bool = False) -> InlineKeyboardMarkup:
     """
     Inline keyboard for a newly added or inspected word card.
-    If is_pending=True, shows [➕ Добавить в словарь] and [🔴 Удалить].
+    If is_pending=True, shows [➕ Добавить] and [🔴 Удалить].
     Otherwise, shows [🔴 Знаю! Удалить] [🟢 Выучил!].
     """
     builder = InlineKeyboardBuilder()
@@ -15,7 +15,7 @@ def get_word_card_keyboard(word_id: int | str, lang: str = "ru", is_pending: boo
     if is_pending:
         builder.row(
             InlineKeyboardButton(
-                text=t(lang, "➕ Добавить в словарь"),
+                text=t(lang, "➕ Добавить"),
                 callback_data=f"add_word:{word_id}",
             ),
             InlineKeyboardButton(
