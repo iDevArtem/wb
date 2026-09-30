@@ -7,16 +7,16 @@ from bot.core.config import settings
 def get_word_card_keyboard(word_id: int | str, lang: str = "ru") -> InlineKeyboardMarkup:
     """
     Inline keyboard for a newly added or inspected word card:
-    [🗑 Удалить] [✅ Знаю (в архив)]
+    [🔴 Знаю! Удалить] [🟢 Выучил!]
     """
     builder = InlineKeyboardBuilder()
     builder.row(
         InlineKeyboardButton(
-            text=t(lang, "🗑 Удалить"),
+            text=t(lang, "🔴 Знаю! Удалить"),
             callback_data=f"delete_word:{word_id}",
         ),
         InlineKeyboardButton(
-            text=t(lang, "✅ Знаю (в архив)"),
+            text=t(lang, "🟢 Выучил!"),
             callback_data=f"archive_word:{word_id}",
         ),
     )
