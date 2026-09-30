@@ -158,7 +158,6 @@ async def cmd_help(message: Message, user: User) -> None:
     await message.answer(text, parse_mode="HTML", reply_markup=get_main_menu_keyboard(user.native_language))
 
 
-@router.message(Command("stats"))
 @router.message(TranslatedText("📊 Статистика"))
 @router.message(F.text.in_({"📊", "📊\ufe0f"}))
 async def cmd_stats(message: Message, user: User) -> None:

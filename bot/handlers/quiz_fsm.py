@@ -302,7 +302,6 @@ async def present_next_word(
         await update_main_quiz_message(message.bot, message.chat.id, state, prompt_text, reply_markup=get_quiz_control_keyboard(user.native_language))
 
 
-@router.message(Command("quiz"))
 @router.message(TranslatedText("🧠 Учить"))
 @router.message(F.text.in_({"🧠", "🧠\ufe0f"}))
 async def cmd_quiz(message: Message, user: User, state: FSMContext) -> None:

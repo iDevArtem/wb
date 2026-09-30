@@ -61,12 +61,9 @@ async def main() -> None:
     try:
         from aiogram.types import BotCommand, MenuButtonCommands
         bot_commands = [
-            BotCommand(command="words", description="📖 Словарь и список слов"),
-            BotCommand(command="quiz", description="🧠 Тренировка слов"),
-            BotCommand(command="stats", description="📊 Статистика и стрик"),
-            BotCommand(command="archive", description="📦 Архив выученных слов"),
-            BotCommand(command="settings", description="⚙️ Настройки и тихие часы"),
-            BotCommand(command="help", description="ℹ️ Справка и помощь"),
+            BotCommand(command="start", description="🚀"),
+            BotCommand(command="settings", description="⚙️"),
+            BotCommand(command="help", description="❓"),
         ]
         await bot.set_my_commands(bot_commands)
         await bot.set_chat_menu_button(menu_button=MenuButtonCommands())
