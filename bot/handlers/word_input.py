@@ -105,7 +105,7 @@ def format_word_card(analysis: WordAnalysis | Word, lang: str = "ru", include_au
 
     card = (
         f"<h1>{escaped_word}</h1>" +
-        f"<p>{escaped_transl}</p>" +
+        f"<p><tg-spoiler>{escaped_transl}</tg-spoiler></p>" +
         (f"<audio src=\"tg://audio?id=audio1\"></audio>" if include_audio else "") +
         f"{extend_info}" +
         f"{blockquote}" +
@@ -221,6 +221,10 @@ async def handle_voice_input(
 
         if existing:
             await _send_duplicate_word_message(message, user, analysis, existing)
+            try:
+                await message.delete()
+            except Exception:
+                pass
             return
 
         # Synthesize audio with edge-tts in memory
@@ -281,6 +285,10 @@ async def handle_voice_input(
             rich_message=rich_msg,
             reply_markup=get_word_card_keyboard(new_word.id, user.native_language),
         )
+        try:
+            await message.delete()
+        except Exception:
+            pass
 
     except GeminiQuotaExhaustedError:
         logger.warning("Gemini quota exhausted during voice input")
@@ -326,6 +334,10 @@ async def handle_text_input(
     direct_match = await check_existing_word(user, text)
     if direct_match:
         await _send_duplicate_word_message(message, user, direct_match, direct_match)
+        try:
+            await message.delete()
+        except Exception:
+            pass
         return
 
     await bot.send_chat_action(message.chat.id, ChatAction.TYPING)
@@ -344,6 +356,10 @@ async def handle_text_input(
 
         if existing:
             await _send_duplicate_word_message(message, user, analysis, existing)
+            try:
+                await message.delete()
+            except Exception:
+                pass
             return
 
         # In-memory neural TTS
@@ -405,6 +421,10 @@ async def handle_text_input(
             rich_message=rich_msg,
             reply_markup=get_word_card_keyboard(new_word.id or "", user.native_language),
         )
+        try:
+            await message.delete()
+        except Exception:
+            pass
 
     except GeminiQuotaExhaustedError:
         logger.warning("Gemini quota exhausted during text input")
