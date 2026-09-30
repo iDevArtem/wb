@@ -74,7 +74,7 @@ async def check_due_words_task(bot: Bot) -> None:
             due_count = await words_col.count_documents({
                 "user_id": user.tg_id,
                 "is_archived": False,
-                "is_pending": False,
+                "is_pending": {"$ne": True},
                 "next_review_at": {"$lte": now_utc},
                 "target_language": user.target_language,
                 "native_language": user.native_language,

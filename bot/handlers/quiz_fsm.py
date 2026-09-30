@@ -134,13 +134,13 @@ async def start_quiz_session(
         word_ids = [str(doc["_id"])] if doc else []
     elif allow_all:
         cursor = words_col.find(
-            {"user_id": user.id, "is_archived": False, "is_pending": False, "target_language": user.target_language, "native_language": user.native_language},
+            {"user_id": user.id, "is_archived": False, "is_pending": {"$ne": True}, "target_language": user.target_language, "native_language": user.native_language},
             {"_id": 1},
         ).sort("next_review_at", 1).limit(15)
         word_ids = [str(doc["_id"]) async for doc in cursor]
     else:
         cursor = words_col.find(
-            {"user_id": user.id, "is_archived": False, "is_pending": False, "next_review_at": {"$lte": now_utc}, "target_language": user.target_language, "native_language": user.native_language},
+            {"user_id": user.id, "is_archived": False, "is_pending": {"$ne": True}, "next_review_at": {"$lte": now_utc}, "target_language": user.target_language, "native_language": user.native_language},
             {"_id": 1},
         ).sort("next_review_at", 1).limit(20)
         word_ids = [str(doc["_id"]) async for doc in cursor]
@@ -148,14 +148,14 @@ async def start_quiz_session(
     if not word_ids:
         # Check if user has any active words
         has_any = await words_col.find_one(
-            {"user_id": user.id, "is_archived": False, "is_pending": False, "target_language": user.target_language, "native_language": user.native_language},
+            {"user_id": user.id, "is_archived": False, "is_pending": {"$ne": True}, "target_language": user.target_language, "native_language": user.native_language},
             {"_id": 1},
         )
 
         if not has_any:
             # Check if user has archived words
             has_archived = await words_col.find_one(
-                {"user_id": user.id, "is_archived": True, "is_pending": False, "target_language": user.target_language, "native_language": user.native_language},
+                {"user_id": user.id, "is_archived": True, "is_pending": {"$ne": True}, "target_language": user.target_language, "native_language": user.native_language},
                 {"_id": 1},
             )
             

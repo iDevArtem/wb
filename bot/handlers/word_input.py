@@ -134,7 +134,7 @@ async def check_existing_word(
     doc = await words_col.find_one({
         "user_id": user.tg_id, "target_language": user.target_language, "native_language": user.native_language,
         "is_archived": False,
-        "is_pending": False,
+        "is_pending": {"$ne": True},
         "$or": [
             {"canonical_word": {"$regex": pattern, "$options": "i"}},
             {"lemma": {"$regex": pattern, "$options": "i"}},
