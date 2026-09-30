@@ -146,8 +146,8 @@ async def cmd_stats(message: Message, user: User) -> None:
         f"📊 <b>{t(user.native_language, 'Твой прогресс в изучении:')}</b>\n\n" +
         f"🔥 <b>{t(user.native_language, 'Текущий стрик:')}</b> {user.streak} {t(user.native_language, 'дн.')}\n" +
         f"📚 <b>{t(user.native_language, 'Всего слов в словаре:')}</b> {total_words}\n" +
-        f"⚡ <b>{t(user.native_language, 'Слов на изучении:')}</b> {active_words}\n" +
-        f"✅ <b>{t(user.native_language, 'Выучено (в архиве):')}</b> {archived_words}\n" +
+        f"   ├ ⚡ <i>{t(user.native_language, 'Слов на изучении:')}</i> {active_words}\n" +
+        f"   └ ✅ <i>{t(user.native_language, 'Выучено (в архиве):')}</i> {archived_words}\n" +
         f"🧠 <b>{t(user.native_language, 'Готово к повторению сегодня:')}</b> {due_words}\n" +
         f"📈 <b>{t(user.native_language, 'Средний интервал памяти:')}</b> {avg_interval:.1f} {t(user.native_language, 'дн.')}\n\n" +
         f"🌍 <b>{t(user.native_language, 'Часовой пояс:')}</b> <code>{user.timezone}</code>\n" +
