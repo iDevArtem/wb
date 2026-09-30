@@ -158,7 +158,7 @@ async def _send_duplicate_word_message(
         media=InputMediaAudio(
             media=voice_file_input,
             title=_get_us_transcription(word_data),
-            performer=word_data.canonical_word
+            performer=word_data.level or word_data.canonical_word
         )
     )
     card_text = format_word_card(word_data, user.native_language)
