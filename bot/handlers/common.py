@@ -165,4 +165,16 @@ async def cmd_stats(message: Message, user: User) -> None:
 async def cb_noop(callback: CallbackQuery) -> None:
     await callback.answer()
 
+@router.callback_query(lambda c: c.data == "dismiss")
+async def cb_dismiss(callback: CallbackQuery) -> None:
+    await callback.answer()
+    if callback.message:
+        try:
+            await callback.message.delete()
+        except Exception:
+            try:
+                await callback.message.edit_reply_markup(reply_markup=None)
+            except Exception:
+                pass
+
 
