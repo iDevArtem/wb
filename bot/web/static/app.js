@@ -196,14 +196,17 @@ function createWordCardHtml(word) {
   const interval = word.interval || 1;
   const nextReview = word.next_review_at ? new Date(word.next_review_at) : new Date();
   const now = new Date();
-  const diffDays = Math.round((nextReview - now) / (1000 * 60 * 60 * 24));
+  
+  const diffMs = nextReview - now;
+  const isDue = diffMs <= 0;
+  const diffDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
 
   let dueBadgeText = "";
   let dueBadgeClass = "";
-  if (diffDays <= 0) {
+  if (isDue) {
     dueBadgeText = "Пора повторить";
     dueBadgeClass = "due";
-  } else if (diffDays === 1) {
+  } else if (diffDays <= 1) {
     dueBadgeText = "Завтра";
     dueBadgeClass = "soon";
   } else {
@@ -218,8 +221,8 @@ function createWordCardHtml(word) {
 
   let barsHtml = "";
   for (let i = 0; i < maxBars; i++) {
-    const isFilled = i < filledBars;
-    barsHtml += `<div class="retention-bar ${isFilled ? `filled ${barColorClass}` : ""}"></div>`;
+    const isFilled = (maxBars - 1 - i) < filledBars; // reverse order so bottom is filled first
+    barsHtml += `<div class="retention-scale-segment ${isFilled ? `filled ${barColorClass}` : ""}"></div>`;
   }
 
   // Examples
@@ -253,10 +256,13 @@ function createWordCardHtml(word) {
 
   return `
     <div class="word-card" id="word-${word.id}">
+      <div class="retention-scale-y" title="Уровень запоминания: ${rep}/5">
+        ${barsHtml}
+      </div>
+      
       <div class="word-card-header">
         <div class="word-title-group" onclick="this.closest('.word-card').classList.toggle('expanded')">
           <span class="word-canonical">${escapeHtml(word.canonical_word)}</span>
-          ${word.pos ? `<span class="word-pos">${escapeHtml(word.pos)}</span>` : ""}
           <svg class="expand-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-left: 4px; color: var(--hint-color); transition: transform 0.2s;">
             <polyline points="6 9 12 15 18 9"></polyline>
           </svg>
@@ -273,17 +279,17 @@ function createWordCardHtml(word) {
       <div class="word-translation">${escapeHtml(word.translation)}</div>
       
       <div class="word-details-collapsible">
+        <div class="word-badges-row" style="display: flex; gap: 8px; margin-bottom: 12px; align-items: center; flex-wrap: wrap;">
+          ${word.pos ? `<span class="word-pos">${escapeHtml(word.pos)}</span>` : ""}
+          <span class="next-review-badge ${dueBadgeClass}">${dueBadgeText}</span>
+        </div>
+        
         ${word.transcription ? `<div class="word-transcription-row">Транскрипция: [${escapeHtml(word.transcription)}]</div>` : ""}
         ${examplesHtml}
         ${tagsHtml}
-        <div class="sm2-status">
-          <div class="retention-bars" title="Уровень запоминания: ${rep}/5">${barsHtml}</div>
-          <span style="color: var(--hint-color);">интервал: ${interval} дн.</span>
+        <div class="sm2-status" style="margin-top: 12px; font-size: 0.8rem;">
+          <span style="color: var(--hint-color);">Интервал повторения: ${interval} дн.</span>
         </div>
-      </div>
-
-      <div class="word-footer">
-        <span class="next-review-badge ${dueBadgeClass}">${dueBadgeText}</span>
       </div>
     </div>
   `;

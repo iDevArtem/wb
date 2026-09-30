@@ -287,7 +287,7 @@ body {
   backdrop-filter: blur(12px);
   border: 1px solid var(--card-border);
   border-radius: var(--radius-md);
-  padding: 16px;
+  padding: 16px 16px 16px 20px;
   box-shadow: var(--shadow-card);
   transition: transform 0.15s ease, border-color 0.2s ease;
   position: relative;
@@ -430,27 +430,39 @@ body {
   gap: 6px;
 }
 
-.retention-bars {
+.retention-scale-y {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 4px;
   display: flex;
-  gap: 3px;
+  flex-direction: column;
+  gap: 1px;
 }
 
-.retention-bar {
-  width: 6px;
-  height: 12px;
-  border-radius: 2px;
-  background: rgba(255, 255, 255, 0.12);
+.retention-scale-segment {
+  flex: 1;
+  background: rgba(255, 255, 255, 0.08);
 }
 
-.retention-bar.filled {
+.retention-scale-segment:first-child {
+  border-top-left-radius: var(--radius-md);
+}
+
+.retention-scale-segment:last-child {
+  border-bottom-left-radius: var(--radius-md);
+}
+
+.retention-scale-segment.filled {
   background: var(--success-color);
 }
 
-.retention-bar.filled.medium {
+.retention-scale-segment.filled.medium {
   background: var(--warning-color);
 }
 
-.retention-bar.filled.low {
+.retention-scale-segment.filled.low {
   background: #f43f5e;
 }
 
