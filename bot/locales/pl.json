@@ -85,8 +85,6 @@
   "Всего слов в словаре:": "Wszystkich słów w słowniku:",
   "Слов на изучении:": "Słów w trakcie nauki:",
   "Выучено (в архиве):": "Nauczone (w archiwum):",
-  "Готово к повторению сегодня:": "Gotowe do powtórzenia dzisiaj:",
-  "Средний интервал памяти:": "Średni interwał pamięci:",
   "💡 <i>Есть слова для повторения! Напиши /quiz, чтобы освежить память.</i>": "💡 <i>Masz słowa do powtórzenia! Wpisz /quiz, aby odświeżyć pamięć.</i>",
   "🎉 <i>Все слова на сегодня повторены! Отличная работа!</i>": "🎉 <i>Wszystkie słowa na dziś powtórzone! Świetna robota!</i>",
   "Слова на изучении": "Słowa w trakcie nauki",
@@ -202,5 +200,7 @@
   "Добавлено в словарь!": "Dodano do słownika!",
   "У тебя нет слов на изучении!": "Nie masz słów do nauki!",
   "Все твои добавленные слова уже выучены и находятся в архиве.": "Wszystkie dodane przez ciebie słowa są już nauczone i znajdują się w archiwum.",
-  "Отправь мне новое слово текстом или голосовым сообщением, чтобы продолжить обучение.": "Wyślij mi nowe słowo tekstowo lub za pomocą wiadomości głosowej, aby kontynuować naukę."
+  "Отправь мне новое слово текстом или голосовым сообщением, чтобы продолжить обучение.": "Wyślij mi nowe słowo tekstowo lub za pomocą wiadomości głosowej, aby kontynuować naukę.",
+  "К повторению сегодня:": "Do powtórzenia dzisiaj:",
+  "Средний интервал:": "Średni interwał:"
 }
