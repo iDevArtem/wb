@@ -144,14 +144,14 @@ async def cmd_stats(message: Message, user: User) -> None:
 
     text = (
         f"📊 <b>{t(user.native_language, 'Твой прогресс в изучении:')}</b>\n\n" +
-        f"🔥 <b>{t(user.native_language, 'Текущий стрик:')}</b>&nbsp;{user.streak}&nbsp;{t(user.native_language, 'дн.')}\n" +
-        f"📚 <b>{t(user.native_language, 'Всего слов в словаре:')}</b>&nbsp;{total_words}\n" +
-        f"   ├ ⚡ <i>{t(user.native_language, 'Слов на изучении:')}</i>&nbsp;{active_words}\n" +
-        f"   └ ✅ <i>{t(user.native_language, 'Выучено (в архиве):')}</i>&nbsp;{archived_words}\n" +
-        f"🧠 <b>{t(user.native_language, 'К повторению сегодня:')}</b>&nbsp;{due_words}\n" +
-        f"📈 <b>{t(user.native_language, 'Средний интервал:')}</b>&nbsp;{avg_interval:.1f}&nbsp;{t(user.native_language, 'дн.')}\n\n" +
-        f"🌍 <b>{t(user.native_language, 'Часовой пояс:')}</b>&nbsp;<code>{user.timezone}</code>\n" +
-        f"🌙 <b>{t(user.native_language, 'Тихие часы:')}</b>&nbsp;{user.quiet_hours_start}:00 — {user.quiet_hours_end}:00\n\n" +
+        f"🔥 <b>{t(user.native_language, 'Текущий стрик:')}</b>\xa0{user.streak}\xa0{t(user.native_language, 'дн.')}\n" +
+        f"📚 <b>{t(user.native_language, 'Всего слов в словаре:')}</b>\xa0{total_words}\n" +
+        f"   ├ ⚡ <i>{t(user.native_language, 'Слов на изучении:')}</i>\xa0{active_words}\n" +
+        f"   └ ✅ <i>{t(user.native_language, 'Выучено (в архиве):')}</i>\xa0{archived_words}\n" +
+        f"🧠 <b>{t(user.native_language, 'К повторению сегодня:')}</b>\xa0{due_words}\n" +
+        f"📈 <b>{t(user.native_language, 'Средний интервал:')}</b>\xa0{avg_interval:.1f}\xa0{t(user.native_language, 'дн.')}\n\n" +
+        f"🌍 <b>{t(user.native_language, 'Часовой пояс:')}</b>\xa0<code>{user.timezone}</code>\n" +
+        f"🌙 <b>{t(user.native_language, 'Тихие часы:')}</b>\xa0{user.quiet_hours_start}:00 — {user.quiet_hours_end}:00\n\n" +
         (t(user.native_language, "💡 <i>Есть слова для повторения! Напиши /quiz, чтобы освежить память.</i>") if due_words > 0 else t(user.native_language, "🎉 <i>Все слова на сегодня повторены! Отличная работа!</i>"))
     )
     await message.answer(text, parse_mode="HTML")
