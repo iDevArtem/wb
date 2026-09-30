@@ -69,7 +69,8 @@ def format_word_card(analysis: WordAnalysis | Word, lang: str = "ru", include_au
     gram_text = " • ".join(html.escape(n) for n in analysis.grammar_notes) if getattr(analysis, "grammar_notes", []) else ""
     gram_native_text = " • ".join(html.escape(n) for n in analysis.grammar_notes_native) if getattr(analysis, "grammar_notes_native", []) else ""
 
-    extend_info = f"<details><summary>{t(lang, '✏️ Грамматика')}</summary><blockquote><b>{t(lang, 'Уровень')}: {level_display}</b><br/>{pos_display} • {gram_text}<br/><tg-spoiler>{pos_native} • {gram_native_text}</tg-spoiler></b></blockquote></details>"
+    extra_note = (f"<p>{typo_note}</p>" if typo_note else "") + (f"<p>{lemma_note}</p>" if lemma_note else "")
+    extend_info = f"<details><summary>{t(lang, '✏️ Грамматика')}</summary><blockquote><b>{t(lang, 'Уровень')}: {level_display}</b><br/>{pos_display} • {gram_text}<br/><tg-spoiler>{pos_native} • {gram_native_text}</tg-spoiler></b></blockquote>{extra_note}</details>"
     
     def_text = f"<i>{html.escape(analysis.definition)}</i>" if getattr(analysis, "definition", None) else ""
     definition_native = f"<i>{html.escape(analysis.definition_native)}</i>" if getattr(analysis, "definition_native", None) else ""
@@ -109,9 +110,7 @@ def format_word_card(analysis: WordAnalysis | Word, lang: str = "ru", include_au
         (f"<audio src=\"tg://audio?id=audio1\"></audio>" if include_audio else "") +
         f"{extend_info}" +
         f"{blockquote}" +
-        f"{examples_block}" +
-        (f"<p>{typo_note}</p>" if typo_note else "") +
-        (f"<p>{lemma_note}</p>" if lemma_note else "")
+        f"{examples_block}"
     )
     return card
 
