@@ -43,14 +43,6 @@ async def cmd_start(message: Message, user: User, state: FSMContext) -> None:
         
     await state.update_data(last_start=now)
     
-    name = message.from_user.first_name or t(user.native_language, "друг")
-    
-    greeting = (
-        f"👋 <b>{t(user.native_language, 'Добро пожаловать')}, {name}!</b>\n\n"
-        f"{t(user.native_language, 'Я твой персональный AI-словарь.')}"
-    )
-    await message.answer(greeting, parse_mode="HTML")
-    
     await state.set_state(SetupState.choosing_target)
     await message.answer(
         "<b>" + t(user.native_language, "🧠 Выбери язык, который хочешь выучить:") + "</b>",
@@ -80,10 +72,15 @@ async def finalize_setup(message_obj: Message, user: User, target_code: str, sta
     await get_users_collection().update_one({"tg_id": user.tg_id}, {"$set": {"target_language": target_code}})
     await state.clear()
     
-    text = f"{t(user.native_language, 'Отправь мне прямо сейчас любое слово текстом или голосовым! 🚀')}"
+    name = user.first_name or t(user.native_language, "друг")
+    text = (
+        f"👋 <b>{t(user.native_language, 'Добро пожаловать')}, {name}!</b>\n\n"
+        f"{t(user.native_language, 'Отправь мне прямо сейчас любое слово текстом или голосовым! 🚀')}"
+    )
     
     try:
-        await message_obj.edit_reply_markup(reply_markup=None)
+        if message_obj.from_user.id == message_obj.bot.id:
+            await message_obj.delete()
     except Exception:
         pass
         
