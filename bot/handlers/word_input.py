@@ -69,7 +69,7 @@ def format_word_card(analysis: WordAnalysis | Word, lang: str = "ru", include_au
     gram_text = " • ".join(html.escape(n) for n in analysis.grammar_notes) if getattr(analysis, "grammar_notes", []) else ""
     gram_native_text = " • ".join(html.escape(n) for n in analysis.grammar_notes_native) if getattr(analysis, "grammar_notes_native", []) else ""
 
-    extend_info = f"<details><summary>{t(lang, '✏️ Грамматика')}</summary><blockquote><b>{t(lang, 'Уровень')}: {level_display}<br/>{pos_display} • {gram_text}<br/><tg-spoiler>{pos_native} • {gram_native_text}</tg-spoiler></b></blockquote></details>"
+    extend_info = f"<details><summary>{t(lang, '✏️ Грамматика')}</summary><blockquote><b>{t(lang, 'Уровень')}: {level_display}</b><br/>{pos_display} • {gram_text}<br/><tg-spoiler>{pos_native} • {gram_native_text}</tg-spoiler></b></blockquote></details>"
     
     def_text = f"<i>{html.escape(analysis.definition)}</i>" if getattr(analysis, "definition", None) else ""
     definition_native = f"<i>{html.escape(analysis.definition_native)}</i>" if getattr(analysis, "definition_native", None) else ""
@@ -158,13 +158,13 @@ async def _send_duplicate_word_message(
         id="audio1",
         media=InputMediaAudio(
             media=voice_file_input,
-            title=_get_us_transcription(word_data)
+            title=_get_us_transcription(word_data) or word_data.canonical_word
         )
     )
     card_text = format_word_card(word_data, user.native_language)
     dup_text = (
-        f"{card_text}<br/><br/>"
-        f"<i>{t(user.native_language, '💡 Ты уже учишь слово')}  "
+        f"{card_text}"
+        f"<i>{t(user.native_language, '💡 Ты уже учишь слово')}<br/>"
         f"{t(user.native_language, 'Интервал повторения:')} <b>{existing_word.interval}</b> {t(user.native_language, 'дн.')}</i><br/>"
     )
     await message.bot.send_rich_message(
@@ -267,7 +267,7 @@ async def handle_voice_input(
             id="audio1",
             media=InputMediaAudio(
                 media=voice_file_input,
-                title=_get_us_transcription(analysis)
+                title=_get_us_transcription(analysis) or analysis.canonical_word
             )
         )
         rich_msg = InputRichMessage(
@@ -390,7 +390,7 @@ async def handle_text_input(
             id="audio1",
             media=InputMediaAudio(
                 media=voice_file_input,
-                title=_get_us_transcription(analysis)
+                title=_get_us_transcription(analysis) or analysis.canonical_word
             )
         )
         rich_msg = InputRichMessage(
