@@ -27,12 +27,16 @@ class UserMiddleware(BaseMiddleware):
         user_doc = await users_col.find_one({"tg_id": event_user.id})
 
         if user_doc is None:
+            lang_code = getattr(event_user, "language_code", None)
+            native_lang = lang_code.split('-')[0] if lang_code else "uk"
+
             user = User(
                 tg_id=event_user.id,
                 username=event_user.username,
                 first_name=event_user.first_name,
                 timezone="UTC",
                 streak=1,
+                native_language=native_lang,
             )
             result = await users_col.insert_one(user.to_mongo())
             user.mongo_id = str(result.inserted_id)

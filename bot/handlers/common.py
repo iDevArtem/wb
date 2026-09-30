@@ -28,8 +28,6 @@ router = Router(name="common")
 
 
 class SetupState(StatesGroup):
-    choosing_native = State()
-    choosing_custom_native = State()
     choosing_target = State()
     choosing_custom_target = State()
 
@@ -40,57 +38,18 @@ async def cmd_start(message: Message, user: User, state: FSMContext) -> None:
     last_start = data.get("last_start", 0)
     now = message.date.timestamp()
     
-    if current_state == SetupState.choosing_native.state and (now - last_start) < 2:
+    if current_state == SetupState.choosing_target.state and (now - last_start) < 2:
         return
         
     await state.update_data(last_start=now)
-    await state.set_state(SetupState.choosing_native)
-    name = message.from_user.first_name or "друг"
+    
+    name = message.from_user.first_name or t(user.native_language, "друг")
     
     greeting = (
-        f"👋 <b>Вітаю / Welcome / Добро пожаловать, {name}!</b>\n\n"
-        "Я твій персональний AI-словник.\n"
-        "I am your personal AI-dictionary.\n"
-        "Я твой персональный AI-словарь."
+        f"👋 <b>{t(user.native_language, 'Добро пожаловать')}, {name}!</b>\n\n"
+        f"{t(user.native_language, 'Я твой персональный AI-словарь.')}"
     )
     await message.answer(greeting, parse_mode="HTML")
-    
-    prompt = (
-        "Оберіть вашу рідну мову\n"
-        "Choose your native language\n"
-        "Выберите ваш родной язык"
-    )
-    await message.answer(
-        prompt, 
-        reply_markup=get_setup_language_keyboard("native", user.native_language), 
-        parse_mode="HTML"
-    )
-
-@router.callback_query(lambda c: c.data and c.data.startswith("setup_native:"))
-async def cb_setup_native(callback: CallbackQuery, user: User, state: FSMContext) -> None:
-    code = callback.data.split(":")[1]
-    user.native_language = code
-    from bot.core.database import get_users_collection
-    await get_users_collection().update_one({"tg_id": user.tg_id}, {"$set": {"native_language": code}})
-    
-    await state.set_state(SetupState.choosing_target)
-    await callback.message.edit_text(
-        "<b>" + t(user.native_language, "🧠 Выбери язык, который хочешь выучить:") + "</b>",
-        reply_markup=get_setup_language_keyboard("target", user.native_language),
-        parse_mode="HTML"
-    )
-
-@router.callback_query(lambda c: c.data == "setup_manual_native")
-async def cb_setup_manual_native(callback: CallbackQuery, state: FSMContext, user: User) -> None:
-    await state.set_state(SetupState.choosing_custom_native)
-    await callback.message.edit_text(t(user.native_language, "✏️ Введи код языка (например, ru, en, es):"))
-
-@router.message(SetupState.choosing_custom_native, F.text)
-async def handle_setup_custom_native(message: Message, user: User, state: FSMContext) -> None:
-    code = message.text.strip().lower()[:5]
-    user.native_language = code
-    from bot.core.database import get_users_collection
-    await get_users_collection().update_one({"tg_id": user.tg_id}, {"$set": {"native_language": code}})
     
     await state.set_state(SetupState.choosing_target)
     await message.answer(
