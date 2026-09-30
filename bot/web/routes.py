@@ -132,12 +132,13 @@ async def get_stats(current_user: User = Depends(get_current_user)) -> StatsResp
         "target_language": current_user.target_language,
     }
     
-    total_words = await words_col.count_documents({"user_id": user_id, **lang_filter})
-    learning_words = await words_col.count_documents({"user_id": user_id, "is_archived": False, **lang_filter})
-    mastered_words = await words_col.count_documents({"user_id": user_id, "is_archived": True, **lang_filter})
+    total_words = await words_col.count_documents({"user_id": user_id, "is_pending": False, **lang_filter})
+    learning_words = await words_col.count_documents({"user_id": user_id, "is_archived": False, "is_pending": False, **lang_filter})
+    mastered_words = await words_col.count_documents({"user_id": user_id, "is_archived": True, "is_pending": False, **lang_filter})
     due_words = await words_col.count_documents({
         "user_id": user_id,
         "is_archived": False,
+        "is_pending": False,
         "next_review_at": {"$lte": now},
         **lang_filter,
     })
@@ -175,6 +176,7 @@ async def get_words(
         "user_id": user_id,
         "native_language": current_user.native_language,
         "target_language": current_user.target_language,
+        "is_pending": False,
     }
 
     if filter == "archived":

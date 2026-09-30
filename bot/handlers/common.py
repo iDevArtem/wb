@@ -120,12 +120,13 @@ async def cmd_stats(message: Message, user: User) -> None:
     now_utc = datetime.now(timezone.utc)
     words_col = get_words_collection()
 
-    total_words = await words_col.count_documents({"user_id": user.tg_id, "target_language": user.target_language, "native_language": user.native_language})
-    active_words = await words_col.count_documents({"user_id": user.tg_id, "is_archived": False, "target_language": user.target_language, "native_language": user.native_language})
-    archived_words = await words_col.count_documents({"user_id": user.tg_id, "is_archived": True, "target_language": user.target_language, "native_language": user.native_language})
+    total_words = await words_col.count_documents({"user_id": user.tg_id, "is_pending": False, "target_language": user.target_language, "native_language": user.native_language})
+    active_words = await words_col.count_documents({"user_id": user.tg_id, "is_archived": False, "is_pending": False, "target_language": user.target_language, "native_language": user.native_language})
+    archived_words = await words_col.count_documents({"user_id": user.tg_id, "is_archived": True, "is_pending": False, "target_language": user.target_language, "native_language": user.native_language})
     due_words = await words_col.count_documents({
         "user_id": user.tg_id,
         "is_archived": False,
+        "is_pending": False,
         "next_review_at": {"$lte": now_utc},
         "target_language": user.target_language,
         "native_language": user.native_language,
@@ -134,7 +135,7 @@ async def cmd_stats(message: Message, user: User) -> None:
     avg_interval = 0.0
     if active_words > 0:
         pipeline = [
-            {"$match": {"user_id": user.tg_id, "is_archived": False, "target_language": user.target_language, "native_language": user.native_language}},
+            {"$match": {"user_id": user.tg_id, "is_archived": False, "is_pending": False, "target_language": user.target_language, "native_language": user.native_language}},
             {"$group": {"_id": None, "avg_interval": {"$avg": "$interval"}}},
         ]
         cursor = await words_col.aggregate(pipeline)

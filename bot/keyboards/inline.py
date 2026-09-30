@@ -4,22 +4,37 @@ from aiogram.utils.keyboard import InlineKeyboardBuilder
 from bot.core.config import settings
 
 
-def get_word_card_keyboard(word_id: int | str, lang: str = "ru") -> InlineKeyboardMarkup:
+def get_word_card_keyboard(word_id: int | str, lang: str = "ru", is_pending: bool = False) -> InlineKeyboardMarkup:
     """
-    Inline keyboard for a newly added or inspected word card:
-    [🔴 Знаю! Удалить] [🟢 Выучил!]
+    Inline keyboard for a newly added or inspected word card.
+    If is_pending=True, shows [➕ Добавить в словарь] and [🔴 Удалить].
+    Otherwise, shows [🔴 Знаю! Удалить] [🟢 Выучил!].
     """
     builder = InlineKeyboardBuilder()
-    builder.row(
-        InlineKeyboardButton(
-            text=t(lang, "🔴 Знаю! Удалить"),
-            callback_data=f"delete_word:{word_id}",
-        ),
-        InlineKeyboardButton(
-            text=t(lang, "🟢 Выучил!"),
-            callback_data=f"archive_word:{word_id}",
-        ),
-    )
+    
+    if is_pending:
+        builder.row(
+            InlineKeyboardButton(
+                text=t(lang, "➕ Добавить в словарь"),
+                callback_data=f"add_word:{word_id}",
+            ),
+            InlineKeyboardButton(
+                text=t(lang, "🗑 Удалить"),
+                callback_data=f"delete_word:{word_id}",
+            ),
+        )
+    else:
+        builder.row(
+            InlineKeyboardButton(
+                text=t(lang, "🔴 Знаю! Удалить"),
+                callback_data=f"delete_word:{word_id}",
+            ),
+            InlineKeyboardButton(
+                text=t(lang, "🟢 Выучил!"),
+                callback_data=f"archive_word:{word_id}",
+            ),
+        )
+        
     return builder.as_markup()
 
 

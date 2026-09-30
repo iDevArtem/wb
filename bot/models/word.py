@@ -37,6 +37,8 @@ class Word(MongoBaseModel):
     ease_factor: float = 2.5
     next_review_at: datetime = Field(default_factory=default_next_review)
     is_archived: bool = False
+    is_pending: bool = False
+
 
     def __repr__(self) -> str:
         return f"<Word id={self.id} canonical='{self.canonical_word}' user_id={self.user_id} target={self.target_language}>"

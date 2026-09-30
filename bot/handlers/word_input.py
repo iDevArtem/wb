@@ -134,6 +134,7 @@ async def check_existing_word(
     doc = await words_col.find_one({
         "user_id": user.tg_id, "target_language": user.target_language, "native_language": user.native_language,
         "is_archived": False,
+        "is_pending": False,
         "$or": [
             {"canonical_word": {"$regex": pattern, "$options": "i"}},
             {"lemma": {"$regex": pattern, "$options": "i"}},
@@ -256,6 +257,7 @@ async def handle_voice_input(
             ease_factor=2.5,
             next_review_at=datetime.now(timezone.utc) + timedelta(days=1),
             is_archived=False,
+            is_pending=True,
         )
         words_col = get_words_collection()
         insert_res = await words_col.insert_one(new_word.to_mongo())
@@ -282,7 +284,7 @@ async def handle_voice_input(
         await message.bot.send_rich_message(
             chat_id=message.chat.id,
             rich_message=rich_msg,
-            reply_markup=get_word_card_keyboard(new_word.id, user.native_language),
+            reply_markup=get_word_card_keyboard(new_word.id, user.native_language, is_pending=True),
         )
         try:
             await message.delete()
@@ -391,6 +393,7 @@ async def handle_text_input(
             ease_factor=2.5,
             next_review_at=datetime.now(timezone.utc) + timedelta(days=1),
             is_archived=False,
+            is_pending=True,
         )
         words_col = get_words_collection()
         insert_res = await words_col.insert_one(new_word.to_mongo())
@@ -418,7 +421,7 @@ async def handle_text_input(
         await message.bot.send_rich_message(
             chat_id=message.chat.id,
             rich_message=rich_msg,
-            reply_markup=get_word_card_keyboard(new_word.id or "", user.native_language),
+            reply_markup=get_word_card_keyboard(new_word.id or "", user.native_language, is_pending=True),
         )
         try:
             await message.delete()
@@ -443,6 +446,33 @@ async def handle_text_input(
             t(user.native_language, "⚠️ Произошла непредвиденная ошибка при анализе слова. Попробуйте позже."),
             parse_mode="HTML",
         )
+
+
+@router.callback_query(lambda c: c.data and c.data.startswith("add_word:"))
+async def cb_add_word(callback: CallbackQuery, user: User) -> None:
+    word_id_str = callback.data.split(":")[1]
+    words_col = get_words_collection()
+    
+    doc = await words_col.find_one_and_update(
+        _word_query_by_id(word_id_str, user),
+        {"$set": {"is_pending": False, "updated_at": utc_now()}},
+        return_document=True,
+    )
+
+    if not doc:
+        await callback.answer(t(user.native_language, "Слово не найдено"), show_alert=True)
+        return
+
+    word = Word.model_validate(doc)
+    await callback.answer(t(user.native_language, "Добавлено в словарь!"))
+    
+    if callback.message:
+        try:
+            await callback.message.edit_reply_markup(
+                reply_markup=get_word_card_keyboard(word.id or word_id_str, user.native_language, is_pending=False)
+            )
+        except Exception:
+            pass
 
 
 @router.callback_query(lambda c: c.data and c.data.startswith("delete_word:"))

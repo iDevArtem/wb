@@ -281,7 +281,7 @@ async def cb_my_dictionaries(callback: CallbackQuery, user: User) -> None:
     
     # Aggregation to find all combinations of native_language and target_language for this user
     pipeline = [
-        {"$match": {"user_id": user.id}},
+        {"$match": {"user_id": user.id, "is_pending": False}},
         {
             "$group": {
                 "_id": {
