@@ -196,5 +196,11 @@
   "💡 Значение": "💡 Significado",
   "Примеры": "Ejemplos",
   "Добро пожаловать": "Bienvenido",
-  "Я твой персональный AI-словарь.": "Soy tu diccionario de IA personal."
+  "Я твой персональный AI-словарь.": "Soy tu diccionario de IA personal.",
+  "➕ Добавить в словарь": "➕ Añadir al diccionario",
+  "🗑 Удалить": "🗑 Eliminar",
+  "Добавлено в словарь!": "¡Añadido al diccionario!",
+  "У тебя нет слов на изучении!": "¡No tienes palabras para aprender!",
+  "Все твои добавленные слова уже выучены и находятся в архиве.": "Todas las palabras que has añadido ya han sido aprendidas y están en el archivo.",
+  "Отправь мне новое слово текстом или голосовым сообщением, чтобы продолжить обучение.": "Envíame una nueva palabra por texto o mensaje de voz para seguir aprendiendo."
 }

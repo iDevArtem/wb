@@ -153,11 +153,25 @@ async def start_quiz_session(
         )
 
         if not has_any:
-            await target_message.answer(
-                t(user.native_language, "📭 Твой словарь пуст!") + "\n" +
-                t(user.native_language, "Отправь мне любое слово текстом или голосовым сообщением, чтобы начать учить."),
-                parse_mode="HTML",
+            # Check if user has archived words
+            has_archived = await words_col.find_one(
+                {"user_id": user.id, "is_archived": True, "is_pending": False, "target_language": user.target_language, "native_language": user.native_language},
+                {"_id": 1},
             )
+            
+            if has_archived:
+                await target_message.answer(
+                    "📭 <b>" + t(user.native_language, "У тебя нет слов на изучении!") + "</b>\n" +
+                    t(user.native_language, "Все твои добавленные слова уже выучены и находятся в архиве.") + "\n" +
+                    t(user.native_language, "Отправь мне новое слово текстом или голосовым сообщением, чтобы продолжить обучение."),
+                    parse_mode="HTML",
+                )
+            else:
+                await target_message.answer(
+                    "📭 " + t(user.native_language, "Твой словарь пуст!") + "\n" +
+                    t(user.native_language, "Отправь мне любое слово текстом или голосовым сообщением, чтобы начать учить."),
+                    parse_mode="HTML",
+                )
             return
 
         await target_message.answer(
