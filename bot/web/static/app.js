@@ -35,6 +35,9 @@ const el = {
   emptyState: document.getElementById("empty-state"),
   trainBtn: document.getElementById("train-btn"),
   authModal: document.getElementById("auth-modal"),
+  fullWordModal: document.getElementById("full-word-modal"),
+  fullWordClose: document.getElementById("full-word-close"),
+  fullWordBody: document.getElementById("full-word-body"),
 };
 
 // --- Initialization ---
@@ -287,8 +290,15 @@ function createWordCardHtml(word) {
         ${word.transcription ? `<div class="word-transcription-row">Транскрипция: [${escapeHtml(word.transcription)}]</div>` : ""}
         ${examplesHtml}
         ${tagsHtml}
-        <div class="sm2-status" style="margin-top: 12px; font-size: 0.8rem;">
+        <div class="sm2-status" style="margin-top: 12px; font-size: 0.8rem; display: flex; justify-content: space-between; align-items: center;">
           <span style="color: var(--hint-color);">Интервал повторения: ${interval} дн.</span>
+          <button class="open-full-card-btn" data-id="${word.id}" style="background: none; border: none; color: var(--link-color); font-size: 0.9rem; cursor: pointer; display: flex; align-items: center; gap: 4px;">
+            Подробнее
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="5" y1="12" x2="19" y2="12"></line>
+              <polyline points="12 5 19 12 12 19"></polyline>
+            </svg>
+          </button>
         </div>
       </div>
     </div>
@@ -421,4 +431,120 @@ function escapeHtml(text) {
 
 function escapeRegExp(string) {
   return string.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+// --- Full Word Modal Logic ---
+document.addEventListener("click", (e) => {
+  const btn = e.target.closest(".open-full-card-btn");
+  if (btn) {
+    const id = parseInt(btn.dataset.id, 10);
+    const word = state.words.find(w => w.id === id);
+    if (word) openFullWordModal(word);
+  }
+});
+
+el.fullWordClose?.addEventListener("click", () => {
+  el.fullWordModal.style.display = "none";
+});
+
+el.fullWordModal?.addEventListener("click", (e) => {
+  if (e.target === el.fullWordModal) {
+    el.fullWordModal.style.display = "none";
+  }
+});
+
+function openFullWordModal(word) {
+  if (!el.fullWordModal || !el.fullWordBody) return;
+  
+  const rep = word.repetition || 0;
+  const ef = (word.easiness_factor || 2.5).toFixed(2);
+  const interval = word.interval || 1;
+  const created = new Date(word.created_at).toLocaleDateString('ru-RU');
+
+  // Examples (show all in modal)
+  let examplesHtml = "";
+  if (word.examples && word.examples.length > 0) {
+    const exItems = word.examples.map(ex => {
+      const enText = typeof ex === "string" ? ex : ex.en || "";
+      const ruText = typeof ex === "object" ? ex.ru || "" : "";
+      const regex = new RegExp(`(${escapeRegExp(word.canonical_word)}|${escapeRegExp(word.lemma || "")})`, "gi");
+      const highlightedEn = enText.replace(regex, "<strong>$1</strong>");
+      return `
+        <div class="full-modal-example">
+          <div class="example-en">${highlightedEn}</div>
+          ${ruText ? `<div class="example-ru">${ruText}</div>` : ""}
+        </div>
+      `;
+    }).join("");
+    examplesHtml = `<div class="full-modal-section"><h4>Примеры</h4>${exItems}</div>`;
+  }
+
+  // Tags
+  let tagsHtml = "";
+  if (word.synonyms_collocations && word.synonyms_collocations.length > 0) {
+    tagsHtml = `
+      <div class="full-modal-section">
+        <h4>Синонимы / Словосочетания</h4>
+        <div class="tags-row" style="margin-top: 8px;">
+          ${word.synonyms_collocations.map((t) => `<span class="tag-pill">${escapeHtml(t)}</span>`).join("")}
+        </div>
+      </div>
+    `;
+  }
+
+  el.fullWordBody.innerHTML = `
+    <div class="full-modal-header-row">
+      <h2 class="full-modal-word">${escapeHtml(word.canonical_word)}</h2>
+      <button class="audio-btn modal-audio-btn" data-word="${escapeHtml(word.canonical_word)}" title="Произношение">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+          <path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path>
+          <path d="M19.07 4.93a10 10 0 0 1 0 14.14"></path>
+        </svg>
+      </button>
+    </div>
+    
+    <div class="full-modal-badges">
+      ${word.pos ? `<span class="word-pos">${escapeHtml(word.pos)}</span>` : ""}
+      ${word.transcription ? `<span class="word-transcription">[${escapeHtml(word.transcription)}]</span>` : ""}
+    </div>
+
+    <div class="full-modal-translation">${escapeHtml(word.translation)}</div>
+    
+    ${examplesHtml}
+    ${tagsHtml}
+    
+    <div class="full-modal-section">
+      <h4>Статистика (SM-2)</h4>
+      <div class="stats-grid">
+        <div class="stat-box">
+          <div class="stat-value">${rep}</div>
+          <div class="stat-label">Повторений</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-value">${interval} дн.</div>
+          <div class="stat-label">Интервал</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-value">${ef}</div>
+          <div class="stat-label">Фактор</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-value">${created}</div>
+          <div class="stat-label">Добавлено</div>
+        </div>
+      </div>
+    </div>
+  `;
+
+  // Attach audio for modal
+  const audioBtn = el.fullWordBody.querySelector(".modal-audio-btn");
+  if (audioBtn) {
+    audioBtn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      playPronunciation(word.canonical_word, audioBtn);
+    });
+  }
+
+  el.fullWordModal.style.display = "flex";
 }
