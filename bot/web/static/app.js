@@ -213,19 +213,20 @@ function createWordCardHtml(word) {
       
       <div class="word-card-inner">
         <div class="word-card-left">
-          <div class="word-canonical">${escapeHtml(word.canonical_word)}</div>
+          <div class="word-title-group">
+            <div class="word-canonical">${escapeHtml(word.canonical_word)}</div>
+            <button class="audio-btn" data-word="${escapeHtml(word.canonical_word)}" title="Произношение">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+                <path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path>
+                <path d="M19.07 4.93a10 10 0 0 1 0 14.14"></path>
+              </svg>
+            </button>
+          </div>
           <div class="word-translation">${escapeHtml(word.translation)}</div>
         </div>
         
         <div class="word-card-right">
-          <button class="audio-btn" data-word="${escapeHtml(word.canonical_word)}" title="Произношение">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
-              <path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path>
-              <path d="M19.07 4.93a10 10 0 0 1 0 14.14"></path>
-            </svg>
-          </button>
-          
           <button class="open-full-card-btn" data-id="${word.id}" title="Подробнее">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
@@ -426,8 +427,34 @@ function openFullWordModal(word) {
     `;
   }
 
+  // Definition
+  let definitionHtml = "";
+  if (word.definition || word.definition_native) {
+    definitionHtml = `
+      <div class="full-modal-section">
+        <h4>Значение</h4>
+        ${word.definition ? `<div class="modal-text-en">${escapeHtml(word.definition)}</div>` : ""}
+        ${word.definition_native ? `<div class="modal-text-ru">${escapeHtml(word.definition_native)}</div>` : ""}
+      </div>
+    `;
+  }
+
+  // Grammar Notes
+  let grammarHtml = "";
+  const allGrammar = [...(word.grammar_notes || []), ...(word.grammar_notes_native || [])];
+  if (allGrammar.length > 0) {
+    grammarHtml = `
+      <div class="full-modal-section">
+        <h4>Грамматика</h4>
+        <ul class="modal-list">
+          ${allGrammar.map(g => `<li>${escapeHtml(g)}</li>`).join("")}
+        </ul>
+      </div>
+    `;
+  }
+
   el.fullWordBody.innerHTML = `
-    <div class="full-modal-header-row">
+    <div class="full-modal-header-row" style="justify-content: flex-start; gap: 8px;">
       <h2 class="full-modal-word">${escapeHtml(word.canonical_word)}</h2>
       <button class="audio-btn modal-audio-btn" data-word="${escapeHtml(word.canonical_word)}" title="Произношение">
         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -445,6 +472,8 @@ function openFullWordModal(word) {
 
     <div class="full-modal-translation">${escapeHtml(word.translation)}</div>
     
+    ${definitionHtml}
+    ${grammarHtml}
     ${examplesHtml}
     ${tagsHtml}
     

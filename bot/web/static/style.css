@@ -61,20 +61,20 @@ body {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 12px 16px;
+  padding: 8px 12px;
   background: var(--card-bg);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
   border: 1px solid var(--card-border);
   border-radius: var(--radius-lg);
-  margin-bottom: 16px;
+  margin-bottom: 10px;
   box-shadow: var(--shadow-card);
 }
 
 .user-profile {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 8px;
 }
 
 .user-avatar {
@@ -128,8 +128,8 @@ body {
 .stats-grid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: 10px;
-  margin-bottom: 16px;
+  gap: 8px;
+  margin-bottom: 10px;
 }
 
 @media (max-width: 600px) {
@@ -143,7 +143,7 @@ body {
   backdrop-filter: blur(8px);
   border: 1px solid var(--card-border);
   border-radius: var(--radius-md);
-  padding: 12px 14px;
+  padding: 8px 10px;
   text-align: center;
   box-shadow: var(--shadow-card);
   transition: transform 0.15s ease;
@@ -178,12 +178,12 @@ body {
   backdrop-filter: blur(12px);
   border: 1px solid var(--card-border);
   border-radius: var(--radius-lg);
-  padding: 14px;
-  margin-bottom: 16px;
+  padding: 10px;
+  margin-bottom: 10px;
   box-shadow: var(--shadow-card);
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 8px;
 }
 
 .search-box {
@@ -193,7 +193,7 @@ body {
 
 .search-box input {
   width: 100%;
-  padding: 12px 40px 12px 38px;
+  padding: 10px 36px 10px 34px;
   background: var(--secondary-bg);
   border: 1px solid var(--card-border);
   border-radius: var(--radius-md);
@@ -235,7 +235,7 @@ body {
   justify-content: space-between;
   align-items: center;
   flex-wrap: wrap;
-  gap: 10px;
+  gap: 8px;
 }
 
 .filter-chips {
@@ -279,7 +279,7 @@ body {
 .words-container {
   display: grid;
   grid-template-columns: 1fr;
-  gap: 12px;
+  gap: 8px;
 }
 
 .word-card {
@@ -287,7 +287,7 @@ body {
   backdrop-filter: blur(12px);
   border: 1px solid var(--card-border);
   border-radius: var(--radius-md);
-  padding: 16px 16px 16px 20px;
+  padding: 10px 12px 10px 14px;
   box-shadow: var(--shadow-card);
   transition: transform 0.15s ease, border-color 0.2s ease;
   position: relative;
@@ -307,7 +307,7 @@ body {
 
 .word-title-group {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   gap: 8px;
   flex-wrap: wrap;
 }
@@ -340,8 +340,8 @@ body {
   background: rgba(59, 130, 246, 0.15);
   border: 1px solid rgba(59, 130, 246, 0.3);
   color: var(--button-color);
-  width: 34px;
-  height: 34px;
+  width: 30px;
+  height: 30px;
   border-radius: 50%;
   display: flex;
   align-items: center;
@@ -370,7 +370,7 @@ body {
   font-size: 1.05rem;
   font-weight: 600;
   color: #38bdf8;
-  margin-bottom: 8px;
+  margin-bottom: 6px;
 }
 
 /* Examples */
@@ -498,7 +498,7 @@ body {
 
 .empty-state-icon {
   font-size: 3rem;
-  margin-bottom: 12px;
+  margin-bottom: 6px;
 }
 
 .empty-state h3 {
@@ -519,7 +519,7 @@ body {
   bottom: 0;
   left: 0;
   right: 0;
-  padding: 12px 16px;
+  padding: 8px 12px;
   background: var(--card-bg);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
@@ -537,7 +537,7 @@ body {
   background: var(--accent-gradient);
   color: #ffffff;
   border: none;
-  padding: 12px 28px;
+  padding: 10px 20px;
   border-radius: 999px;
   font-size: 0.95rem;
   font-weight: 700;
@@ -600,13 +600,13 @@ body {
 
 .auth-modal h2 {
   font-size: 1.3rem;
-  margin-bottom: 12px;
+  margin-bottom: 6px;
 }
 
 .auth-modal p {
   color: var(--hint-color);
   font-size: 0.9rem;
-  margin-bottom: 20px;
+  margin-bottom: 12px;
   line-height: 1.5;
 }
 
@@ -616,13 +616,13 @@ body {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 10px 14px;
+  padding: 8px 12px;
   background: var(--card-bg);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
   border: 1px solid var(--card-border);
   border-radius: var(--radius-lg);
-  margin-bottom: 12px;
+  margin-bottom: 6px;
   box-shadow: var(--shadow-card);
 }
 
@@ -647,7 +647,7 @@ body {
 .search-row {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
 }
 
 .search-row .search-box {
@@ -727,14 +727,14 @@ body {
   max-height: 85vh;
   overflow-y: auto;
   position: relative;
-  padding: 24px;
+  padding: 16px;
   box-shadow: 0 10px 40px rgba(0,0,0,0.3);
 }
 
 .modal-close-btn {
   position: absolute;
-  top: 16px;
-  right: 16px;
+  top: 12px;
+  right: 12px;
   background: none;
   border: none;
   color: var(--hint-color);
@@ -758,7 +758,7 @@ body {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 8px;
+  margin-bottom: 6px;
   padding-right: 32px;
 }
 
@@ -772,7 +772,7 @@ body {
 .full-modal-badges {
   display: flex;
   gap: 8px;
-  margin-bottom: 16px;
+  margin-bottom: 10px;
   align-items: center;
   flex-wrap: wrap;
 }
@@ -786,12 +786,12 @@ body {
 .full-modal-translation {
   font-size: 1.2rem;
   color: var(--link-color);
-  margin-bottom: 24px;
+  margin-bottom: 16px;
   font-weight: 500;
 }
 
 .full-modal-section {
-  margin-bottom: 20px;
+  margin-bottom: 12px;
 }
 
 .full-modal-section h4 {
@@ -799,7 +799,7 @@ body {
   text-transform: uppercase;
   letter-spacing: 0.5px;
   color: var(--hint-color);
-  margin-bottom: 12px;
+  margin-bottom: 6px;
   border-bottom: 1px solid var(--card-border);
   padding-bottom: 4px;
 }
@@ -808,13 +808,13 @@ body {
   background: rgba(255, 255, 255, 0.03);
   padding: 12px;
   border-radius: var(--radius-sm);
-  margin-bottom: 8px;
+  margin-bottom: 6px;
 }
 
 .stats-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 12px;
+  gap: 8px;
 }
 
 .stat-box {
@@ -854,7 +854,7 @@ body {
   display: flex;
   flex-direction: column;
   align-items: flex-end;
-  gap: 12px;
+  gap: 8px;
 }
 
 .open-full-card-btn {
@@ -872,4 +872,25 @@ body {
 
 .open-full-card-btn:active {
   transform: scale(0.9);
+}
+
+/* Modal new fields */
+.modal-text-en {
+  color: var(--text-color);
+  font-size: 0.95rem;
+  margin-bottom: 2px;
+}
+.modal-text-ru {
+  color: var(--hint-color);
+  font-size: 0.85rem;
+  margin-bottom: 8px;
+}
+.modal-list {
+  padding-left: 18px;
+  color: var(--text-color);
+  font-size: 0.9rem;
+}
+.modal-list li {
+  margin-bottom: 3px;
+  color: var(--text-color);
 }
