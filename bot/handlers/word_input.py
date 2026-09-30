@@ -247,8 +247,7 @@ async def handle_voice_input(
             id="audio1",
             media=InputMediaAudio(
                 media=voice_file_input,
-                title=_get_us_transcription(analysis),
-                performer=analysis.canonical_word
+                title=_get_us_transcription(analysis)
             )
         )
         rich_msg = InputRichMessage(
@@ -391,8 +390,7 @@ async def handle_text_input(
             id="audio1",
             media=InputMediaAudio(
                 media=voice_file_input,
-                title=_get_us_transcription(analysis),
-                performer=analysis.canonical_word
+                title=_get_us_transcription(analysis)
             )
         )
         rich_msg = InputRichMessage(
