@@ -25,4 +25,4 @@ def get_main_menu_keyboard(lang: str) -> ReplyKeyboardMarkup:
     
     builder.adjust(3)
     
-    return builder.as_markup(resize_keyboard=True, is_persistent=True)
+    return builder.as_markup(resize_keyboard=True)
