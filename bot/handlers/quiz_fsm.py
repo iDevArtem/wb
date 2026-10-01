@@ -124,6 +124,7 @@ async def start_quiz_session(
     state: FSMContext,
     only_word_id: str | int | None = None,
     allow_all: bool = False,
+    edit_message_id: int | None = None,
 ) -> None:
     now_utc = datetime.now(timezone.utc)
     words_col = get_words_collection()
@@ -160,26 +161,39 @@ async def start_quiz_session(
             )
             
             if has_archived:
-                await target_message.answer(
+                text = (
                     "📭 <b>" + t(user.native_language, "У тебя нет слов на изучении!") + "</b>\n" +
                     t(user.native_language, "Все твои добавленные слова уже выучены и находятся в архиве.") + "\n" +
-                    t(user.native_language, "Отправь мне новое слово текстом или голосовым сообщением, чтобы продолжить обучение."),
-                    parse_mode="HTML",
+                    t(user.native_language, "Отправь мне новое слово текстом или голосовым сообщением, чтобы продолжить обучение.")
                 )
             else:
-                await target_message.answer(
+                text = (
                     "📭 " + t(user.native_language, "Твой словарь пуст!") + "\n" +
-                    t(user.native_language, "Отправь мне любое слово текстом или голосовым сообщением, чтобы начать учить."),
-                    parse_mode="HTML",
+                    t(user.native_language, "Отправь мне любое слово текстом или голосовым сообщением, чтобы начать учить.")
                 )
+            if edit_message_id:
+                try:
+                    from aiogram.exceptions import TelegramBadRequest
+                    await target_message.bot.edit_message_text(text, chat_id=target_message.chat.id, message_id=edit_message_id, parse_mode="HTML")
+                except TelegramBadRequest:
+                    await target_message.answer(text, parse_mode="HTML")
+            else:
+                await target_message.answer(text, parse_mode="HTML")
             return
 
-        await target_message.answer(
+        text = (
             "🎉 <b>" + t(user.native_language, "Все слова на сегодня повторены!") + "</b>\n\n" +
             t(user.native_language, "Интервалы SuperMemo-2 защищают тебя от зубрежки. ") +
-            t(user.native_language, "Но если ты хочешь потренироваться вне графика, отправь команду: /quiz_practice"),
-            parse_mode="HTML",
+            t(user.native_language, "Но если ты хочешь потренироваться вне графика, отправь команду: /quiz_practice")
         )
+        if edit_message_id:
+            try:
+                from aiogram.exceptions import TelegramBadRequest
+                await target_message.bot.edit_message_text(text, chat_id=target_message.chat.id, message_id=edit_message_id, parse_mode="HTML")
+            except TelegramBadRequest:
+                await target_message.answer(text, parse_mode="HTML")
+        else:
+            await target_message.answer(text, parse_mode="HTML")
         return
 
     # Store queue in FSM
@@ -191,7 +205,7 @@ async def start_quiz_session(
         correct_first_try=0,
         reviewed_words_list=[],
         temp_msg_ids=[],
-        quiz_msg_id=None,
+        quiz_msg_id=edit_message_id,
     )
 
     await present_next_word(target_message, user, state)
@@ -333,7 +347,7 @@ async def cmd_quiz_practice(message: Message, user: User, state: FSMContext) -> 
 async def cb_start_due_quiz(callback: CallbackQuery, user: User, state: FSMContext) -> None:
     await callback.answer()
     if callback.message:
-        await start_quiz_session(callback.message, user, state, allow_all=False)
+        await start_quiz_session(callback.message, user, state, allow_all=False, edit_message_id=callback.message.message_id)
 
 
 @router.callback_query(lambda c: c.data and c.data.startswith("quiz_word:"))
@@ -341,7 +355,7 @@ async def cb_quiz_single_word(callback: CallbackQuery, user: User, state: FSMCon
     await callback.answer()
     word_id_str = callback.data.split(":")[1]
     if callback.message:
-        await start_quiz_session(callback.message, user, state, only_word_id=word_id_str)
+        await start_quiz_session(callback.message, user, state, only_word_id=word_id_str, edit_message_id=callback.message.message_id)
 
 
 @router.callback_query(QuizState.answering, lambda c: c.data and c.data.startswith("quiz_mc:"))
