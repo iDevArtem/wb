@@ -698,30 +698,46 @@ async def on_quiz_failure(
             }},
         )
 
-        text = (
-            "❌ <b>" + t(user.native_language, "Все 3 попытки исчерпаны!") + "</b>\n\n" +
-            f"{t(user.native_language, 'Правильный ответ:')} <b>{html.escape(word.canonical_word)}</b> [{html.escape(word.transcription)}]\n" +
-            f"{t(user.native_language, 'Перевод:')} <b>{html.escape(word.translation)}</b>\n\n" +
-            "🔄 " + t(user.native_language, "Интервал сброшен: слово вернется на повторение уже завтра (1 день).") + "\n" +
-            f"{t(user.native_language, 'Осталось в этой сессии:')} <b>{len(queue)}</b>"
-        )
-        if len(queue) > 0:
-            await update_main_quiz_message(message.bot, message.chat.id, state, text, reply_markup=get_quiz_next_keyboard(user.native_language))
-        else:
-            await update_main_quiz_message(message.bot, message.chat.id, state, text)
-
-        # Send fresh pronunciation audio
         try:
             audio = await tts_service.generate_audio(word.canonical_word, target_lang=user.target_language)
             voice_file = BufferedInputFile(audio.getvalue(), filename=f"{word.canonical_word}.mp3")
-            msg = await message.answer_voice(
-                voice=voice_file,
-                caption=f"🔊 {t(user.native_language, 'Запомни произношение:')} <b>{html.escape(word.canonical_word)}</b>",
-                parse_mode="HTML",
+            media = InputRichMessageMedia(
+                id="audio_fail",
+                media=InputMediaAudio(
+                    media=voice_file,
+                    title=word.canonical_word,
+                    performer=t(user.native_language, 'Аудирование')
+                )
             )
-            await add_temp_message(state, msg.message_id)
+            text = (
+                "❌ <b>" + t(user.native_language, "Все 3 попытки исчерпаны!") + "</b><br/><br/>" +
+                f"{t(user.native_language, 'Правильный ответ:')} <b>{html.escape(word.canonical_word)}</b> [{html.escape(word.transcription)}]<br/>" +
+                f"{t(user.native_language, 'Перевод:')} <b>{html.escape(word.translation)}</b><br/><br/>" +
+                '<audio src="tg://audio?id=audio_fail"></audio><br/><br/>' +
+                "🔄 " + t(user.native_language, "Интервал сброшен: слово вернется на повторение уже завтра (1 день).") + "<br/>" +
+                f"{t(user.native_language, 'Осталось в этой сессии:')} <b>{len(queue)}</b>"
+            )
+            rich_msg = InputRichMessage(html=text, media=[media])
+            
+            if len(queue) > 0:
+                await update_main_quiz_message(message.bot, message.chat.id, state, rich_message=rich_msg, reply_markup=get_quiz_next_keyboard(user.native_language))
+            else:
+                await update_main_quiz_message(message.bot, message.chat.id, state, rich_message=rich_msg)
+                
         except Exception:
             logger.exception("Failed to send pronunciation after failure")
+            text = (
+                "❌ <b>" + t(user.native_language, "Все 3 попытки исчерпаны!") + "</b><br/><br/>" +
+                f"{t(user.native_language, 'Правильный ответ:')} <b>{html.escape(word.canonical_word)}</b> [{html.escape(word.transcription)}]<br/>" +
+                f"{t(user.native_language, 'Перевод:')} <b>{html.escape(word.translation)}</b><br/><br/>" +
+                "🔄 " + t(user.native_language, "Интервал сброшен: слово вернется на повторение уже завтра (1 день).") + "<br/>" +
+                f"{t(user.native_language, 'Осталось в этой сессии:')} <b>{len(queue)}</b>"
+            )
+            rich_msg = InputRichMessage(html=text)
+            if len(queue) > 0:
+                await update_main_quiz_message(message.bot, message.chat.id, state, rich_message=rich_msg, reply_markup=get_quiz_next_keyboard(user.native_language))
+            else:
+                await update_main_quiz_message(message.bot, message.chat.id, state, rich_message=rich_msg)
 
         # If queue is now empty, show quiz completion
         if len(queue) == 0:
