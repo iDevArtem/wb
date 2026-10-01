@@ -50,13 +50,17 @@ async def clean_temp_messages(bot: Bot, chat_id: int, state: FSMContext):
             pass
     await state.update_data(temp_msg_ids=[])
 
-async def update_main_quiz_message(bot: Bot, chat_id: int, state: FSMContext, text: str, reply_markup=None):
+async def update_main_quiz_message(bot: Bot, chat_id: int, state: FSMContext, text: str | None = None, reply_markup=None, rich_message=None):
     data = await state.get_data()
     quiz_msg_id = data.get("quiz_msg_id")
     
     if quiz_msg_id:
         try:
-            await bot.edit_message_text(text, chat_id=chat_id, message_id=quiz_msg_id, reply_markup=reply_markup, parse_mode="HTML")
+            from aiogram.exceptions import TelegramBadRequest
+            if rich_message:
+                await bot.edit_message_text(text=None, chat_id=chat_id, message_id=quiz_msg_id, reply_markup=reply_markup, rich_message=rich_message)
+            else:
+                await bot.edit_message_text(text, chat_id=chat_id, message_id=quiz_msg_id, reply_markup=reply_markup, parse_mode="HTML")
             return
         except TelegramBadRequest as e:
             err = str(e).lower()
@@ -65,7 +69,10 @@ async def update_main_quiz_message(bot: Bot, chat_id: int, state: FSMContext, te
             # If not modified, just return. If not found or other, we will send new below.
             
     # Send new
-    msg = await bot.send_message(chat_id, text, reply_markup=reply_markup, parse_mode="HTML")
+    if rich_message:
+        msg = await bot.send_rich_message(chat_id, rich_message, reply_markup=reply_markup)
+    else:
+        msg = await bot.send_message(chat_id, text, reply_markup=reply_markup, parse_mode="HTML")
     await state.update_data(quiz_msg_id=msg.message_id)
 
 async def add_temp_message(state: FSMContext, msg_id: int):
@@ -308,10 +315,23 @@ async def present_next_word(
         try:
             audio = await tts_service.generate_audio(word.canonical_word, target_lang=user.target_language)
             voice_file = BufferedInputFile(audio.getvalue(), filename="listening.mp3")
-            msg = await message.answer_voice(voice=voice_file)
-            await add_temp_message(state, msg.message_id)
-            combined_text = prompt_text + "\n\n" + t(user.native_language, "Введи ответ:")
-            await update_main_quiz_message(message.bot, message.chat.id, state, combined_text, reply_markup=get_quiz_control_keyboard(user.native_language))
+            
+            from aiogram.types import InputRichMessage, InputRichMessageMedia, InputMediaAudio
+            media = InputRichMessageMedia(
+                id="audio1",
+                media=InputMediaAudio(
+                    media=voice_file,
+                    title=word.canonical_word,
+                    performer=t(user.native_language, 'Аудирование')
+                )
+            )
+            rich_html = f'{prompt_text}\n\n<audio src="tg://audio?id=audio1"></audio>\n\n' + t(user.native_language, "Введи ответ:")
+            rich_msg = InputRichMessage(
+                html=rich_html,
+                media=[media]
+            )
+            
+            await update_main_quiz_message(message.bot, message.chat.id, state, rich_message=rich_msg, reply_markup=get_quiz_control_keyboard(user.native_language))
         except Exception:
             # Fallback to spelling if TTS fails
             await update_main_quiz_message(message.bot, message.chat.id, state, 
