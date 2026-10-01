@@ -400,8 +400,8 @@ function openFullWordModal(word) {
   let examplesHtml = "";
   if (word.examples && word.examples.length > 0) {
     const exItems = word.examples.map(ex => {
-      const enText = typeof ex === "string" ? ex : ex.en || "";
-      const ruText = typeof ex === "object" ? ex.ru || "" : "";
+      const enText = typeof ex === "string" ? ex : ex.target || ex.en || "";
+      const ruText = typeof ex === "object" ? ex.native || ex.ru || "" : "";
       const regex = new RegExp(`(${escapeRegExp(word.canonical_word)}|${escapeRegExp(word.lemma || "")})`, "gi");
       const highlightedEn = enText.replace(regex, "<strong>$1</strong>");
       return `
