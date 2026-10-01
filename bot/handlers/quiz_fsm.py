@@ -298,19 +298,19 @@ async def present_next_word(
 
     elif mode == "multiple_choice":
         prompt_text = (
-            "🧩 <b>" + t(user.native_language, 'Режим: Выбор перевода (Multiple Choice)') + "</b>\n\n" +
-            f"{t(user.native_language, 'Каков перевод слова:')}\n" +
-            f"👉 <b>{html.escape(word.canonical_word)}</b> [{html.escape(word.transcription)}]?\n\n"
+            "🧩 <b>" + t(user.native_language, 'Режим: Выбор перевода (Multiple Choice)') + "</b><br/><br/>" +
+            f"{t(user.native_language, 'Каков перевод слова:')}<br/>" +
+            f"👉 <b>{html.escape(word.canonical_word)}</b> [{html.escape(word.transcription)}]?<br/><br/>"
         )
         for idx, opt in enumerate(options):
-            prompt_text += f'<tg-button-row><tg-button type="callback_data" data="quiz_mc:{idx}">{html.escape(opt)}</tg-button></tg-button-row>\n'
+            prompt_text += f'<tg-button-row><tg-button type="callback_data" data="quiz_mc:{idx}">{html.escape(opt)}</tg-button></tg-button-row>'
         
         rich_msg = InputRichMessage(html=prompt_text)
         await update_main_quiz_message(message.bot, message.chat.id, state, rich_message=rich_msg, reply_markup=get_quiz_control_keyboard(user.native_language))
 
     elif mode == "listening":
         prompt_text = (
-            "🎧 <b>" + t(user.native_language, 'Режим: Аудирование (Listening)') + "</b>\n\n" +
+            "🎧 <b>" + t(user.native_language, 'Режим: Аудирование (Listening)') + "</b><br/><br/>" +
             t(user.native_language, "Послушай произношение и напиши это слово (или его перевод):")
         )
         try:
@@ -321,11 +321,11 @@ async def present_next_word(
                 id="audio1",
                 media=InputMediaAudio(
                     media=voice_file,
-                    title=word.canonical_word,
-                    performer=t(user.native_language, 'Аудирование')
+                    title=t(user.native_language, 'Аудирование'),
+                    performer=t(user.target_language, 'Аудирование')
                 )
             )
-            rich_html = f'{prompt_text}\n\n<audio src="tg://audio?id=audio1"></audio>\n\n' + t(user.native_language, "Введи ответ:")
+            rich_html = f'{prompt_text}<br/><br/><audio src="tg://audio?id=audio1"></audio><br/><br/>' + t(user.native_language, "Введи ответ:")
             rich_msg = InputRichMessage(
                 html=rich_html,
                 media=[media]
@@ -410,11 +410,11 @@ async def handle_mc_choice(
         if attempts_left > 0:
             hint = SRSService.get_attempt_1_hint(canonical, user.native_language)
             prompt_text = (
-                f"❌ {t(user.native_language, 'Неверно! Осталось попыток:')} {attempts_left}.\n" +
-                f"💡 {t(user.native_language, 'Подсказка:')} {hint}\n\n"
+                f"❌ {t(user.native_language, 'Неверно! Осталось попыток:')} {attempts_left}.<br/>" +
+                f"💡 {t(user.native_language, 'Подсказка:')} {hint}<br/><br/>"
             )
             for idx, opt in enumerate(options):
-                prompt_text += f'<tg-button-row><tg-button type="callback_data" data="quiz_mc:{idx}">{html.escape(opt)}</tg-button></tg-button-row>\n'
+                prompt_text += f'<tg-button-row><tg-button type="callback_data" data="quiz_mc:{idx}">{html.escape(opt)}</tg-button></tg-button-row>'
             
                 rich_msg = InputRichMessage(html=prompt_text)
             await update_main_quiz_message(callback.bot, callback.message.chat.id, state, rich_message=rich_msg, reply_markup=get_quiz_control_keyboard(user.native_language))
