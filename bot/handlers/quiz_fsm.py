@@ -9,7 +9,7 @@ from aiogram import Bot, F, Router
 from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
-from aiogram.types import BufferedInputFile, CallbackQuery, Message
+from aiogram.types import BufferedInputFile, CallbackQuery, Message, InputRichMessage, InputRichMessageMedia, InputMediaAudio
 from aiogram.exceptions import TelegramBadRequest
 from bson import ObjectId
 
@@ -56,7 +56,6 @@ async def update_main_quiz_message(bot: Bot, chat_id: int, state: FSMContext, te
     
     if quiz_msg_id:
         try:
-            from aiogram.exceptions import TelegramBadRequest
             if rich_message:
                 await bot.edit_message_text(text=None, chat_id=chat_id, message_id=quiz_msg_id, reply_markup=reply_markup, rich_message=rich_message)
             else:
@@ -180,8 +179,7 @@ async def start_quiz_session(
                 )
             if edit_message_id:
                 try:
-                    from aiogram.exceptions import TelegramBadRequest
-                    await target_message.bot.edit_message_text(text, chat_id=target_message.chat.id, message_id=edit_message_id, parse_mode="HTML")
+                            await target_message.bot.edit_message_text(text, chat_id=target_message.chat.id, message_id=edit_message_id, parse_mode="HTML")
                 except TelegramBadRequest:
                     await target_message.answer(text, parse_mode="HTML")
             else:
@@ -195,8 +193,7 @@ async def start_quiz_session(
         )
         if edit_message_id:
             try:
-                from aiogram.exceptions import TelegramBadRequest
-                await target_message.bot.edit_message_text(text, chat_id=target_message.chat.id, message_id=edit_message_id, parse_mode="HTML")
+                    await target_message.bot.edit_message_text(text, chat_id=target_message.chat.id, message_id=edit_message_id, parse_mode="HTML")
             except TelegramBadRequest:
                 await target_message.answer(text, parse_mode="HTML")
         else:
@@ -303,9 +300,13 @@ async def present_next_word(
         prompt_text = (
             "🧩 <b>" + t(user.native_language, 'Режим: Выбор перевода (Multiple Choice)') + "</b>\n\n" +
             f"{t(user.native_language, 'Каков перевод слова:')}\n" +
-            f"👉 <b>{html.escape(word.canonical_word)}</b> [{html.escape(word.transcription)}]?"
+            f"👉 <b>{html.escape(word.canonical_word)}</b> [{html.escape(word.transcription)}]?\n\n"
         )
-        await update_main_quiz_message(message.bot, message.chat.id, state, prompt_text, reply_markup=get_quiz_options_keyboard(options, user.native_language))
+        for idx, opt in enumerate(options):
+            prompt_text += f'<tg-button-row><tg-button type="callback_data" data="quiz_mc:{idx}">{html.escape(opt)}</tg-button></tg-button-row>\n'
+        
+        rich_msg = InputRichMessage(html=prompt_text)
+        await update_main_quiz_message(message.bot, message.chat.id, state, rich_message=rich_msg, reply_markup=get_quiz_control_keyboard(user.native_language))
 
     elif mode == "listening":
         prompt_text = (
@@ -316,7 +317,6 @@ async def present_next_word(
             audio = await tts_service.generate_audio(word.canonical_word, target_lang=user.target_language)
             voice_file = BufferedInputFile(audio.getvalue(), filename="listening.mp3")
             
-            from aiogram.types import InputRichMessage, InputRichMessageMedia, InputMediaAudio
             media = InputRichMessageMedia(
                 id="audio1",
                 media=InputMediaAudio(
@@ -409,11 +409,15 @@ async def handle_mc_choice(
 
         if attempts_left > 0:
             hint = SRSService.get_attempt_1_hint(canonical, user.native_language)
-            await update_main_quiz_message(callback.bot, callback.message.chat.id, state,
+            prompt_text = (
                 f"❌ {t(user.native_language, 'Неверно! Осталось попыток:')} {attempts_left}.\n" +
-                f"💡 {t(user.native_language, 'Подсказка:')} {hint}",
-                reply_markup=get_quiz_options_keyboard(options, user.native_language)
+                f"💡 {t(user.native_language, 'Подсказка:')} {hint}\n\n"
             )
+            for idx, opt in enumerate(options):
+                prompt_text += f'<tg-button-row><tg-button type="callback_data" data="quiz_mc:{idx}">{html.escape(opt)}</tg-button></tg-button-row>\n'
+            
+                rich_msg = InputRichMessage(html=prompt_text)
+            await update_main_quiz_message(callback.bot, callback.message.chat.id, state, rich_message=rich_msg, reply_markup=get_quiz_control_keyboard(user.native_language))
         else:
             await on_quiz_failure(callback.message, user, word, state)
 
