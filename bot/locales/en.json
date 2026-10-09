@@ -224,5 +224,11 @@
   "Поддерживаешь огонь:": "Keeping the fire alive:",
   "В ударе:": "On fire:",
   "Держишь ритм:": "Keeping the rhythm:",
-  "➕ Добавить": "➕ Add"
+  "➕ Добавить": "➕ Add",
+  "⚠️ У тебя уже идет квиз!": "⚠️ You already have an active quiz!",
+  "Закончи предыдущий квиз или сбрось его, чтобы начать заново.": "Finish the previous quiz or reset it to start over.",
+  "▶️ Продолжить": "▶️ Continue",
+  "🔄 Сбросить": "🔄 Reset",
+  "⚠️ Этот квиз уже недействителен.": "⚠️ This quiz is no longer valid.",
+  "Квиз сброшен. Начинаем заново!": "Quiz reset. Starting over!"
 }

@@ -76,8 +76,8 @@ async def main() -> None:
     scheduler.add_job(
         check_due_words_task,
         trigger="interval",
-        minutes=15,
-        kwargs={"bot": bot},
+        minutes=5,
+        kwargs={"bot": bot, "dp": dp},
         id="check_due_words_job",
         replace_existing=True,
     )

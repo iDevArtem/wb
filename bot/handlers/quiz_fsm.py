@@ -13,15 +13,17 @@ from aiogram.types import BufferedInputFile, CallbackQuery, Message, InputRichMe
 from aiogram.exceptions import TelegramBadRequest
 from bson import ObjectId
 
-from bot.core.database import get_words_collection
+from bot.core.database import get_words_collection, get_users_collection
 from bot.keyboards.inline import (
     get_quiz_control_keyboard,
     get_quiz_next_keyboard,
     get_quiz_options_keyboard,
+    get_quiz_conflict_keyboard,
 )
 from bot.models.base import utc_now
 from bot.models.user import User
 from bot.models.word import Word
+from bot.scheduler.tasks import cleanup_user_reminder
 from bot.services.gemini_service import (
     GeminiQuotaExhaustedError,
     GeminiServiceError,
@@ -38,6 +40,41 @@ router = Router(name="quiz_fsm")
 class QuizState(StatesGroup):
     answering = State()
 
+
+async def is_quiz_in_progress(state: FSMContext) -> bool:
+    """Check if the user is currently engaged in an active quiz session."""
+    current_state = await state.get_state()
+    if current_state != QuizState.answering.state:
+        return False
+    data = await state.get_data()
+    queue = data.get("queue")
+    return bool(queue and len(queue) > 0)
+
+
+async def _is_valid_quiz_callback(callback: CallbackQuery, user: User, state: FSMContext) -> bool:
+    """Validate that the callback originates from the active quiz message."""
+    current_state = await state.get_state()
+    if current_state != QuizState.answering.state:
+        await callback.answer(t(user.native_language, "⚠️ Этот квиз уже недействителен."), show_alert=True)
+        if callback.message:
+            try:
+                await callback.message.edit_reply_markup(reply_markup=None)
+            except Exception:
+                pass
+        return False
+
+    data = await state.get_data()
+    active_msg_id = data.get("quiz_msg_id")
+    if not callback.message or (active_msg_id and callback.message.message_id != active_msg_id):
+        await callback.answer(t(user.native_language, "⚠️ Этот квиз уже недействителен."), show_alert=True)
+        if callback.message:
+            try:
+                await callback.message.edit_reply_markup(reply_markup=None)
+            except Exception:
+                pass
+        return False
+
+    return True
 
 
 async def clean_temp_messages(bot: Bot, chat_id: int, state: FSMContext):
@@ -132,6 +169,12 @@ async def start_quiz_session(
     allow_all: bool = False,
     edit_message_id: int | None = None,
 ) -> None:
+    users_col = get_users_collection()
+    if edit_message_id:
+        await users_col.update_one({"tg_id": user.tg_id}, {"$unset": {"last_reminder_msg_id": ""}})
+    else:
+        await cleanup_user_reminder(target_message.bot, user.tg_id)
+
     now_utc = datetime.now(timezone.utc)
     words_col = get_words_collection()
 
@@ -285,6 +328,17 @@ async def present_next_word(
         correct_idx=correct_idx,
     )
 
+    await _deliver_quiz_question(message, user, state, word, mode, options)
+
+
+async def _deliver_quiz_question(
+    message: Message,
+    user: User,
+    state: FSMContext,
+    word: Word,
+    mode: str,
+    options: list[str],
+) -> None:
     # Deliver question according to mode
     if mode == "spelling":
         prompt_text = (
@@ -350,40 +404,75 @@ async def present_next_word(
         await update_main_quiz_message(message.bot, message.chat.id, state, prompt_text, reply_markup=get_quiz_control_keyboard(user.native_language))
 
 
+@router.message(Command("quiz"))
 @router.message(TranslatedText("🧠 Учить"))
 @router.message(F.text.in_({"🧠", "🧠\ufe0f"}))
 async def cmd_quiz(message: Message, user: User, state: FSMContext) -> None:
+    if await is_quiz_in_progress(state):
+        text = (
+            "⚠️ <b>" + t(user.native_language, "У тебя уже идет квиз!") + "</b>\n\n" +
+            t(user.native_language, "Закончи предыдущий квиз или сбрось его, чтобы начать заново.")
+        )
+        await message.answer(text, reply_markup=get_quiz_conflict_keyboard(user.native_language, restart_data="quiz_restart:due"), parse_mode="HTML")
+        return
     await state.clear()
+    await cleanup_user_reminder(message.bot, user.tg_id)
     await start_quiz_session(message, user, state, allow_all=False)
 
 
 @router.message(Command("quiz_practice"))
 async def cmd_quiz_practice(message: Message, user: User, state: FSMContext) -> None:
+    if await is_quiz_in_progress(state):
+        text = (
+            "⚠️ <b>" + t(user.native_language, "У тебя уже идет квиз!") + "</b>\n\n" +
+            t(user.native_language, "Закончи предыдущий квиз или сбрось его, чтобы начать заново.")
+        )
+        await message.answer(text, reply_markup=get_quiz_conflict_keyboard(user.native_language, restart_data="quiz_restart:practice"), parse_mode="HTML")
+        return
     await state.clear()
+    await cleanup_user_reminder(message.bot, user.tg_id)
     await start_quiz_session(message, user, state, allow_all=True)
 
 
 @router.callback_query(lambda c: c.data == "quiz_start_due")
 async def cb_start_due_quiz(callback: CallbackQuery, user: User, state: FSMContext) -> None:
     await callback.answer()
-    if callback.message:
-        await start_quiz_session(callback.message, user, state, allow_all=False, edit_message_id=callback.message.message_id)
+    if not callback.message:
+        return
+    if await is_quiz_in_progress(state):
+        text = (
+            "⚠️ <b>" + t(user.native_language, "У тебя уже идет квиз!") + "</b>\n\n" +
+            t(user.native_language, "Закончи предыдущий квиз или сбрось его, чтобы начать заново.")
+        )
+        await callback.message.edit_text(text, reply_markup=get_quiz_conflict_keyboard(user.native_language, restart_data="quiz_restart:due"), parse_mode="HTML")
+        return
+    await start_quiz_session(callback.message, user, state, allow_all=False, edit_message_id=callback.message.message_id)
 
 
 @router.callback_query(lambda c: c.data and c.data.startswith("quiz_word:"))
 async def cb_quiz_single_word(callback: CallbackQuery, user: User, state: FSMContext) -> None:
     await callback.answer()
+    if not callback.message:
+        return
     word_id_str = callback.data.split(":")[1]
-    if callback.message:
-        await start_quiz_session(callback.message, user, state, only_word_id=word_id_str, edit_message_id=callback.message.message_id)
+    if await is_quiz_in_progress(state):
+        text = (
+            "⚠️ <b>" + t(user.native_language, "У тебя уже идет квиз!") + "</b>\n\n" +
+            t(user.native_language, "Закончи предыдущий квиз или сбрось его, чтобы начать заново.")
+        )
+        await callback.message.edit_text(text, reply_markup=get_quiz_conflict_keyboard(user.native_language, restart_data=f"quiz_restart:word:{word_id_str}"), parse_mode="HTML")
+        return
+    await start_quiz_session(callback.message, user, state, only_word_id=word_id_str, edit_message_id=callback.message.message_id)
 
 
-@router.callback_query(QuizState.answering, lambda c: c.data and c.data.startswith("quiz_mc:"))
+@router.callback_query(lambda c: c.data and c.data.startswith("quiz_mc:"))
 async def handle_mc_choice(
     callback: CallbackQuery,
     user: User,
     state: FSMContext,
 ) -> None:
+    if not await _is_valid_quiz_callback(callback, user, state):
+        return
     await callback.answer()
     choice_idx = int(callback.data.split(":")[1])
     data = await state.get_data()
@@ -757,6 +846,8 @@ async def cb_quiz_skip(
     user: User,
     state: FSMContext,
 ) -> None:
+    if not await _is_valid_quiz_callback(callback, user, state):
+        return
     await callback.answer(t(user.native_language, "Слово пропущено"))
     data = await state.get_data()
     word_id = data.get("current_word_id")
@@ -773,6 +864,8 @@ async def cb_quiz_next(
     user: User,
     state: FSMContext,
 ) -> None:
+    if not await _is_valid_quiz_callback(callback, user, state):
+        return
     await callback.answer()
     if callback.message:
         await present_next_word(callback.message, user, state)
@@ -784,6 +877,8 @@ async def cb_quiz_stop(
     user: User,
     state: FSMContext,
 ) -> None:
+    if not await _is_valid_quiz_callback(callback, user, state):
+        return
     await callback.answer()
     data = await state.get_data()
     completed = data.get("completed_session", 0)
@@ -798,6 +893,79 @@ async def cb_quiz_stop(
             f"📝 <b>{t(user.native_language, 'Пройденные слова:')}</b>\n{words_list_text}"
         )
         await clean_temp_messages(callback.bot, callback.message.chat.id, state)
-        await update_main_quiz_message(callback.bot, callback.message.chat.id, state, text)
+        await update_main_quiz_message(callback.bot, callback.message.chat.id, state, text, reply_markup=None)
     await state.clear()
+
+
+@router.callback_query(lambda c: c.data == "quiz_resume")
+async def cb_quiz_resume(
+    callback: CallbackQuery,
+    user: User,
+    state: FSMContext,
+) -> None:
+    await callback.answer()
+    if not callback.message:
+        return
+
+    data = await state.get_data()
+    quiz_msg_id = data.get("quiz_msg_id")
+
+    # If the conflict prompt was a separate message, delete it
+    if callback.message.message_id != quiz_msg_id:
+        try:
+            await callback.message.delete()
+        except Exception:
+            pass
+
+    current_word_id = data.get("current_word_id")
+    if current_word_id:
+        words_col = get_words_collection()
+        query = _word_query_by_id(str(current_word_id), user.id)
+        doc = await words_col.find_one(query)
+        if doc:
+            word = Word.model_validate(doc)
+            mode = data.get("mode", "spelling")
+            options = data.get("options", [])
+            await _deliver_quiz_question(callback.message, user, state, word, mode, options)
+            return
+
+    await present_next_word(callback.message, user, state)
+
+
+@router.callback_query(lambda c: c.data and c.data.startswith("quiz_restart"))
+async def cb_quiz_restart(
+    callback: CallbackQuery,
+    user: User,
+    state: FSMContext,
+) -> None:
+    await callback.answer(t(user.native_language, "Квиз сброшен. Начинаем заново!"))
+    if not callback.message:
+        return
+
+    data = await state.get_data()
+    old_quiz_msg_id = data.get("quiz_msg_id")
+    if old_quiz_msg_id and old_quiz_msg_id != callback.message.message_id:
+        try:
+            await callback.bot.edit_message_reply_markup(
+                chat_id=callback.message.chat.id,
+                message_id=old_quiz_msg_id,
+                reply_markup=None,
+            )
+        except Exception:
+            pass
+
+    await clean_temp_messages(callback.bot, callback.message.chat.id, state)
+    await state.clear()
+    await cleanup_user_reminder(callback.bot, user.tg_id)
+
+    restart_parts = callback.data.split(":")
+    restart_type = restart_parts[1] if len(restart_parts) > 1 else "due"
+
+    if restart_type == "practice":
+        await start_quiz_session(callback.message, user, state, allow_all=True, edit_message_id=callback.message.message_id)
+    elif restart_type == "word" and len(restart_parts) > 2:
+        word_id = restart_parts[2]
+        await start_quiz_session(callback.message, user, state, only_word_id=word_id, edit_message_id=callback.message.message_id)
+    else:
+        await start_quiz_session(callback.message, user, state, allow_all=False, edit_message_id=callback.message.message_id)
 

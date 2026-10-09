@@ -1,3 +1,4 @@
+from typing import Any
 from bot.core.i18n import t
 
 import logging
@@ -42,10 +43,29 @@ def is_within_allowed_hours(user: User, now_utc: datetime) -> bool:
         return local_hour < start or local_hour >= end
 
 
-async def check_due_words_task(bot: Bot) -> None:
+async def cleanup_user_reminder(bot: Bot, user_id: int) -> None:
+    """
+    Delete any pending reminder notification message and clear its ID from DB.
+    """
+    users_col = get_users_collection()
+    user_doc = await users_col.find_one({"tg_id": user_id})
+    if user_doc and user_doc.get("last_reminder_msg_id"):
+        msg_id = user_doc["last_reminder_msg_id"]
+        try:
+            await bot.delete_message(chat_id=user_id, message_id=msg_id)
+        except Exception:
+            pass
+        await users_col.update_one(
+            {"tg_id": user_id},
+            {"$unset": {"last_reminder_msg_id": ""}},
+        )
+
+
+async def check_due_words_task(bot: Bot, dp: Any = None) -> None:
     """
     Background job triggered by APScheduler.
     Finds active users with due words and sends notification if allowed by quiet hours.
+    Repeats every 30 minutes, deleting the previous reminder message, until words are reviewed.
     """
     now_utc = datetime.now(timezone.utc)
     logger.debug("Running check_due_words_task at %s UTC", now_utc)
@@ -61,14 +81,16 @@ async def check_due_words_task(bot: Bot) -> None:
             if not is_within_allowed_hours(user, now_utc):
                 continue
 
-            # Rate limit: do not spam more frequently than every 4 hours
-            if user.last_notified_at:
-                user_notif_time = user.last_notified_at
-                if user_notif_time.tzinfo is None:
-                    user_notif_time = user_notif_time.replace(tzinfo=timezone.utc)
-                elapsed = now_utc - user_notif_time
-                if elapsed < timedelta(hours=4):
-                    continue
+            # Skip notification if user is currently taking a quiz
+            if dp and hasattr(dp, "fsm") and hasattr(dp.fsm, "storage"):
+                try:
+                    from aiogram.fsm.storage.base import StorageKey
+                    key = StorageKey(bot_id=bot.id, chat_id=user.tg_id, user_id=user.tg_id)
+                    current_state = await dp.fsm.storage.get_state(key)
+                    if current_state and "quiz" in current_state.lower():
+                        continue
+                except Exception as ex:
+                    logger.debug("Could not check FSM state for user %s: %s", user.tg_id, ex)
 
             # Count words ready for review
             due_count = await words_col.count_documents({
@@ -80,23 +102,54 @@ async def check_due_words_task(bot: Bot) -> None:
                 "native_language": user.native_language,
             })
 
-            if due_count > 0:
-                text = (
-                    f"{t(user.native_language, 'Пора повторить')} <b>{due_count}</b> {t(user.native_language, 'слов! 🧠')}\n\n" +
-                    t(user.native_language, "Интервальное повторение активирует долговременную память. ") +
-                    t(user.native_language, "Пройди быстрый квиз прямо сейчас:")
-                )
-                await bot.send_message(
-                    chat_id=user.tg_id,
-                    text=text,
-                    reply_markup=get_scheduler_notification_keyboard(user.native_language),
-                    parse_mode="HTML",
-                )
-                await users_col.update_one(
-                    {"tg_id": user.tg_id},
-                    {"$set": {"last_notified_at": now_utc}},
-                )
-                logger.info("Sent review notification to tg_id=%s for %s words", user.tg_id, due_count)
+            # If user has no due words, remove any leftover reminder message
+            if due_count == 0:
+                if user.last_reminder_msg_id:
+                    try:
+                        await bot.delete_message(chat_id=user.tg_id, message_id=user.last_reminder_msg_id)
+                    except Exception:
+                        pass
+                    await users_col.update_one(
+                        {"tg_id": user.tg_id},
+                        {"$unset": {"last_reminder_msg_id": ""}},
+                    )
+                continue
+
+            # Rate limit: do not re-send if less than 30 minutes have elapsed
+            if user.last_notified_at:
+                user_notif_time = user.last_notified_at
+                if user_notif_time.tzinfo is None:
+                    user_notif_time = user_notif_time.replace(tzinfo=timezone.utc)
+                elapsed = now_utc - user_notif_time
+                if elapsed < timedelta(minutes=30):
+                    continue
+
+            # Delete the previous reminder message before sending a new one
+            if user.last_reminder_msg_id:
+                try:
+                    await bot.delete_message(chat_id=user.tg_id, message_id=user.last_reminder_msg_id)
+                except Exception:
+                    pass
+
+            text = (
+                f"{t(user.native_language, 'Пора повторить')} <b>{due_count}</b> {t(user.native_language, 'слов! 🧠')}\n\n" +
+                t(user.native_language, "Интервальное повторение активирует долговременную память. ") +
+                t(user.native_language, "Пройди быстрый квиз прямо сейчас:")
+            )
+            msg = await bot.send_message(
+                chat_id=user.tg_id,
+                text=text,
+                reply_markup=get_scheduler_notification_keyboard(user.native_language),
+                parse_mode="HTML",
+            )
+            await users_col.update_one(
+                {"tg_id": user.tg_id},
+                {"$set": {
+                    "last_notified_at": now_utc,
+                    "last_reminder_msg_id": msg.message_id,
+                }},
+            )
+            logger.info("Sent review notification to tg_id=%s for %s words (msg_id=%s)", user.tg_id, due_count, msg.message_id)
 
         except Exception as ex:
             logger.exception("Error checking due words for user: %s", ex)

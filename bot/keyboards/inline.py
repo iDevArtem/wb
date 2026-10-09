@@ -99,6 +99,24 @@ def get_scheduler_notification_keyboard(lang: str = "ru") -> InlineKeyboardMarku
     return builder.as_markup()
 
 
+def get_quiz_conflict_keyboard(lang: str = "ru", restart_data: str = "quiz_restart:due") -> InlineKeyboardMarkup:
+    """
+    Keyboard shown when user attempts to start a new quiz while another is active.
+    """
+    builder = InlineKeyboardBuilder()
+    builder.row(
+        InlineKeyboardButton(
+            text=t(lang, "▶️ Продолжить"),
+            callback_data="quiz_resume",
+        ),
+        InlineKeyboardButton(
+            text=t(lang, "🔄 Сбросить"),
+            callback_data=restart_data,
+        ),
+    )
+    return builder.as_markup()
+
+
 def get_archive_item_keyboard(word_id: int | str, lang: str = "ru") -> InlineKeyboardMarkup:
     """
     Button to restore an archived word.

@@ -15,6 +15,7 @@ class User(MongoBaseModel):
     streak: int = 0
     last_activity_date: date | None = None
     last_notified_at: datetime | None = None
+    last_reminder_msg_id: int | None = None
     is_active: bool = True
     native_language: str = "uk"
     target_language: str = "en"
