@@ -228,3 +228,116 @@ async def test_is_valid_quiz_callback_accepts_current_message():
     valid = await _is_valid_quiz_callback(callback, user, state)
     assert valid is True
     callback.message.edit_reply_markup.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_check_due_words_task_skips_when_quiz_action_is_recent():
+    bot = AsyncMock()
+    bot.id = 99999
+    now = datetime.now(timezone.utc)
+    recent_action = (now - timedelta(minutes=5)).isoformat()
+
+    dp = MagicMock()
+    dp.fsm.storage.get_state = AsyncMock(return_value=QuizState.answering.state)
+    dp.fsm.storage.get_data = AsyncMock(return_value={"last_quiz_action_at": recent_action, "quiz_msg_id": 888})
+
+    user_doc = {
+        "tg_id": 123,
+        "is_active": True,
+        "timezone": "UTC",
+        "quiet_hours_start": 0,
+        "quiet_hours_end": 0,
+        "native_language": "ru",
+        "target_language": "en",
+        "last_notified_at": now - timedelta(hours=2),
+    }
+
+    class AsyncCursor:
+        def __init__(self, items):
+            self.items = items
+        def __aiter__(self):
+            return self
+        async def __anext__(self):
+            if not self.items:
+                raise StopAsyncIteration
+            return self.items.pop(0)
+
+    users_col = MagicMock()
+    users_col.find.return_value = AsyncCursor([user_doc])
+    words_col = AsyncMock()
+    words_col.count_documents.return_value = 5
+
+    with patch("bot.scheduler.tasks.get_users_collection", return_value=users_col), \
+         patch("bot.scheduler.tasks.get_words_collection", return_value=words_col):
+
+        await check_due_words_task(bot, dp=dp)
+
+        # Active quiz within 30 min -> no reminder sent, state not cleared
+        bot.send_message.assert_not_called()
+        dp.fsm.storage.set_state.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_check_due_words_task_deactivates_abandoned_quiz_and_sends_reminder():
+    bot = AsyncMock()
+    bot.id = 99999
+    sent_msg = MagicMock(message_id=999)
+    bot.send_message = AsyncMock(return_value=sent_msg)
+
+    now = datetime.now(timezone.utc)
+    old_action = (now - timedelta(minutes=35)).isoformat()
+
+    dp = MagicMock()
+    dp.fsm.storage.get_state = AsyncMock(return_value=QuizState.answering.state)
+    dp.fsm.storage.get_data = AsyncMock(return_value={
+        "last_quiz_action_at": old_action,
+        "quiz_msg_id": 888,
+        "temp_msg_ids": [],
+    })
+    dp.fsm.storage.set_state = AsyncMock()
+    dp.fsm.storage.set_data = AsyncMock()
+
+    user_doc = {
+        "tg_id": 123,
+        "is_active": True,
+        "timezone": "UTC",
+        "quiet_hours_start": 0,
+        "quiet_hours_end": 0,
+        "native_language": "ru",
+        "target_language": "en",
+        "last_notified_at": now - timedelta(hours=2),
+    }
+
+    class AsyncCursor:
+        def __init__(self, items):
+            self.items = items
+        def __aiter__(self):
+            return self
+        async def __anext__(self):
+            if not self.items:
+                raise StopAsyncIteration
+            return self.items.pop(0)
+
+    users_col = MagicMock()
+    users_col.find.return_value = AsyncCursor([user_doc])
+    users_col.update_one = AsyncMock()
+    words_col = AsyncMock()
+    words_col.count_documents.return_value = 4
+
+    with patch("bot.scheduler.tasks.get_users_collection", return_value=users_col), \
+         patch("bot.scheduler.tasks.get_words_collection", return_value=words_col):
+
+        await check_due_words_task(bot, dp=dp)
+
+        # Deactivates old quiz card (edits message text or removes markup)
+        bot.edit_message_text.assert_awaited_once()
+        assert bot.edit_message_text.call_args[1]["message_id"] == 888
+
+        # Clears FSM state
+        dp.fsm.storage.set_state.assert_awaited_once()
+        dp.fsm.storage.set_data.assert_awaited_once()
+
+        # Sends fresh notification for due words
+        bot.send_message.assert_awaited_once()
+        assert "4" in bot.send_message.call_args[1]["text"]
+

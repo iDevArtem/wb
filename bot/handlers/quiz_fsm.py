@@ -77,6 +77,10 @@ async def _is_valid_quiz_callback(callback: CallbackQuery, user: User, state: FS
     return True
 
 
+def _quiz_now_iso() -> str:
+    return datetime.now(timezone.utc).isoformat()
+
+
 async def clean_temp_messages(bot: Bot, chat_id: int, state: FSMContext):
     data = await state.get_data()
     temp_ids = data.get("temp_msg_ids", [])
@@ -253,6 +257,7 @@ async def start_quiz_session(
         reviewed_words_list=[],
         temp_msg_ids=[],
         quiz_msg_id=edit_message_id,
+        last_quiz_action_at=_quiz_now_iso(),
     )
 
     await present_next_word(target_message, user, state)
@@ -326,6 +331,7 @@ async def present_next_word(
         attempts_left=3,
         options=options,
         correct_idx=correct_idx,
+        last_quiz_action_at=_quiz_now_iso(),
     )
 
     await _deliver_quiz_question(message, user, state, word, mode, options)
@@ -494,7 +500,7 @@ async def handle_mc_choice(
     else:
         # Multiple choice mistake
         attempts_left -= 1
-        await state.update_data(attempts_left=attempts_left)
+        await state.update_data(attempts_left=attempts_left, last_quiz_action_at=_quiz_now_iso())
 
         if attempts_left > 0:
             hint = SRSService.get_attempt_1_hint(canonical, user.native_language)
@@ -638,7 +644,7 @@ async def handle_quiz_text_answer(
         await on_quiz_success(message, user, word, attempts_left, state)
     else:
         attempts_left -= 1
-        await state.update_data(attempts_left=attempts_left)
+        await state.update_data(attempts_left=attempts_left, last_quiz_action_at=_quiz_now_iso())
 
         if attempts_left == 2:
             # Hint 1: First letter + blanks
@@ -689,6 +695,7 @@ async def on_quiz_success(
         correct_first_try=first_tries,
         reviewed_words_list=reviewed,
         current_word_id="",
+        last_quiz_action_at=_quiz_now_iso(),
     )
 
     if word:
@@ -760,6 +767,7 @@ async def on_quiz_failure(
         completed_session=completed,
         reviewed_words_list=reviewed,
         current_word_id="",
+        last_quiz_action_at=_quiz_now_iso(),
     )
 
     if word:
@@ -917,6 +925,7 @@ async def cb_quiz_resume(
         except Exception:
             pass
 
+    await state.update_data(last_quiz_action_at=_quiz_now_iso())
     current_word_id = data.get("current_word_id")
     if current_word_id:
         words_col = get_words_collection()

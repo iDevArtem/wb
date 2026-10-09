@@ -81,14 +81,75 @@ async def check_due_words_task(bot: Bot, dp: Any = None) -> None:
             if not is_within_allowed_hours(user, now_utc):
                 continue
 
-            # Skip notification if user is currently taking a quiz
+            # Check FSM state for quiz in progress or abandoned
             if dp and hasattr(dp, "fsm") and hasattr(dp.fsm, "storage"):
                 try:
                     from aiogram.fsm.storage.base import StorageKey
                     key = StorageKey(bot_id=bot.id, chat_id=user.tg_id, user_id=user.tg_id)
                     current_state = await dp.fsm.storage.get_state(key)
                     if current_state and "quiz" in current_state.lower():
-                        continue
+                        data = await dp.fsm.storage.get_data(key)
+                        action_str = data.get("last_quiz_action_at")
+                        is_abandoned = False
+                        if action_str:
+                            try:
+                                action_time = datetime.fromisoformat(action_str)
+                                if action_time.tzinfo is None:
+                                    action_time = action_time.replace(tzinfo=timezone.utc)
+                                if now_utc - action_time >= timedelta(minutes=30):
+                                    is_abandoned = True
+                            except Exception:
+                                is_abandoned = True
+                        else:
+                            # If no action timestamp in state, check last_notified_at or consider abandoned
+                            if user.last_notified_at:
+                                user_notif_time = user.last_notified_at
+                                if user_notif_time.tzinfo is None:
+                                    user_notif_time = user_notif_time.replace(tzinfo=timezone.utc)
+                                if now_utc - user_notif_time >= timedelta(minutes=30):
+                                    is_abandoned = True
+                            else:
+                                is_abandoned = True
+
+                        if not is_abandoned:
+                            # User is actively taking quiz, do not interrupt
+                            continue
+
+                        # Quiz session is abandoned (> 30 min of inactivity).
+                        # Deactivate card: remove buttons and append notice.
+                        quiz_msg_id = data.get("quiz_msg_id")
+                        if quiz_msg_id:
+                            notice_text = t(user.native_language, "⏱ Сессия завершена из-за неактивности.")
+                            try:
+                                await bot.edit_message_text(
+                                    text=f"⏱ <b>{notice_text}</b>",
+                                    chat_id=user.tg_id,
+                                    message_id=quiz_msg_id,
+                                    reply_markup=None,
+                                    parse_mode="HTML",
+                                )
+                            except Exception:
+                                try:
+                                    await bot.edit_message_reply_markup(
+                                        chat_id=user.tg_id,
+                                        message_id=quiz_msg_id,
+                                        reply_markup=None,
+                                    )
+                                except Exception:
+                                    pass
+
+                        # Clear temp messages if any
+                        temp_ids = data.get("temp_msg_ids", [])
+                        for temp_id in temp_ids:
+                            try:
+                                await bot.delete_message(chat_id=user.tg_id, message_id=temp_id)
+                            except Exception:
+                                pass
+
+                        # Clear FSM state so fresh reminders can be sent and user can start anew
+                        await dp.fsm.storage.set_state(key, None)
+                        await dp.fsm.storage.set_data(key, {})
+                        logger.info("Deactivated abandoned quiz session for user tg_id=%s", user.tg_id)
                 except Exception as ex:
                     logger.debug("Could not check FSM state for user %s: %s", user.tg_id, ex)
 
