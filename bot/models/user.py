@@ -19,6 +19,7 @@ class User(MongoBaseModel):
     is_active: bool = True
     native_language: str = "uk"
     target_language: str = "en"
+    hide_translations: bool = True
 
     @property
     def id(self) -> int:

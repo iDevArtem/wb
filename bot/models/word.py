@@ -26,6 +26,7 @@ class Word(MongoBaseModel):
     pos_native: str | None = None
     grammar_notes: list[str] = Field(default_factory=list)
     grammar_notes_native: list[str] = Field(default_factory=list)
+    forms: list[dict[str, str]] = Field(default_factory=list)
     # Legacy fields
     examples: list[dict[str, str]] = Field(default_factory=list)
     synonyms_collocations: list[str] = Field(default_factory=list)

@@ -30,10 +30,16 @@ class ExampleItem(BaseModel):
     native: str = Field(..., description="Translation of the example sentence into the native language")
 
 
+class WordFormItem(BaseModel):
+    label: str = Field(description="Grammar/tense label in target language or universal term, e.g. 'Past Simple', 'V3 / Past Participle', 'Plural', 'Comparative', 'Future'")
+    word: str = Field(description="The inflected word or short phrase in target language")
+    translation: str = Field(description="Translation of this form into the user's native language")
+
+
 class WordAnalysis(BaseModel):
     canonical_word: str = Field(
         ...,
-        description="Canonical target language word or phrase (e.g., 'necessary', 'go')",
+        description="Canonical target language word or phrase (e.g., 'necessary', 'go', or the specific entered form like 'demonstrated')",
     )
     lemma: str = Field(
         ...,
@@ -91,6 +97,10 @@ class WordAnalysis(BaseModel):
         default=None,
         description="Translation of the part of speech (pos) into the native language",
     )
+    forms: list[WordFormItem] = Field(
+        default_factory=list,
+        description="Key grammatical/inflected forms of this word with translations if applicable. For verbs: key tenses/forms (e.g. Present, Past Simple, Future or V1/V2/V3). For nouns: singular and plural with articles if applicable. For adjectives: comparative and superlative degrees. Empty list for invariant parts of speech.",
+    )
 
 
 class WordExamplesResponse(BaseModel):
@@ -120,13 +130,20 @@ Your task is to analyze user input (text or audio) and output a clean, accurate 
 Rules:
 1. If the input is in {native_lang} or a related language, translate it into the most natural, commonly used canonical {target_lang} word or set expression.
 2. If the input is in {target_lang} with typos (e.g. "necesary", "definately"), fix the spelling in `canonical_word`, and put the original typo in `corrected_from`. If no typo, `corrected_from` must be null.
-3. If the input is an inflected form, set `lemma` to its base dictionary headword.
+3. If the input is an inflected form (e.g. past tense 'demonstrated' or plural 'cats'):
+   - Set `canonical_word` to the exact inflected form the user entered (or its corrected spelling), and set `translation` to match this exact form (e.g. 'demonstrated' -> 'продемонстрировал(и)', 'cats' -> 'коты').
+   - Set `lemma` to its base dictionary headword (e.g. 'demonstrate', 'cat').
 4. Phonetics: Provide strict IPA with stress marks if applicable for {target_lang}.
 5. Provide a short, precise {native_lang} translation in `translation` (max 1-3 words). Also provide the translated part of speech in `pos_native` (e.g. "существительное"). Do not add any explanations in these fields.
 6. `level`: Determine the CEFR level (A1, A2, B1, B2, C1, C2) of the word.
 7. `definition`: Provide one short, simple explanation of the meaning in {target_lang}. Provide its translation in `definition_native`.
 8. `grammar_notes`: Provide a minimal list of crucial grammar facts. Example: for English nouns include `[C]` or `[U]`, for verbs include `[intransitive]`. Provide translations of these notes in `grammar_notes_native`.
-9. `examples`: Provide 5 diverse example sentences using the word, and their translations into the native language.
+9. `forms`: Provide 2-4 key grammatical forms of this word with clear labels and native translations.
+   - For verbs in {target_lang}: provide key forms/tenses (e.g. Present/Base, Past Simple, Future or V1/V2/V3) with translation of each form into {native_lang}.
+   - For nouns: provide Singular and Plural forms (with articles if relevant for {target_lang}).
+   - For adjectives: provide Positive/Base, Comparative, Superlative degrees.
+   - For adverbs, prepositions, particles or invariant words: leave `forms` as an empty list [].
+10. `examples`: Provide 5 diverse example sentences using the word, and their translations into the native language.
 """
 
 def get_voice_quiz_prompt(native_lang: str, target_lang: str) -> str:

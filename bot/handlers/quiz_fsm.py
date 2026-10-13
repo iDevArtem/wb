@@ -305,8 +305,8 @@ async def present_next_word(
 
     word = Word.model_validate(doc)
 
-    # Pick a mode among: spelling, multiple_choice, listening, voice_mode
-    modes = ["spelling", "multiple_choice", "listening", "voice_mode"]
+    # Pick a mode among: spelling, multiple_choice, listening, dictation, voice_mode
+    modes = ["spelling", "multiple_choice", "listening", "dictation", "voice_mode"]
     mode = random.choice(modes)
 
     # Prepare mode data
@@ -371,7 +371,7 @@ async def _deliver_quiz_question(
     elif mode == "listening":
         prompt_text = (
             "🎧 <b>" + t(user.native_language, 'Режим: Аудирование (Listening)') + "</b><br/><br/>" +
-            t(user.native_language, "Послушай произношение и напиши это слово (или его перевод):")
+            t(user.native_language, "Послушай произношение и напиши его перевод на родном языке:")
         )
         try:
             audio = await tts_service.generate_audio(word.canonical_word, target_lang=user.target_language)
@@ -385,7 +385,7 @@ async def _deliver_quiz_question(
                     performer=t(user.target_language, 'Аудирование')
                 )
             )
-            rich_html = f'{prompt_text}<br/><br/><audio src="tg://audio?id=audio1"></audio><br/><br/>' + t(user.native_language, "Введи ответ:")
+            rich_html = f'{prompt_text}<br/><br/><audio src="tg://audio?id=audio1"></audio><br/><br/>' + t(user.native_language, "Введи перевод:")
             rich_msg = InputRichMessage(
                 html=rich_html,
                 media=[media]
@@ -396,6 +396,36 @@ async def _deliver_quiz_question(
             # Fallback to spelling if TTS fails
             await update_main_quiz_message(message.bot, message.chat.id, state, 
                 f"✍️ {t(user.native_language, 'Напиши перевод слова')} <b>{html.escape(word.translation)}</b>:",
+                reply_markup=get_quiz_control_keyboard(user.native_language)
+            )
+
+    elif mode == "dictation":
+        prompt_text = (
+            "👂 <b>" + t(user.native_language, 'Режим: Диктант на слух (Dictation)') + "</b><br/><br/>" +
+            t(user.native_language, "Послушай произношение и напиши услышанное слово на изучаемом языке:")
+        )
+        try:
+            audio = await tts_service.generate_audio(word.canonical_word, target_lang=user.target_language)
+            voice_file = BufferedInputFile(audio.getvalue(), filename="dictation.mp3")
+            
+            media = InputRichMessageMedia(
+                id="audio1",
+                media=InputMediaAudio(
+                    media=voice_file,
+                    title=t(user.native_language, 'Диктант'),
+                    performer=t(user.target_language, 'Диктант')
+                )
+            )
+            rich_html = f'{prompt_text}<br/><br/><audio src="tg://audio?id=audio1"></audio><br/><br/>' + t(user.native_language, "Введи слово на изучаемом языке:")
+            rich_msg = InputRichMessage(
+                html=rich_html,
+                media=[media]
+            )
+            
+            await update_main_quiz_message(message.bot, message.chat.id, state, rich_message=rich_msg, reply_markup=get_quiz_control_keyboard(user.native_language))
+        except Exception:
+            await update_main_quiz_message(message.bot, message.chat.id, state, 
+                f"✍️ {t(user.native_language, 'Напиши слово')} <b>{html.escape(word.translation)}</b>:",
                 reply_markup=get_quiz_control_keyboard(user.native_language)
             )
 
@@ -534,6 +564,15 @@ async def handle_quiz_voice_answer(
         msg = await message.answer(t(user.native_language, "Пожалуйста, нажми кнопку ниже:"))
         await add_temp_message(state, msg.message_id)
         return
+
+    mode = data.get("mode", "spelling")
+    if mode != "voice_mode":
+        warn_msg = await message.answer(
+            "✍️ " + t(user.native_language, "В этом задании требуется текстовый ответ. Пожалуйста, напиши ответ текстом (голос используется в режиме Произношения).")
+        )
+        await add_temp_message(state, warn_msg.message_id)
+        return
+
     canonical = data.get("canonical_word", "")
     lemma = data.get("lemma", "")
     attempts_left = data.get("attempts_left", 3)
@@ -638,6 +677,7 @@ async def handle_quiz_text_answer(
         lemma=lemma,
         translation=translation,
         allow_translation=(mode == "listening"),
+        only_translation=(mode == "listening"),
     )
 
     if is_correct:

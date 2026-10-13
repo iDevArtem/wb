@@ -224,5 +224,20 @@
   "Поддерживаешь огонь:": "Manteniendo el fuego:",
   "В ударе:": "En racha:",
   "Держишь ритм:": "Manteniendo el ritmo:",
-  "➕ Добавить": "➕ Añadir"
+  "➕ Добавить": "➕ Añadir",
+  "Включено (скрыт)": "Activado (oculto)",
+  "Выключено (виден сразу)": "Desactivado (visible de inmediato)",
+  "Скрытие перевода:": "Ocultar traducción:",
+  "🙈 Скрывать перевод: ВКЛ": "🙈 Ocultar traducción: SÍ",
+  "👁 Скрывать перевод: ВЫКЛ": "👁 Ocultar traducción: NO",
+  "Скрытие перевода включено!": "¡Ocultar traducción activado!",
+  "Скрытие перевода выключено!": "¡Ocultar traducción desactivado!",
+  "📐 Формы слова": "📐 Formas de la palabra",
+  "Режим: Диктант на слух (Dictation)": "Modo: Dictado auditivo (Dictation)",
+  "Послушай произношение и напиши услышанное слово на изучаемом языке:": "Escucha la pronunciación y escribe la palabra en el idioma de estudio:",
+  "Послушай произношение и напиши его перевод на родном языке:": "Escucha la pronunciación y escribe su traducción en tu idioma nativo:",
+  "Диктант": "Dictado",
+  "Введи перевод:": "Introduce la traducción:",
+  "Введи слово на изучаемом языке:": "Introduce la palabra en el idioma de estudio:",
+  "В этом задании требуется текстовый ответ. Пожалуйста, напиши ответ текстом (голос используется в режиме Произношения).": "Esta tarea requiere una respuesta de texto. Por favor, escribe tu respuesta (la voz se usa en el modo Pronunciación)."
 }

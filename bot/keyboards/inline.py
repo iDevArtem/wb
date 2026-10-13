@@ -131,7 +131,7 @@ def get_archive_item_keyboard(word_id: int | str, lang: str = "ru") -> InlineKey
     return builder.as_markup()
 
 
-def get_settings_keyboard(lang: str = "ru") -> InlineKeyboardMarkup:
+def get_settings_keyboard(lang: str = "ru", hide_translations: bool = True) -> InlineKeyboardMarkup:
     """
     Settings menu keyboard.
     """
@@ -142,6 +142,10 @@ def get_settings_keyboard(lang: str = "ru") -> InlineKeyboardMarkup:
     builder.row(
         InlineKeyboardButton(text=t(lang, "🗣 Родной язык"), callback_data="set_native_lang"),
         InlineKeyboardButton(text=t(lang, "🧠 Изучаемый язык"), callback_data="set_target_lang"),
+    )
+    hide_text = t(lang, "🙈 Скрывать перевод: ВКЛ") if hide_translations else t(lang, "👁 Скрывать перевод: ВЫКЛ")
+    builder.row(
+        InlineKeyboardButton(text=hide_text, callback_data="toggle_hide_translations"),
     )
     builder.row(
         InlineKeyboardButton(text=t(lang, "🌍 Выбрать часовой пояс"), callback_data="set_tz"),

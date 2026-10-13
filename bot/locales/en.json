@@ -231,5 +231,20 @@
   "🔄 Сбросить": "🔄 Reset",
   "⚠️ Этот квиз уже недействителен.": "⚠️ This quiz is no longer valid.",
   "⏱ Сессия завершена из-за неактивности.": "⏱ Session ended due to inactivity.",
-  "Квиз сброшен. Начинаем заново!": "Quiz reset. Starting over!"
+  "Квиз сброшен. Начинаем заново!": "Quiz reset. Starting over!",
+  "Включено (скрыт)": "Enabled (hidden)",
+  "Выключено (виден сразу)": "Disabled (shown immediately)",
+  "Скрытие перевода:": "Hide translation:",
+  "🙈 Скрывать перевод: ВКЛ": "🙈 Hide translation: ON",
+  "👁 Скрывать перевод: ВЫКЛ": "👁 Hide translation: OFF",
+  "Скрытие перевода включено!": "Translation hiding enabled!",
+  "Скрытие перевода выключено!": "Translation hiding disabled!",
+  "📐 Формы слова": "📐 Word forms",
+  "Режим: Диктант на слух (Dictation)": "Mode: Listening Dictation",
+  "Послушай произношение и напиши услышанное слово на изучаемом языке:": "Listen to the pronunciation and write the word in the target language:",
+  "Послушай произношение и напиши его перевод на родном языке:": "Listen to the pronunciation and write its translation in your native language:",
+  "Диктант": "Dictation",
+  "Введи перевод:": "Enter translation:",
+  "Введи слово на изучаемом языке:": "Enter the word in target language:",
+  "В этом задании требуется текстовый ответ. Пожалуйста, напиши ответ текстом (голос используется в режиме Произношения).": "This task requires a text answer. Please type your answer (voice is used in Speaking mode)."
 }

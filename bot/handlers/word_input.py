@@ -46,11 +46,14 @@ def _get_us_transcription(analysis: WordAnalysis | Word) -> str:
             return parts[1].strip()
     return raw_trans.strip()
 
-def format_word_card(analysis: WordAnalysis | Word, lang: str = "ru", include_audio: bool = True) -> str:
+def format_word_card(analysis: WordAnalysis | Word, lang: str = "ru", include_audio: bool = True, hide_translations: bool = True) -> str:
     escaped_word = html.escape(analysis.canonical_word)
     escaped_pos = html.escape(analysis.pos)
     escaped_lemma = html.escape(analysis.lemma)
     escaped_transl = html.escape(analysis.translation)
+
+    def _wrap_spoiler(text: str) -> str:
+        return f"<tg-spoiler>{text}</tg-spoiler>" if hide_translations else text
 
     typo_note = ""
     if analysis.corrected_from:
@@ -70,8 +73,32 @@ def format_word_card(analysis: WordAnalysis | Word, lang: str = "ru", include_au
     gram_native_text = " • ".join(html.escape(n) for n in analysis.grammar_notes_native) if getattr(analysis, "grammar_notes_native", []) else ""
 
     extra_note = (f"<p>{typo_note}</p>" if typo_note else "") + (f"<p>{lemma_note}</p>" if lemma_note else "")
-    extend_info = f"<details><summary>{t(lang, '✏️ Грамматика')}</summary><blockquote><b>{t(lang, 'Уровень')}: {level_display}</b><br/>{pos_display} • {gram_text}<br/><tg-spoiler>{pos_native} • {gram_native_text}</tg-spoiler></b></blockquote>{extra_note}</details>"
-    
+    native_gram_part = _wrap_spoiler(f"{pos_native} • {gram_native_text}") if (pos_native or gram_native_text) else ""
+    extend_info = f"<details><summary>{t(lang, '✏️ Грамматика')}</summary><blockquote><b>{t(lang, 'Уровень')}: {level_display}</b><br/>{pos_display} • {gram_text}<br/>{native_gram_part}</b></blockquote>{extra_note}</details>"
+
+    forms_block = ""
+    forms = getattr(analysis, "forms", [])
+    if forms:
+        form_lines = []
+        for f in forms:
+            if isinstance(f, dict):
+                f_label = f.get("label", "")
+                f_word = f.get("word", "")
+                f_trans = f.get("translation", "")
+            else:
+                f_label = getattr(f, "label", "")
+                f_word = getattr(f, "word", "")
+                f_trans = getattr(f, "translation", "")
+            
+            trans_part = f" — {_wrap_spoiler(html.escape(f_trans))}" if f_trans else ""
+            form_lines.append(f"• <b>{html.escape(f_label)}:</b> <code>{html.escape(f_word)}</code>{trans_part}")
+
+        forms_block = (
+            f"<details><summary>{t(lang, '📐 Формы слова')}</summary><blockquote>" +
+            "<br/>".join(form_lines) +
+            "</blockquote></details>"
+        )
+
     def_text = f"<i>{html.escape(analysis.definition)}</i>" if getattr(analysis, "definition", None) else ""
     definition_native = f"<i>{html.escape(analysis.definition_native)}</i>" if getattr(analysis, "definition_native", None) else ""
 
@@ -81,7 +108,7 @@ def format_word_card(analysis: WordAnalysis | Word, lang: str = "ru", include_au
         if def_text:
             content_lines.append(f"• {def_text}")
         if definition_native:
-            content_lines.append(f"- <tg-spoiler>{definition_native}</tg-spoiler>")
+            content_lines.append(f"- {_wrap_spoiler(definition_native)}")
             
         blockquote = (
             f"<details><summary>{t(lang, '💡 Значение')}</summary><blockquote>" +
@@ -100,15 +127,17 @@ def format_word_card(analysis: WordAnalysis | Word, lang: str = "ru", include_au
             else:
                 target = getattr(ex, "target", "")
                 native = getattr(ex, "native", "")
-            ex_lines.append(f"• {html.escape(target)}<br/>- <tg-spoiler><i>{html.escape(native)}</i></tg-spoiler>")
+            ex_lines.append(f"• {html.escape(target)}<br/>- {_wrap_spoiler('<i>' + html.escape(native) + '</i>')}")
         
         examples_block = f"<details><summary>💬 {t(lang, 'Примеры')}</summary><blockquote>" + "<br/><br/>".join(ex_lines) + "</blockquote></details>"
 
+    transl_display = _wrap_spoiler(escaped_transl)
     card = (
         f"<h1>{escaped_word}</h1>" +
-        f"<p><tg-spoiler>{escaped_transl}</tg-spoiler></p>" +
+        f"<p>{transl_display}</p>" +
         (f"<audio src=\"tg://audio?id=audio1\"></audio>" if include_audio else "") +
         f"{extend_info}" +
+        f"{forms_block}" +
         f"{blockquote}" +
         f"{examples_block}"
     )
@@ -162,7 +191,7 @@ async def _send_duplicate_word_message(
             performer=word_data.level or word_data.canonical_word
         )
     )
-    card_text = format_word_card(word_data, user.native_language)
+    card_text = format_word_card(word_data, user.native_language, hide_translations=getattr(user, "hide_translations", True))
     dup_text = (
         f"{card_text}"
         f"<i>{t(user.native_language, '💡 Ты уже учишь слово')}<br/>"
@@ -247,6 +276,7 @@ async def handle_voice_input(
             pos_native=getattr(analysis, "pos_native", None),
             grammar_notes=getattr(analysis, "grammar_notes", []),
             grammar_notes_native=getattr(analysis, "grammar_notes_native", []),
+            forms=[{"label": f.label, "word": f.word, "translation": f.translation} for f in getattr(analysis, "forms", [])] if getattr(analysis, "forms", None) else [],
             examples=[{"target": ex.target, "native": ex.native} for ex in getattr(analysis, "examples", [])] if getattr(analysis, "examples", None) else [],
             extra_data={
                 "transcription_uk": getattr(analysis, "transcription_uk", None),
@@ -264,7 +294,7 @@ async def handle_voice_input(
         new_word.id = str(insert_res.inserted_id)
 
         # Send card text
-        card_text = format_word_card(analysis, user.native_language)
+        card_text = format_word_card(analysis, user.native_language, hide_translations=getattr(user, "hide_translations", True))
         voice_file_input = BufferedInputFile(
             tts_audio.getvalue(),
             filename=f"{analysis.canonical_word}.mp3",
@@ -383,6 +413,7 @@ async def handle_text_input(
             pos_native=getattr(analysis, "pos_native", None),
             grammar_notes=getattr(analysis, "grammar_notes", []),
             grammar_notes_native=getattr(analysis, "grammar_notes_native", []),
+            forms=[{"label": f.label, "word": f.word, "translation": f.translation} for f in getattr(analysis, "forms", [])] if getattr(analysis, "forms", None) else [],
             examples=[{"target": ex.target, "native": ex.native} for ex in getattr(analysis, "examples", [])] if getattr(analysis, "examples", None) else [],
             extra_data={
                 "transcription_uk": getattr(analysis, "transcription_uk", None),
@@ -401,7 +432,7 @@ async def handle_text_input(
 
 
         # Send voice and card
-        card_text = format_word_card(analysis, user.native_language)
+        card_text = format_word_card(analysis, user.native_language, hide_translations=getattr(user, "hide_translations", True))
         voice_file_input = BufferedInputFile(
             tts_audio.getvalue(),
             filename=f"{analysis.canonical_word}.mp3",

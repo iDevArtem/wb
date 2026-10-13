@@ -34,25 +34,29 @@ class SettingsState(StatesGroup):
 @router.message(TranslatedText("⚙️ Настройки"))
 @router.message(F.text.in_({"⚙️", "⚙️\ufe0f"}))
 async def cmd_settings(message: Message, user: User) -> None:
+    hide_status = t(user.native_language, "Включено (скрыт)") if getattr(user, "hide_translations", True) else t(user.native_language, "Выключено (виден сразу)")
     text = (
         f"⚙️ <b>{t(user.native_language, 'Настройки профиля:')}</b>\n\n" +
         f"🗣 <b>{t(user.native_language, 'Родной язык:')}</b> <code>{user.native_language}</code>\n" +
         f"🧠 <b>{t(user.native_language, 'Изучаемый язык:')}</b> <code>{user.target_language}</code>\n" +
+        f"🙈 <b>{t(user.native_language, 'Скрытие перевода:')}</b> {hide_status}\n" +
         f"🌍 <b>{t(user.native_language, 'Часовой пояс:')}</b> <code>{user.timezone}</code>\n" +
         f"🌙 <b>{t(user.native_language, 'Тихие часы:')}</b> {t(user.native_language, 'с')} {user.quiet_hours_start}:00 {t(user.native_language, 'до')} {user.quiet_hours_end}:00\n" +
         f"<i>({t(user.native_language, 'Уведомления отправляются только днем с')} {user.quiet_hours_end}:00 {t(user.native_language, 'до')} {user.quiet_hours_start}:00)</i>\n\n" +
         t(user.native_language, "Выбери нужный пункт для изменения:")
     )
-    await message.answer(text, reply_markup=get_settings_keyboard(user.native_language), parse_mode="HTML")
+    await message.answer(text, reply_markup=get_settings_keyboard(user.native_language, getattr(user, "hide_translations", True)), parse_mode="HTML")
 
 
 @router.callback_query(lambda c: c.data == "open_settings")
 async def cb_open_settings(callback: CallbackQuery, user: User) -> None:
     await callback.answer()
+    hide_status = t(user.native_language, "Включено (скрыт)") if getattr(user, "hide_translations", True) else t(user.native_language, "Выключено (виден сразу)")
     text = (
         f"⚙️ <b>{t(user.native_language, 'Настройки профиля:')}</b>\n\n" +
         f"🗣 <b>{t(user.native_language, 'Родной язык:')}</b> <code>{user.native_language}</code>\n" +
         f"🧠 <b>{t(user.native_language, 'Изучаемый язык:')}</b> <code>{user.target_language}</code>\n" +
+        f"🙈 <b>{t(user.native_language, 'Скрытие перевода:')}</b> {hide_status}\n" +
         f"🌍 <b>{t(user.native_language, 'Часовой пояс:')}</b> <code>{user.timezone}</code>\n" +
         f"🌙 <b>{t(user.native_language, 'Тихие часы:')}</b> {t(user.native_language, 'с')} {user.quiet_hours_start}:00 {t(user.native_language, 'до')} {user.quiet_hours_end}:00\n\n" +
         t(user.native_language, "Выбери нужный пункт для изменения:")
@@ -60,9 +64,42 @@ async def cb_open_settings(callback: CallbackQuery, user: User) -> None:
     if callback.message:
         await callback.message.edit_text(
             text,
-            reply_markup=get_settings_keyboard(user.native_language),
+            reply_markup=get_settings_keyboard(user.native_language, getattr(user, "hide_translations", True)),
             parse_mode="HTML",
         )
+
+
+@router.callback_query(lambda c: c.data == "toggle_hide_translations")
+async def cb_toggle_hide_translations(callback: CallbackQuery, user: User) -> None:
+    new_val = not getattr(user, "hide_translations", True)
+    user.hide_translations = new_val
+    users_col = get_users_collection()
+    await users_col.update_one(
+        {"tg_id": user.tg_id},
+        {"$set": {"hide_translations": new_val, "updated_at": utc_now()}}
+    )
+    msg_alert = t(user.native_language, "Скрытие перевода включено!") if new_val else t(user.native_language, "Скрытие перевода выключено!")
+    await callback.answer(msg_alert)
+
+    hide_status = t(user.native_language, "Включено (скрыт)") if new_val else t(user.native_language, "Выключено (виден сразу)")
+    text = (
+        f"⚙️ <b>{t(user.native_language, 'Настройки профиля:')}</b>\n\n" +
+        f"🗣 <b>{t(user.native_language, 'Родной язык:')}</b> <code>{user.native_language}</code>\n" +
+        f"🧠 <b>{t(user.native_language, 'Изучаемый язык:')}</b> <code>{user.target_language}</code>\n" +
+        f"🙈 <b>{t(user.native_language, 'Скрытие перевода:')}</b> {hide_status}\n" +
+        f"🌍 <b>{t(user.native_language, 'Часовой пояс:')}</b> <code>{user.timezone}</code>\n" +
+        f"🌙 <b>{t(user.native_language, 'Тихие часы:')}</b> {t(user.native_language, 'с')} {user.quiet_hours_start}:00 {t(user.native_language, 'до')} {user.quiet_hours_end}:00\n\n" +
+        t(user.native_language, "Выбери нужный пункт для изменения:")
+    )
+    if callback.message:
+        try:
+            await callback.message.edit_text(
+                text,
+                reply_markup=get_settings_keyboard(user.native_language, new_val),
+                parse_mode="HTML",
+            )
+        except Exception:
+            pass
 
 
 @router.callback_query(lambda c: c.data == "set_tz")

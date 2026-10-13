@@ -107,21 +107,24 @@ class SRSService:
         lemma: str,
         translation: str | None = None,
         allow_translation: bool = False,
+        only_translation: bool = False,
     ) -> bool:
         """
         Check if user's answer matches canonical word, lemma, or translation.
+        If only_translation=True, only matches against native translation.
         """
         norm_user = cls.normalize_text(user_input)
         if not norm_user:
             return False
 
-        norm_canonical = cls.normalize_text(canonical_word)
-        norm_lemma = cls.normalize_text(lemma)
+        if not only_translation:
+            norm_canonical = cls.normalize_text(canonical_word)
+            norm_lemma = cls.normalize_text(lemma)
 
-        if norm_user == norm_canonical or norm_user == norm_lemma:
-            return True
+            if norm_user == norm_canonical or norm_user == norm_lemma:
+                return True
 
-        if allow_translation and translation:
+        if (allow_translation or only_translation) and translation:
             # Check against comma-separated translations
             translations = [cls.normalize_text(t) for t in re.split(r"[,;/]", translation)]
             if norm_user in translations or cls.normalize_text(translation) == norm_user:
