@@ -192,28 +192,44 @@ async def _send_duplicate_word_message(
     word_data,
     existing_word
 ) -> None:
-    tts_audio = await tts_service.generate_audio(word_data.canonical_word, target_lang=user.target_language)
-    voice_file_input = BufferedInputFile(
-        tts_audio.getvalue(),
-        filename=f"{word_data.canonical_word}.mp3",
+    tts_audio: io.BytesIO | None = None
+    try:
+        tts_audio = await tts_service.generate_audio(word_data.canonical_word, target_lang=user.target_language)
+    except Exception as e:
+        logger.warning("TTS audio generation failed for duplicate word '%s': %s", word_data.canonical_word, e)
+
+    card_text = format_word_card(
+        word_data,
+        user.native_language,
+        include_audio=bool(tts_audio),
+        hide_translations=getattr(user, "hide_translations", True)
     )
-    media = InputRichMessageMedia(
-        id="audio1",
-        media=InputMediaAudio(
-            media=voice_file_input,
-            title=_get_us_transcription(word_data),
-            performer=word_data.level or word_data.canonical_word
-        )
-    )
-    card_text = format_word_card(word_data, user.native_language, hide_translations=getattr(user, "hide_translations", True))
     dup_text = (
         f"{card_text}"
         f"<i>{t(user.native_language, '💡 Ты уже учишь слово')}<br/>"
         f"{t(user.native_language, 'Интервал повторения:')} <b>{existing_word.interval}</b> {t(user.native_language, 'дн.')}</i><br/>"
     )
+
+    if tts_audio:
+        voice_file_input = BufferedInputFile(
+            tts_audio.getvalue(),
+            filename=f"{word_data.canonical_word}.mp3",
+        )
+        media = InputRichMessageMedia(
+            id="audio1",
+            media=InputMediaAudio(
+                media=voice_file_input,
+                title=_get_us_transcription(word_data),
+                performer=word_data.level or word_data.canonical_word
+            )
+        )
+        rich_msg = InputRichMessage(html=dup_text, media=[media])
+    else:
+        rich_msg = InputRichMessage(html=dup_text)
+
     await message.bot.send_rich_message(
         chat_id=message.chat.id,
-        rich_message=InputRichMessage(html=dup_text, media=[media]),
+        rich_message=rich_msg,
         reply_markup=get_word_card_keyboard(existing_word.id or "", user.native_language),
     )
 
@@ -270,8 +286,12 @@ async def handle_voice_input(
                 pass
             return
 
-        # Synthesize audio with edge-tts in memory
-        tts_audio = await tts_service.generate_audio(analysis.canonical_word, target_lang=user.target_language)
+        # Synthesize audio with edge-tts in memory with fallback
+        tts_audio: io.BytesIO | None = None
+        try:
+            tts_audio = await tts_service.generate_audio(analysis.canonical_word, target_lang=user.target_language)
+        except Exception as e:
+            logger.warning("TTS audio generation failed for voice input '%s': %s", analysis.canonical_word, e)
 
         # Save to DB
         new_word = Word(
@@ -308,23 +328,32 @@ async def handle_voice_input(
         new_word.id = str(insert_res.inserted_id)
 
         # Send card text
-        card_text = format_word_card(analysis, user.native_language, hide_translations=getattr(user, "hide_translations", True))
-        voice_file_input = BufferedInputFile(
-            tts_audio.getvalue(),
-            filename=f"{analysis.canonical_word}.mp3",
+        card_text = format_word_card(
+            analysis,
+            user.native_language,
+            include_audio=bool(tts_audio),
+            hide_translations=getattr(user, "hide_translations", True)
         )
-        media = InputRichMessageMedia(
-            id="audio1",
-            media=InputMediaAudio(
-                media=voice_file_input,
-                title=_get_us_transcription(analysis),
-                performer=analysis.canonical_word
+        if tts_audio:
+            voice_file_input = BufferedInputFile(
+                tts_audio.getvalue(),
+                filename=f"{analysis.canonical_word}.mp3",
             )
-        )
-        rich_msg = InputRichMessage(
-            html=card_text,
-            media=[media]
-        )
+            media = InputRichMessageMedia(
+                id="audio1",
+                media=InputMediaAudio(
+                    media=voice_file_input,
+                    title=_get_us_transcription(analysis),
+                    performer=analysis.canonical_word
+                )
+            )
+            rich_msg = InputRichMessage(
+                html=card_text,
+                media=[media]
+            )
+        else:
+            rich_msg = InputRichMessage(html=card_text)
+
         await message.bot.send_rich_message(
             chat_id=message.chat.id,
             rich_message=rich_msg,
@@ -407,8 +436,12 @@ async def handle_text_input(
                 pass
             return
 
-        # In-memory neural TTS
-        tts_audio = await tts_service.generate_audio(analysis.canonical_word, target_lang=user.target_language)
+        # In-memory neural TTS with fallback
+        tts_audio: io.BytesIO | None = None
+        try:
+            tts_audio = await tts_service.generate_audio(analysis.canonical_word, target_lang=user.target_language)
+        except Exception as e:
+            logger.warning("TTS audio generation failed for text input '%s': %s", analysis.canonical_word, e)
 
         # Save to DB
         new_word = Word(
@@ -444,25 +477,33 @@ async def handle_text_input(
         insert_res = await words_col.insert_one(new_word.to_mongo())
         new_word.id = str(insert_res.inserted_id)
 
-
         # Send voice and card
-        card_text = format_word_card(analysis, user.native_language, hide_translations=getattr(user, "hide_translations", True))
-        voice_file_input = BufferedInputFile(
-            tts_audio.getvalue(),
-            filename=f"{analysis.canonical_word}.mp3",
+        card_text = format_word_card(
+            analysis,
+            user.native_language,
+            include_audio=bool(tts_audio),
+            hide_translations=getattr(user, "hide_translations", True)
         )
-        media = InputRichMessageMedia(
-            id="audio1",
-            media=InputMediaAudio(
-                media=voice_file_input,
-                title=_get_us_transcription(analysis),
-                performer=analysis.canonical_word
+        if tts_audio:
+            voice_file_input = BufferedInputFile(
+                tts_audio.getvalue(),
+                filename=f"{analysis.canonical_word}.mp3",
             )
-        )
-        rich_msg = InputRichMessage(
-            html=card_text,
-            media=[media]
-        )
+            media = InputRichMessageMedia(
+                id="audio1",
+                media=InputMediaAudio(
+                    media=voice_file_input,
+                    title=_get_us_transcription(analysis),
+                    performer=analysis.canonical_word
+                )
+            )
+            rich_msg = InputRichMessage(
+                html=card_text,
+                media=[media]
+            )
+        else:
+            rich_msg = InputRichMessage(html=card_text)
+
         await message.bot.send_rich_message(
             chat_id=message.chat.id,
             rich_message=rich_msg,

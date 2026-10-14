@@ -1,6 +1,6 @@
 aiogram>=3.17.0
 google-genai>=1.0.0
-edge-tts>=6.1.19
+edge-tts>=7.2.8
 pymongo>=4.9.0
 apscheduler>=3.10.4
 pydantic>=2.10.0
