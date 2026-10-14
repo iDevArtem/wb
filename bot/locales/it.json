@@ -240,5 +240,10 @@
   "Диктант": "Dettato",
   "Введи перевод:": "Inserisci la traduzione:",
   "Введи слово на изучаемом языке:": "Inserisci la parola nella lingua di studio:",
-  "В этом задании требуется текстовый ответ. Пожалуйста, напиши ответ текстом (голос используется в режиме Произношения).": "Questo esercizio richiede una risposta di testo. Scrivi la risposta per iscritto (la voce è per la modalità Pronuncia)."
+  "В этом задании требуется текстовый ответ. Пожалуйста, напиши ответ текстом (голос используется в режиме Произношения).": "Questo esercizio richiede una risposta di testo. Scrivi la risposta per iscritto (la voce è per la modalità Pronuncia).",
+  "Озвучка временно недоступна.": "L'audio non è temporaneamente disponibile.",
+  "Осталось 2 попытки. Введи перевод:": "Rimangono 2 tentativi. Inserisci la traduzione:",
+  "Осталось 2 попытки. Напиши слово на изучаемом языке:": "Rimangono 2 tentativi. Scrivi la parola nella lingua che stai imparando:",
+  "Осталась последняя попытка. Напиши перевод:": "Ultimo tentativo. Inserisci la traduzione:",
+  "Осталась последняя попытка. Напиши слово на изучаемом языке:": "Ultimo tentativo. Scrivi la parola nella lingua che stai imparando:"
 }

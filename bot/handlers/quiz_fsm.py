@@ -3,6 +3,7 @@ import html
 import io
 import logging
 import random
+import re
 from datetime import datetime, timezone
 from typing import Any
 from aiogram import Bot, F, Router
@@ -41,25 +42,27 @@ def format_quiz_pos(
     pos: str | None,
     pos_native: str | None,
     native_lang: str,
+    target_lang: str = "en",
     hide_translations: bool = True,
 ) -> str:
     """
     Format part of speech for quiz questions.
-    Target language line: <i>Часть речи: noun</i>
+    Target language line: <i>Part of speech: noun</i>
     Native language line: <tg-spoiler><i>Часть речи: существительное</i></tg-spoiler> (if hide_translations)
     """
     if not pos:
         return ""
     target_pos = pos.strip()
-    label = t(native_lang, "Часть речи:")
-    target_line = f"<i>{label} {html.escape(target_pos)}</i>"
+    label_target = t(target_lang, "Часть речи:")
+    target_line = f"<i>{label_target} {html.escape(target_pos)}</i>"
 
     resolved_native = (pos_native or "").strip()
     if not resolved_native:
         resolved_native = get_pos_translation(target_pos, native_lang) or ""
 
     if resolved_native:
-        native_content = f"<i>{label} {html.escape(resolved_native)}</i>"
+        label_native = t(native_lang, "Часть речи:")
+        native_content = f"<i>{label_native} {html.escape(resolved_native)}</i>"
         native_line = wrap_spoiler(native_content, hide_translations)
         return f"{target_line}\n{native_line}"
 
@@ -381,9 +384,10 @@ async def _deliver_quiz_question(
             word.pos,
             getattr(word, "pos_native", None),
             user.native_language,
+            target_lang=user.target_language,
             hide_translations=hide,
         )
-        pos_section = f"{pos_block}\n" if pos_block else ""
+        pos_section = f"{pos_block}\n\n" if pos_block else ""
         prompt_text = (
             "✍️ <b>" + t(user.native_language, 'Режим: Правописание (Spelling)') + "</b>\n\n" +
             f"{t(user.native_language, 'Переведи на изучаемый язык слово:')}\n" +
@@ -429,10 +433,17 @@ async def _deliver_quiz_question(
             )
             
             await update_main_quiz_message(message.bot, message.chat.id, state, rich_message=rich_msg, reply_markup=get_quiz_control_keyboard(user.native_language))
-        except Exception:
-            # Fallback to spelling if TTS fails
+        except Exception as e:
+            logger.exception("Failed to deliver listening rich message for word '%s': %s", word.canonical_word, e)
+            fallback_text = (
+                "🎧 <b>" + t(user.native_language, 'Режим: Аудирование (Listening)') + "</b>\n\n" +
+                "⚠️ <i>" + t(user.native_language, 'Озвучка временно недоступна.') + "</i>\n\n" +
+                f"{t(user.native_language, 'Каков перевод слова:')}\n" +
+                f"👉 <b>{html.escape(word.canonical_word)}</b> [{html.escape(word.transcription)}]\n\n" +
+                t(user.native_language, "Введи перевод:")
+            )
             await update_main_quiz_message(message.bot, message.chat.id, state, 
-                f"✍️ {t(user.native_language, 'Напиши перевод слова')} <b>{html.escape(word.translation)}</b>:",
+                fallback_text,
                 reply_markup=get_quiz_control_keyboard(user.native_language)
             )
 
@@ -460,9 +471,17 @@ async def _deliver_quiz_question(
             )
             
             await update_main_quiz_message(message.bot, message.chat.id, state, rich_message=rich_msg, reply_markup=get_quiz_control_keyboard(user.native_language))
-        except Exception:
+        except Exception as e:
+            logger.exception("Failed to deliver dictation rich message for word '%s': %s", word.canonical_word, e)
+            fallback_text = (
+                "👂 <b>" + t(user.native_language, 'Режим: Диктант на слух (Dictation)') + "</b>\n\n" +
+                "⚠️ <i>" + t(user.native_language, 'Озвучка временно недоступна.') + "</i>\n\n" +
+                f"{t(user.native_language, 'Переведи на изучаемый язык слово:')}\n" +
+                f"👉 <b>{html.escape(word.translation)}</b>\n\n" +
+                t(user.native_language, "Напиши слово на изучаемом языке в ответном сообщении (3 попытки):")
+            )
             await update_main_quiz_message(message.bot, message.chat.id, state, 
-                f"✍️ {t(user.native_language, 'Напиши слово')} <b>{html.escape(word.translation)}</b>:",
+                fallback_text,
                 reply_markup=get_quiz_control_keyboard(user.native_language)
             )
 
@@ -727,23 +746,98 @@ async def handle_quiz_text_answer(
 
         if attempts_left == 2:
             # Hint 1: First letter + blanks
-            hint = SRSService.get_attempt_1_hint(canonical, user.native_language)
-            await update_main_quiz_message(message.bot, message.chat.id, state,
-                f"❌ {t(user.native_language, 'Неверно!')}\n\n" +
-                f"💡 <b>{t(user.native_language, 'Подсказка 1:')}</b> {hint}\n" +
-                t(user.native_language, "Осталось 2 попытки. Попробуй еще раз:"),
-                reply_markup=get_quiz_control_keyboard(user.native_language)
-            )
+            if mode == "listening":
+                primary_transl = re.split(r"[,;/]", translation)[0].strip()
+                hint = SRSService.get_attempt_1_hint(primary_transl, user.native_language)
+                hint_text = (
+                    f"❌ {t(user.native_language, 'Неверно!')}\n\n" +
+                    f"💡 <b>{t(user.native_language, 'Подсказка 1:')}</b> {hint}"
+                )
+                instruction_text = t(user.native_language, "Осталось 2 попытки. Введи перевод:")
+            elif mode == "dictation":
+                hint = SRSService.get_attempt_1_hint(canonical, user.native_language)
+                hint_text = (
+                    f"❌ {t(user.native_language, 'Неверно!')}\n\n" +
+                    f"💡 <b>{t(user.native_language, 'Подсказка 1:')}</b> {hint}"
+                )
+                instruction_text = t(user.native_language, "Осталось 2 попытки. Напиши слово на изучаемом языке:")
+            else:
+                hint = SRSService.get_attempt_1_hint(canonical, user.native_language)
+                hint_text = (
+                    f"❌ {t(user.native_language, 'Неверно!')}\n\n" +
+                    f"💡 <b>{t(user.native_language, 'Подсказка 1:')}</b> {hint}"
+                )
+                instruction_text = t(user.native_language, "Осталось 2 попытки. Попробуй еще раз:")
+
+            if mode in ("dictation", "listening"):
+                try:
+                    audio = await tts_service.generate_audio(canonical, target_lang=user.target_language)
+                    voice_file = BufferedInputFile(audio.getvalue(), filename=f"{mode}.mp3")
+                    mode_title = t(user.native_language, 'Диктант' if mode == 'dictation' else 'Аудирование')
+                    media = InputRichMessageMedia(
+                        id="audio1",
+                        media=InputMediaAudio(
+                            media=voice_file,
+                            title=mode_title,
+                            performer=t(user.target_language, mode_title)
+                        )
+                    )
+                    rich_html = f'{hint_text}<br/><br/><audio src="tg://audio?id=audio1"></audio><br/><br/>{instruction_text}'
+                    rich_msg = InputRichMessage(html=rich_html, media=[media])
+                    await update_main_quiz_message(message.bot, message.chat.id, state, rich_message=rich_msg, reply_markup=get_quiz_control_keyboard(user.native_language))
+                except Exception as e:
+                    logger.exception("Failed to update rich quiz message for %s hint 1: %s", mode, e)
+                    await update_main_quiz_message(message.bot, message.chat.id, state, f"{hint_text}\n\n{instruction_text}", reply_markup=get_quiz_control_keyboard(user.native_language))
+            else:
+                await update_main_quiz_message(message.bot, message.chat.id, state, f"{hint_text}\n\n{instruction_text}", reply_markup=get_quiz_control_keyboard(user.native_language))
+
         elif attempts_left == 1:
             # Hint 2: Example sentence with blank
             hide = getattr(user, "hide_translations", True)
-            hint = SRSService.get_attempt_2_hint(canonical, lemma, examples, user.native_language, hide_translations=hide)
-            await update_main_quiz_message(message.bot, message.chat.id, state,
-                f"❌ {t(user.native_language, 'Снова не то!')}\n\n" +
-                f"💡 <b>{t(user.native_language, 'Подсказка 2 (контекст):')}</b>\n{hint}\n\n" +
-                t(user.native_language, "Осталась последняя попытка:"),
-                reply_markup=get_quiz_control_keyboard(user.native_language)
-            )
+            if mode == "listening":
+                hint = SRSService.get_listening_attempt_2_hint(canonical, translation, examples, lang=user.native_language, hide_translations=hide)
+                hint_text = (
+                    f"❌ {t(user.native_language, 'Снова не то!')}\n\n" +
+                    f"💡 <b>{t(user.native_language, 'Подсказка 2 (контекст):')}</b>\n{hint}"
+                )
+                instruction_text = t(user.native_language, "Осталась последняя попытка. Напиши перевод:")
+            elif mode == "dictation":
+                hint = SRSService.get_attempt_2_hint(canonical, lemma, examples, user.native_language, hide_translations=hide)
+                hint_text = (
+                    f"❌ {t(user.native_language, 'Снова не то!')}\n\n" +
+                    f"💡 <b>{t(user.native_language, 'Подсказка 2 (контекст):')}</b>\n{hint}"
+                )
+                instruction_text = t(user.native_language, "Осталась последняя попытка. Напиши слово на изучаемом языке:")
+            else:
+                hint = SRSService.get_attempt_2_hint(canonical, lemma, examples, user.native_language, hide_translations=hide)
+                hint_text = (
+                    f"❌ {t(user.native_language, 'Снова не то!')}\n\n" +
+                    f"💡 <b>{t(user.native_language, 'Подсказка 2 (контекст):')}</b>\n{hint}"
+                )
+                instruction_text = t(user.native_language, "Осталась последняя попытка:")
+
+            if mode in ("dictation", "listening"):
+                try:
+                    audio = await tts_service.generate_audio(canonical, target_lang=user.target_language)
+                    voice_file = BufferedInputFile(audio.getvalue(), filename=f"{mode}.mp3")
+                    mode_title = t(user.native_language, 'Диктант' if mode == 'dictation' else 'Аудирование')
+                    media = InputRichMessageMedia(
+                        id="audio1",
+                        media=InputMediaAudio(
+                            media=voice_file,
+                            title=mode_title,
+                            performer=t(user.target_language, mode_title)
+                        )
+                    )
+                    rich_html = f'{hint_text}<br/><br/><audio src="tg://audio?id=audio1"></audio><br/><br/>{instruction_text}'
+                    rich_msg = InputRichMessage(html=rich_html, media=[media])
+                    await update_main_quiz_message(message.bot, message.chat.id, state, rich_message=rich_msg, reply_markup=get_quiz_control_keyboard(user.native_language))
+                except Exception as e:
+                    logger.exception("Failed to update rich quiz message for %s hint 2: %s", mode, e)
+                    await update_main_quiz_message(message.bot, message.chat.id, state, f"{hint_text}\n\n{instruction_text}", reply_markup=get_quiz_control_keyboard(user.native_language))
+            else:
+                await update_main_quiz_message(message.bot, message.chat.id, state, f"{hint_text}\n\n{instruction_text}", reply_markup=get_quiz_control_keyboard(user.native_language))
+
         else:
             # Attempt 3 failed -> Exhausted
             await on_quiz_failure(message, user, word, state)

@@ -240,5 +240,10 @@
   "Диктант": "Dictado",
   "Введи перевод:": "Introduce la traducción:",
   "Введи слово на изучаемом языке:": "Introduce la palabra en el idioma de estudio:",
-  "В этом задании требуется текстовый ответ. Пожалуйста, напиши ответ текстом (голос используется в режиме Произношения).": "Esta tarea requiere una respuesta de texto. Por favor, escribe tu respuesta (la voz se usa en el modo Pronunciación)."
+  "В этом задании требуется текстовый ответ. Пожалуйста, напиши ответ текстом (голос используется в режиме Произношения).": "Esta tarea requiere una respuesta de texto. Por favor, escribe tu respuesta (la voz se usa en el modo Pronunciación).",
+  "Озвучка временно недоступна.": "El audio no está disponible temporalmente.",
+  "Осталось 2 попытки. Введи перевод:": "Quedan 2 intentos. Introduce la traducción:",
+  "Осталось 2 попытки. Напиши слово на изучаемом языке:": "Quedan 2 intentos. Escribe la palabra en el idioma que estás aprendiendo:",
+  "Осталась последняя попытка. Напиши перевод:": "Último intento. Introduce la traducción:",
+  "Осталась последняя попытка. Напиши слово на изучаемом языке:": "Último intento. Escribe la palabra en el idioma que estás aprendiendo:"
 }

@@ -201,3 +201,54 @@ class SRSService:
                 return f"«{masked_target}»"
 
         return f"{t(lang, 'Контекст:')} <i>{canonical_word[0]}... ({lemma})</i>"
+
+    @classmethod
+    def get_listening_attempt_2_hint(
+        cls,
+        canonical_word: str,
+        translation: str,
+        examples: list[dict[str, str]],
+        lang: str = "ru",
+        hide_translations: bool = True,
+    ) -> str:
+        """
+        Hint 2 for listening mode:
+        Shows the target language context sentence (with the spoken word in bold)
+        and masks the native translation in the native sentence with '___'.
+        """
+        primary_translation = re.split(r"[,;/]", translation)[0].strip()
+        blank = "<b>___</b>"
+
+        for example in examples:
+            target_text = example.get("target") or example.get("en", "")
+            native_text = example.get("native") or example.get("ru", "")
+            if target_text and native_text and primary_translation.lower() in native_text.lower():
+                highlighted_target = re.sub(
+                    rf"\b({re.escape(canonical_word)})\b",
+                    r"<b>\1</b>",
+                    target_text,
+                    flags=re.IGNORECASE,
+                )
+                masked_native = re.sub(
+                    re.escape(primary_translation),
+                    blank,
+                    native_text,
+                    flags=re.IGNORECASE,
+                )
+                wrapped_native = wrap_spoiler(masked_native, hide_translations)
+                return f"«{highlighted_target}»\n<i>({wrapped_native})</i>"
+
+        if examples:
+            first_target = examples[0].get("target") or examples[0].get("en", "")
+            if first_target:
+                highlighted_target = re.sub(
+                    rf"\b({re.escape(canonical_word)})\b",
+                    r"<b>\1</b>",
+                    first_target,
+                    flags=re.IGNORECASE,
+                )
+                return f"«{highlighted_target}»"
+
+        masked_transl = cls.get_attempt_1_hint(primary_translation, lang)
+        return f"{t(lang, 'Контекст:')} {masked_transl}"
+

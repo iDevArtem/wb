@@ -247,5 +247,10 @@
   "Диктант": "Dictation",
   "Введи перевод:": "Enter translation:",
   "Введи слово на изучаемом языке:": "Enter the word in target language:",
-  "В этом задании требуется текстовый ответ. Пожалуйста, напиши ответ текстом (голос используется в режиме Произношения).": "This task requires a text answer. Please type your answer (voice is used in Speaking mode)."
+  "В этом задании требуется текстовый ответ. Пожалуйста, напиши ответ текстом (голос используется в режиме Произношения).": "This task requires a text answer. Please type your answer (voice is used in Speaking mode).",
+  "Озвучка временно недоступна.": "Audio is temporarily unavailable.",
+  "Осталось 2 попытки. Введи перевод:": "2 attempts left. Enter the translation:",
+  "Осталось 2 попытки. Напиши слово на изучаемом языке:": "2 attempts left. Write the word in the target language:",
+  "Осталась последняя попытка. Напиши перевод:": "Last attempt left. Enter the translation:",
+  "Осталась последняя попытка. Напиши слово на изучаемом языке:": "Last attempt left. Write the word in the target language:"
 }

@@ -240,5 +240,10 @@
   "Диктант": "Dictée",
   "Введи перевод:": "Saisis la traduction :",
   "Введи слово на изучаемом языке:": "Saisis le mot dans la langue cible :",
-  "В этом задании требуется текстовый ответ. Пожалуйста, напиши ответ текстом (голос используется в режиме Произношения).": "Cette tâche nécessite une réponse écrite. Merci de saisir ta réponse par texte (la voix est réservée au mode Prononciation)."
+  "В этом задании требуется текстовый ответ. Пожалуйста, напиши ответ текстом (голос используется в режиме Произношения).": "Cette tâche nécessite une réponse écrite. Merci de saisir ta réponse par texte (la voix est réservée au mode Prononciation).",
+  "Озвучка временно недоступна.": "L'audio est temporairement indisponible.",
+  "Осталось 2 попытки. Введи перевод:": "Il reste 2 tentatives. Entre la traduction :",
+  "Осталось 2 попытки. Напиши слово на изучаемом языке:": "Il reste 2 tentatives. Écris le mot dans la langue apprise :",
+  "Осталась последняя попытка. Напиши перевод:": "Dernière tentative. Entre la traduction :",
+  "Осталась последняя попытка. Напиши слово на изучаемом языке:": "Dernière tentative. Écris le mot dans la langue apprise :"
 }

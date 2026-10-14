@@ -24,9 +24,10 @@ def test_format_quiz_pos_with_pos_native_hidden():
         pos="noun",
         pos_native="существительное",
         native_lang="ru",
+        target_lang="en",
         hide_translations=True,
     )
-    assert "<i>Часть речи: noun</i>" in result
+    assert "<i>Part of speech: noun</i>" in result
     assert "<tg-spoiler><i>Часть речи: существительное</i></tg-spoiler>" in result
 
 
@@ -35,9 +36,10 @@ def test_format_quiz_pos_with_pos_native_visible():
         pos="noun",
         pos_native="существительное",
         native_lang="ru",
+        target_lang="en",
         hide_translations=False,
     )
-    assert "<i>Часть речи: noun</i>" in result
+    assert "<i>Part of speech: noun</i>" in result
     assert "<i>Часть речи: существительное</i>" in result
     assert "<tg-spoiler>" not in result
 
@@ -48,10 +50,23 @@ def test_format_quiz_pos_fallback_mapping_uk():
         pos="noun",
         pos_native=None,
         native_lang="uk",
+        target_lang="en",
         hide_translations=True,
     )
-    assert "<i>Частина мови: noun</i>" in result
+    assert "<i>Part of speech: noun</i>" in result
     assert "<tg-spoiler><i>Частина мови: іменник</i></tg-spoiler>" in result
+
+
+def test_format_quiz_pos_german_target():
+    result = format_quiz_pos(
+        pos="Nomen",
+        pos_native="существительное",
+        native_lang="ru",
+        target_lang="de",
+        hide_translations=True,
+    )
+    assert "<i>Wortart: Nomen</i>" in result
+    assert "<tg-spoiler><i>Часть речи: существительное</i></tg-spoiler>" in result
 
 
 def test_format_quiz_pos_empty():
@@ -97,3 +112,153 @@ def test_get_attempt_2_hint_legacy_keys_with_spoiler():
     )
     assert "<b>___</b>" in hint
     assert "<tg-spoiler>Она выращивает капусту в саду.</tg-spoiler>" in hint
+
+
+def test_get_listening_attempt_1_hint():
+    hint = SRSService.get_attempt_1_hint("окно", "ru")
+    assert "<code>о _ _ о</code>" in hint
+    assert "4 букв" in hint
+
+
+def test_get_listening_attempt_2_hint():
+    examples = [{"target": "Open the window.", "native": "Открой окно."}]
+    hint = SRSService.get_listening_attempt_2_hint(
+        canonical_word="window",
+        translation="окно",
+        examples=examples,
+        lang="ru",
+        hide_translations=True,
+    )
+    assert "Open the <b>window</b>." in hint
+    assert "<tg-spoiler>Открой <b>___</b>.</tg-spoiler>" in hint
+
+
+@pytest.mark.asyncio
+async def test_spelling_prompt_spacing_and_pos():
+    from unittest.mock import AsyncMock, MagicMock, patch
+    from aiogram.types import Message, Chat
+    from bot.handlers.quiz_fsm import _deliver_quiz_question
+    from bot.models.word import Word
+    from bot.models.user import User
+
+    mock_bot = MagicMock()
+    mock_message = MagicMock(spec=Message)
+    mock_message.chat = MagicMock(spec=Chat, id=12345)
+    mock_message.bot = mock_bot
+    mock_state = MagicMock()
+
+    user = User(
+        tg_id=12345,
+        target_language="en",
+        native_language="ru",
+        hide_translations=True,
+    )
+    word = Word(
+        user_id=12345,
+        canonical_word="magazine",
+        lemma="magazine",
+        pos="noun",
+        pos_native="существительное",
+        transcription="ˌmæɡ.əˈziːn",
+        translation="журнал",
+        target_language="en",
+        native_language="ru",
+    )
+
+    with patch("bot.handlers.quiz_fsm.update_main_quiz_message", new_callable=AsyncMock) as mock_update:
+        await _deliver_quiz_question(mock_message, user, mock_state, word, mode="spelling", options=[])
+        mock_update.assert_awaited_once()
+        text = mock_update.call_args.args[3]
+        
+        # Verify bilingual POS
+        assert "<i>Part of speech: noun</i>" in text
+        assert "<tg-spoiler><i>Часть речи: существительное</i></tg-spoiler>" in text
+        
+        # Verify empty line (double newline) before prompt instruction
+        expected_pos_block = (
+            "<i>Part of speech: noun</i>\n"
+            "<tg-spoiler><i>Часть речи: существительное</i></tg-spoiler>\n\n"
+            "Напиши слово на изучаемом языке в ответном сообщении (3 попытки):"
+        )
+        assert expected_pos_block in text
+
+
+@pytest.mark.asyncio
+async def test_dictation_fallback_on_tts_failure():
+    from unittest.mock import AsyncMock, MagicMock, patch
+    from aiogram.types import Message, Chat
+    from bot.handlers.quiz_fsm import _deliver_quiz_question
+    from bot.models.word import Word
+    from bot.models.user import User
+
+    mock_bot = MagicMock()
+    mock_message = MagicMock(spec=Message)
+    mock_message.chat = MagicMock(spec=Chat, id=12345)
+    mock_message.bot = mock_bot
+    mock_state = MagicMock()
+
+    user = User(tg_id=12345, target_language="en", native_language="ru")
+    word = Word(
+        user_id=12345,
+        canonical_word="window",
+        lemma="window",
+        pos="noun",
+        pos_native="существительное",
+        transcription="ˈwɪn.doʊ",
+        translation="окно",
+        target_language="en",
+        native_language="ru",
+    )
+
+    with patch("bot.handlers.quiz_fsm.tts_service.generate_audio", side_effect=RuntimeError("TTS down")), \
+         patch("bot.handlers.quiz_fsm.update_main_quiz_message", new_callable=AsyncMock) as mock_update:
+        await _deliver_quiz_question(mock_message, user, mock_state, word, mode="dictation", options=[])
+        mock_update.assert_awaited_once()
+        text = mock_update.call_args.args[3]
+        
+        # Fallback card must not be raw '✍️ Напиши слово окно:'
+        assert "Режим: Диктант на слух (Dictation)" in text
+        assert "Озвучка временно недоступна." in text
+        assert "👉 <b>окно</b>" in text
+        assert "Напиши слово на изучаемом языке" in text
+
+
+@pytest.mark.asyncio
+async def test_listening_fallback_on_tts_failure():
+    from unittest.mock import AsyncMock, MagicMock, patch
+    from aiogram.types import Message, Chat
+    from bot.handlers.quiz_fsm import _deliver_quiz_question
+    from bot.models.word import Word
+    from bot.models.user import User
+
+    mock_bot = MagicMock()
+    mock_message = MagicMock(spec=Message)
+    mock_message.chat = MagicMock(spec=Chat, id=12345)
+    mock_message.bot = mock_bot
+    mock_state = MagicMock()
+
+    user = User(tg_id=12345, target_language="en", native_language="ru")
+    word = Word(
+        user_id=12345,
+        canonical_word="window",
+        lemma="window",
+        pos="noun",
+        pos_native="существительное",
+        transcription="ˈwɪn.doʊ",
+        translation="окно",
+        target_language="en",
+        native_language="ru",
+    )
+
+    with patch("bot.handlers.quiz_fsm.tts_service.generate_audio", side_effect=RuntimeError("TTS down")), \
+         patch("bot.handlers.quiz_fsm.update_main_quiz_message", new_callable=AsyncMock) as mock_update:
+        await _deliver_quiz_question(mock_message, user, mock_state, word, mode="listening", options=[])
+        mock_update.assert_awaited_once()
+        text = mock_update.call_args.args[3]
+        
+        assert "Режим: Аудирование (Listening)" in text
+        assert "Озвучка временно недоступна." in text
+        assert "👉 <b>window</b> [ˈwɪn.doʊ]" in text
+        assert "Введи перевод:" in text
+
+
