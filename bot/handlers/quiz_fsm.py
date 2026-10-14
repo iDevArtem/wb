@@ -1,4 +1,4 @@
-from bot.core.i18n import t, TranslatedText
+from bot.core.i18n import t, TranslatedText, wrap_spoiler, get_pos_translation
 import html
 import io
 import logging
@@ -35,6 +35,35 @@ from bot.services.tts_service import tts_service
 logger = logging.getLogger(__name__)
 
 router = Router(name="quiz_fsm")
+
+
+def format_quiz_pos(
+    pos: str | None,
+    pos_native: str | None,
+    native_lang: str,
+    hide_translations: bool = True,
+) -> str:
+    """
+    Format part of speech for quiz questions.
+    Target language line: <i>Часть речи: noun</i>
+    Native language line: <tg-spoiler><i>Часть речи: существительное</i></tg-spoiler> (if hide_translations)
+    """
+    if not pos:
+        return ""
+    target_pos = pos.strip()
+    label = t(native_lang, "Часть речи:")
+    target_line = f"<i>{label} {html.escape(target_pos)}</i>"
+
+    resolved_native = (pos_native or "").strip()
+    if not resolved_native:
+        resolved_native = get_pos_translation(target_pos, native_lang) or ""
+
+    if resolved_native:
+        native_content = f"<i>{label} {html.escape(resolved_native)}</i>"
+        native_line = wrap_spoiler(native_content, hide_translations)
+        return f"{target_line}\n{native_line}"
+
+    return target_line
 
 
 class QuizState(StatesGroup):
@@ -347,11 +376,19 @@ async def _deliver_quiz_question(
 ) -> None:
     # Deliver question according to mode
     if mode == "spelling":
+        hide = getattr(user, "hide_translations", True)
+        pos_block = format_quiz_pos(
+            word.pos,
+            getattr(word, "pos_native", None),
+            user.native_language,
+            hide_translations=hide,
+        )
+        pos_section = f"{pos_block}\n" if pos_block else ""
         prompt_text = (
             "✍️ <b>" + t(user.native_language, 'Режим: Правописание (Spelling)') + "</b>\n\n" +
             f"{t(user.native_language, 'Переведи на изучаемый язык слово:')}\n" +
             f"👉 <b>{html.escape(word.translation)}</b>\n\n" +
-            f"<i>{t(user.native_language, 'Часть речи:')} {html.escape(word.pos)}</i>\n" +
+            f"{pos_section}" +
             t(user.native_language, "Напиши слово на изучаемом языке в ответном сообщении (3 попытки):")
         )
         await update_main_quiz_message(message.bot, message.chat.id, state, prompt_text, reply_markup=get_quiz_control_keyboard(user.native_language))
@@ -430,11 +467,13 @@ async def _deliver_quiz_question(
             )
 
     elif mode == "voice_mode":
+        hide = getattr(user, "hide_translations", True)
+        transl_display = wrap_spoiler(html.escape(word.translation), hide)
         prompt_text = (
             "🗣 <b>" + t(user.native_language, 'Режим: Голосовое произношение (Voice Mode)') + "</b>\n\n" +
             f"{t(user.native_language, 'Произнеси вслух в голосовом сообщении слово:')}\n" +
             f"👉 <b>{html.escape(word.canonical_word)}</b> [{html.escape(word.transcription)}]\n" +
-            f"<i>{t(user.native_language, 'Значение:')} {html.escape(word.translation)}</i>\n\n" +
+            f"<i>{t(user.native_language, 'Значение:')} {transl_display}</i>\n\n" +
             t(user.native_language, "Запиши войс (voice message) с произношением:")
         )
         await update_main_quiz_message(message.bot, message.chat.id, state, prompt_text, reply_markup=get_quiz_control_keyboard(user.native_language))
@@ -697,7 +736,8 @@ async def handle_quiz_text_answer(
             )
         elif attempts_left == 1:
             # Hint 2: Example sentence with blank
-            hint = SRSService.get_attempt_2_hint(canonical, lemma, examples, user.native_language)
+            hide = getattr(user, "hide_translations", True)
+            hint = SRSService.get_attempt_2_hint(canonical, lemma, examples, user.native_language, hide_translations=hide)
             await update_main_quiz_message(message.bot, message.chat.id, state,
                 f"❌ {t(user.native_language, 'Снова не то!')}\n\n" +
                 f"💡 <b>{t(user.native_language, 'Подсказка 2 (контекст):')}</b>\n{hint}\n\n" +
@@ -719,8 +759,10 @@ async def on_quiz_success(
     data = await state.get_data()
     completed = data.get("completed_session", 0) + 1
     reviewed = data.get("reviewed_words_list", [])
+    hide = getattr(user, "hide_translations", True)
     if word:
-        reviewed.append(f"• <b>{html.escape(word.canonical_word)}</b> — {html.escape(word.translation)}")
+        transl_display = wrap_spoiler(html.escape(word.translation), hide)
+        reviewed.append(f"• <b>{html.escape(word.canonical_word)}</b> — {transl_display}")
 
     first_tries = data.get("correct_first_try", 0) + (1 if attempts_left == 3 else 0)
 
@@ -765,9 +807,10 @@ async def on_quiz_success(
 
         praise = t(user.native_language, "🌟 Великолепно с первой попытки!") if attempts_left == 3 else t(user.native_language, "👍 Правильно!")
         voice_feedback = data.get("voice_feedback", "")
+        transl_display = wrap_spoiler(html.escape(word.translation), hide)
         text = (
             f"{voice_feedback}🎉 <b>{praise}</b>\n\n" +
-            f"{t(user.native_language, 'Слово:')} <b>{html.escape(word.canonical_word)}</b> [{html.escape(word.transcription)}] — {html.escape(word.translation)}\n" +
+            f"{t(user.native_language, 'Слово:')} <b>{html.escape(word.canonical_word)}</b> [{html.escape(word.transcription)}] — {transl_display}\n" +
             f"📈 {t(user.native_language, 'Следующее повторение через:')} <b>{srs_res.interval}</b> {t(user.native_language, 'дн.')} ({t(user.native_language, 'шаг')} {srs_res.repetition})\n" +
             f"{t(user.native_language, 'Осталось в этой сессии:')} <b>{len(queue)}</b>"
         )
@@ -794,8 +837,10 @@ async def on_quiz_failure(
     data = await state.get_data()
     completed = data.get("completed_session", 0) + 1
     reviewed = data.get("reviewed_words_list", [])
+    hide = getattr(user, "hide_translations", True)
     if word:
-        reviewed.append(f"• <b>{html.escape(word.canonical_word)}</b> — {html.escape(word.translation)}")
+        transl_display = wrap_spoiler(html.escape(word.translation), hide)
+        reviewed.append(f"• <b>{html.escape(word.canonical_word)}</b> — {transl_display}")
 
     queue: list[str] = data.get("queue", [])
     if queue and word and queue[0] == str(word.id):
@@ -835,6 +880,7 @@ async def on_quiz_failure(
             }},
         )
 
+        transl_display = wrap_spoiler(html.escape(word.translation), hide)
         try:
             audio = await tts_service.generate_audio(word.canonical_word, target_lang=user.target_language)
             voice_file = BufferedInputFile(audio.getvalue(), filename=f"{word.canonical_word}.mp3")
@@ -849,7 +895,7 @@ async def on_quiz_failure(
             text = (
                 "❌ <b>" + t(user.native_language, "Все 3 попытки исчерпаны!") + "</b><br/><br/>" +
                 f"{t(user.native_language, 'Правильный ответ:')} <b>{html.escape(word.canonical_word)}</b> [{html.escape(word.transcription)}]<br/>" +
-                f"{t(user.native_language, 'Перевод:')} <b>{html.escape(word.translation)}</b><br/><br/>" +
+                f"{t(user.native_language, 'Перевод:')} <b>{transl_display}</b><br/><br/>" +
                 '<audio src="tg://audio?id=audio_fail"></audio><br/><br/>' +
                 "🔄 " + t(user.native_language, "Интервал сброшен: слово вернется на повторение уже завтра (1 день).") + "<br/>" +
                 f"{t(user.native_language, 'Осталось в этой сессии:')} <b>{len(queue)}</b>"
@@ -866,7 +912,7 @@ async def on_quiz_failure(
             text = (
                 "❌ <b>" + t(user.native_language, "Все 3 попытки исчерпаны!") + "</b><br/><br/>" +
                 f"{t(user.native_language, 'Правильный ответ:')} <b>{html.escape(word.canonical_word)}</b> [{html.escape(word.transcription)}]<br/>" +
-                f"{t(user.native_language, 'Перевод:')} <b>{html.escape(word.translation)}</b><br/><br/>" +
+                f"{t(user.native_language, 'Перевод:')} <b>{transl_display}</b><br/><br/>" +
                 "🔄 " + t(user.native_language, "Интервал сброшен: слово вернется на повторение уже завтра (1 день).") + "<br/>" +
                 f"{t(user.native_language, 'Осталось в этой сессии:')} <b>{len(queue)}</b>"
             )

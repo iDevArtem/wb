@@ -47,3 +47,174 @@ class TranslatedText(Filter):
                 return True
         # Fallback check against the raw key
         return message.text == self.text
+
+
+def wrap_spoiler(text: str, hide: bool = True) -> str:
+    """Wrap text in Telegram spoiler tag if hide is True."""
+    return f"<tg-spoiler>{text}</tg-spoiler>" if hide else text
+
+
+POS_TRANSLATIONS: Dict[str, Dict[str, str]] = {
+    "noun": {
+        "ru": "существительное",
+        "uk": "іменник",
+        "en": "noun",
+        "es": "sustantivo",
+        "de": "Substantiv",
+        "fr": "nom",
+        "it": "sostantivo",
+        "pl": "rzeczownik",
+    },
+    "verb": {
+        "ru": "глагол",
+        "uk": "дієслово",
+        "en": "verb",
+        "es": "verbo",
+        "de": "Verb",
+        "fr": "verbe",
+        "it": "verbo",
+        "pl": "czasownik",
+    },
+    "phrasal verb": {
+        "ru": "фразовый глагол",
+        "uk": "фразове дієслово",
+        "en": "phrasal verb",
+        "es": "verbo compuesto",
+        "de": "Phrasales Verb",
+        "fr": "verbe à particule",
+        "it": "verbo frasale",
+        "pl": "czasownik frazowy",
+    },
+    "adjective": {
+        "ru": "прилагательное",
+        "uk": "прикметник",
+        "en": "adjective",
+        "es": "adjetivo",
+        "de": "Adjektiv",
+        "fr": "adjectif",
+        "it": "aggettivo",
+        "pl": "przymiotnik",
+    },
+    "adverb": {
+        "ru": "наречие",
+        "uk": "прислівник",
+        "en": "adverb",
+        "es": "adverbio",
+        "de": "Adverb",
+        "fr": "adverbe",
+        "it": "avverbio",
+        "pl": "przysłówek",
+    },
+    "pronoun": {
+        "ru": "местоимение",
+        "uk": "займенник",
+        "en": "pronoun",
+        "es": "pronombre",
+        "de": "Pronomen",
+        "fr": "pronom",
+        "it": "pronome",
+        "pl": "zaimek",
+    },
+    "preposition": {
+        "ru": "предлог",
+        "uk": "прийменник",
+        "en": "preposition",
+        "es": "preposición",
+        "de": "Präposition",
+        "fr": "préposition",
+        "it": "preposizione",
+        "pl": "przyimek",
+    },
+    "conjunction": {
+        "ru": "союз",
+        "uk": "сполучник",
+        "en": "conjunction",
+        "es": "conjunción",
+        "de": "Konjunktion",
+        "fr": "conjonction",
+        "it": "congiunzione",
+        "pl": "spójnik",
+    },
+    "interjection": {
+        "ru": "междометие",
+        "uk": "вигук",
+        "en": "interjection",
+        "es": "interjección",
+        "de": "Interjektion",
+        "fr": "interjection",
+        "it": "interiezione",
+        "pl": "wykrzyknik",
+    },
+    "numeral": {
+        "ru": "числительное",
+        "uk": "числівник",
+        "en": "numeral",
+        "es": "numeral",
+        "de": "Zahlwort",
+        "fr": "numéral",
+        "it": "numerale",
+        "pl": "liczebnik",
+    },
+    "particle": {
+        "ru": "частица",
+        "uk": "частка",
+        "en": "particle",
+        "es": "partícula",
+        "de": "Partikel",
+        "fr": "particule",
+        "it": "particella",
+        "pl": "partykuła",
+    },
+    "determiner": {
+        "ru": "детерминатив",
+        "uk": "детермінатив",
+        "en": "determiner",
+        "es": "determinante",
+        "de": "Determinator",
+        "fr": "déterminant",
+        "it": "determinante",
+        "pl": "określnik",
+    },
+    "article": {
+        "ru": "артикль",
+        "uk": "артикль",
+        "en": "article",
+        "es": "artículo",
+        "de": "Artikel",
+        "fr": "article",
+        "it": "articolo",
+        "pl": "rodzajnik",
+    },
+    "phrase": {
+        "ru": "фраза",
+        "uk": "фраза",
+        "en": "phrase",
+        "es": "frase",
+        "de": "Phrase",
+        "fr": "phrase",
+        "it": "frase",
+        "pl": "fraza",
+    },
+    "idiom": {
+        "ru": "идиома",
+        "uk": "ідіома",
+        "en": "idiom",
+        "es": "modismo",
+        "de": "Redewendung",
+        "fr": "idiome",
+        "it": "idioma",
+        "pl": "idiom",
+    },
+}
+
+
+def get_pos_translation(pos: str | None, lang: str) -> str | None:
+    """Return localized part of speech if standard mapping exists."""
+    if not pos:
+        return None
+    cleaned = pos.strip().lower()
+    mapping = POS_TRANSLATIONS.get(cleaned)
+    if mapping:
+        return mapping.get(lang) or mapping.get("ru") or mapping.get("en")
+    return None
+

@@ -1,4 +1,4 @@
-from bot.core.i18n import t
+from bot.core.i18n import t, wrap_spoiler
 import re
 import string
 from dataclasses import dataclass
@@ -162,6 +162,7 @@ class SRSService:
         lemma: str,
         examples: list[dict[str, str]],
         lang: str = "en",
+        hide_translations: bool = True,
     ) -> str:
         """
         Hint 2: Example sentence with the target word replaced by '___'.
@@ -173,27 +174,30 @@ class SRSService:
         )
 
         for example in examples:
-            en_text = example.get("en", "")
-            if pattern.search(en_text):
-                masked_en = pattern.sub(blank, en_text)
-                ru_text = example.get("ru", "")
-                if ru_text:
-                    return f"«{masked_en}»\n<i>({ru_text})</i>"
-                return f"«{masked_en}»"
+            target_text = example.get("target") or example.get("en", "")
+            if pattern.search(target_text):
+                masked_target = pattern.sub(blank, target_text)
+                native_text = example.get("native") or example.get("ru", "")
+                if native_text:
+                    wrapped_native = wrap_spoiler(native_text, hide_translations)
+                    return f"«{masked_target}»\n<i>({wrapped_native})</i>"
+                return f"«{masked_target}»"
 
         # Fallback if no matching example contains the exact word boundary
-        if examples and examples[0].get("en"):
-            first_ex = examples[0]["en"]
-            first_ru = examples[0].get("ru", "")
-            # Sub string case-insensitively
-            masked_en = re.sub(
-                re.escape(canonical_word),
-                blank,
-                first_ex,
-                flags=re.IGNORECASE,
-            )
-            if ru_text := first_ru:
-                return f"«{masked_en}»\n<i>({ru_text})</i>"
-            return f"«{masked_en}»"
+        if examples:
+            first_target = examples[0].get("target") or examples[0].get("en", "")
+            if first_target:
+                first_native = examples[0].get("native") or examples[0].get("ru", "")
+                # Sub string case-insensitively
+                masked_target = re.sub(
+                    re.escape(canonical_word),
+                    blank,
+                    first_target,
+                    flags=re.IGNORECASE,
+                )
+                if first_native:
+                    wrapped_native = wrap_spoiler(first_native, hide_translations)
+                    return f"«{masked_target}»\n<i>({wrapped_native})</i>"
+                return f"«{masked_target}»"
 
         return f"{t(lang, 'Контекст:')} <i>{canonical_word[0]}... ({lemma})</i>"
