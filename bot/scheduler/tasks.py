@@ -5,6 +5,7 @@ import logging
 from datetime import datetime, timedelta, timezone
 from zoneinfo import ZoneInfo
 from aiogram import Bot
+from aiogram.exceptions import TelegramForbiddenError
 
 from bot.core.database import get_users_collection, get_words_collection
 from bot.keyboards.inline import get_scheduler_notification_keyboard
@@ -75,6 +76,7 @@ async def check_due_words_task(bot: Bot, dp: Any = None) -> None:
 
     users_cursor = users_col.find({"is_active": True})
     async for user_doc in users_cursor:
+        user_tg_id = user_doc.get("tg_id")
         try:
             user = User.model_validate(user_doc)
 
@@ -212,6 +214,13 @@ async def check_due_words_task(bot: Bot, dp: Any = None) -> None:
             )
             logger.info("Sent review notification to tg_id=%s for %s words (msg_id=%s)", user.tg_id, due_count, msg.message_id)
 
+        except TelegramForbiddenError:
+            logger.info("User tg_id=%s has blocked the bot. Marking as is_active=False", user_tg_id)
+            if user_tg_id:
+                await users_col.update_one(
+                    {"tg_id": user_tg_id},
+                    {"$set": {"is_active": False, "updated_at": now_utc}},
+                )
         except Exception as ex:
-            logger.exception("Error checking due words for user: %s", ex)
+            logger.exception("Error checking due words for user %s: %s", user_tg_id, ex)
 

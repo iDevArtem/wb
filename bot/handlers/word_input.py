@@ -64,17 +64,31 @@ def format_word_card(analysis: WordAnalysis | Word, lang: str = "ru", include_au
     if analysis.lemma.lower() != analysis.canonical_word.lower():
         lemma_note = f"🌱 {t(lang, 'Словарная форма:')} <code>{escaped_lemma}</code>"
     
-    level_display = f"<b>{analysis.level}</b>" if getattr(analysis, "level", None) else ""
+    level_val = html.escape(analysis.level) if getattr(analysis, "level", None) else ""
+    level_part = f"<b>{t(lang, 'Уровень')}:</b> {level_val}" if level_val else ""
     
-    pos_display = f"<i>{escaped_pos}</i>"
+    pos_display = f"<i>{escaped_pos}</i>" if escaped_pos else ""
     pos_native = f"<i>{html.escape(analysis.pos_native)}</i>" if getattr(analysis, "pos_native", None) else ""        
 
     gram_text = " • ".join(html.escape(n) for n in analysis.grammar_notes) if getattr(analysis, "grammar_notes", []) else ""
     gram_native_text = " • ".join(html.escape(n) for n in analysis.grammar_notes_native) if getattr(analysis, "grammar_notes_native", []) else ""
 
+    target_gram_line = f"{pos_display} • {gram_text}" if (pos_display and gram_text) else (pos_display or gram_text)
+    native_gram_content = f"{pos_native} • {gram_native_text}" if (pos_native and gram_native_text) else (pos_native or gram_native_text)
+    native_gram_part = _wrap_spoiler(native_gram_content) if native_gram_content else ""
+
     extra_note = (f"<p>{typo_note}</p>" if typo_note else "") + (f"<p>{lemma_note}</p>" if lemma_note else "")
-    native_gram_part = _wrap_spoiler(f"{pos_native} • {gram_native_text}") if (pos_native or gram_native_text) else ""
-    extend_info = f"<details><summary>{t(lang, '✏️ Грамматика')}</summary><blockquote><b>{t(lang, 'Уровень')}: {level_display}</b><br/>{pos_display} • {gram_text}<br/>{native_gram_part}</b></blockquote>{extra_note}</details>"
+
+    block_lines = []
+    if level_part:
+        block_lines.append(level_part)
+    if target_gram_line:
+        block_lines.append(target_gram_line)
+    if native_gram_part:
+        block_lines.append(native_gram_part)
+
+    inner_blockquote = "<br/>".join(block_lines)
+    extend_info = f"<details><summary>{t(lang, '✏️ Грамматика')}</summary><blockquote>{inner_blockquote}</blockquote>{extra_note}</details>"
 
     forms_block = ""
     forms = getattr(analysis, "forms", [])

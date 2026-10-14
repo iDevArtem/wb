@@ -341,3 +341,50 @@ async def test_check_due_words_task_deactivates_abandoned_quiz_and_sends_reminde
         bot.send_message.assert_awaited_once()
         assert "4" in bot.send_message.call_args[1]["text"]
 
+
+@pytest.mark.asyncio
+async def test_check_due_words_task_handles_blocked_bot_forbidden():
+    from aiogram.exceptions import TelegramForbiddenError
+    bot = AsyncMock()
+    bot.send_message = AsyncMock(side_effect=TelegramForbiddenError(method=MagicMock(), message="Forbidden: bot was blocked by the user"))
+
+    now = datetime.now(timezone.utc)
+    user_doc = {
+        "tg_id": 999,
+        "is_active": True,
+        "timezone": "UTC",
+        "quiet_hours_start": 0,
+        "quiet_hours_end": 0,
+        "native_language": "ru",
+        "target_language": "en",
+        "last_notified_at": now - timedelta(hours=1),
+    }
+
+    class AsyncCursor:
+        def __init__(self, items):
+            self.items = items
+        def __aiter__(self):
+            return self
+        async def __anext__(self):
+            if not self.items:
+                raise StopAsyncIteration
+            return self.items.pop(0)
+
+    users_col = MagicMock()
+    users_col.find.return_value = AsyncCursor([user_doc])
+    users_col.update_one = AsyncMock()
+    words_col = AsyncMock()
+    words_col.count_documents.return_value = 3
+
+    with patch("bot.scheduler.tasks.get_users_collection", return_value=users_col), \
+         patch("bot.scheduler.tasks.get_words_collection", return_value=words_col):
+
+        await check_due_words_task(bot)
+
+        users_col.update_one.assert_awaited_once()
+        filter_arg = users_col.update_one.call_args[0][0]
+        update_arg = users_col.update_one.call_args[0][1]
+        assert filter_arg == {"tg_id": 999}
+        assert update_arg["$set"]["is_active"] is False
+
+
