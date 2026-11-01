@@ -60,6 +60,32 @@ async def init_db() -> None:
     await words_col.create_index([("user_id", ASCENDING), ("next_review_at", ASCENDING)])
     await words_col.create_index([("user_id", ASCENDING), ("canonical_word", ASCENDING)])
     await words_col.create_index([("user_id", ASCENDING), ("lemma", ASCENDING)])
+    await words_col.create_index([
+        ("user_id", ASCENDING),
+        ("target_language", ASCENDING),
+        ("native_language", ASCENDING),
+    ])
+
+    # Backfill legacy documents missing multilingual fields (originally Russian-English)
+    try:
+        await words_col.update_many(
+            {"target_language": {"$exists": False}},
+            {"$set": {"target_language": "en"}},
+        )
+        await words_col.update_many(
+            {"native_language": {"$exists": False}},
+            {"$set": {"native_language": "ru"}},
+        )
+        await users_col.update_many(
+            {"target_language": {"$exists": False}},
+            {"$set": {"target_language": "en"}},
+        )
+        await users_col.update_many(
+            {"native_language": {"$exists": False}},
+            {"$set": {"native_language": "ru"}},
+        )
+    except Exception as e:
+        logger.warning("Could not execute legacy multilingual backfill on MongoDB: %s", e)
 
     logger.info("MongoDB indexes verified and ready.")
 

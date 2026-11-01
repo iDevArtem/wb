@@ -68,6 +68,8 @@ def migrate(
             "last_activity_date": u_dict.get("last_activity_date"),
             "last_notified_at": parse_datetime(u_dict.get("last_notified_at")),
             "is_active": bool(u_dict.get("is_active", 1)),
+            "native_language": u_dict.get("native_language") or "ru",
+            "target_language": u_dict.get("target_language") or "en",
             "created_at": parse_datetime(u_dict.get("created_at")) or datetime.now(timezone.utc),
             "updated_at": parse_datetime(u_dict.get("updated_at")) or datetime.now(timezone.utc),
         }
@@ -113,6 +115,8 @@ def migrate(
 
         mongo_word = {
             "user_id": tg_id,
+            "native_language": w_dict.get("native_language") or "ru",
+            "target_language": w_dict.get("target_language") or "en",
             "canonical_word": w_dict.get("canonical_word", ""),
             "lemma": w_dict.get("lemma", ""),
             "pos": w_dict.get("pos", ""),
@@ -131,8 +135,19 @@ def migrate(
             "updated_at": parse_datetime(w_dict.get("updated_at")) or datetime.now(timezone.utc),
         }
 
-        # Check existing word by user_id and canonical_word
-        existing = words_col.find_one({"user_id": tg_id, "canonical_word": mongo_word["canonical_word"]})
+        # Check existing word by user_id, languages and canonical_word
+        existing = words_col.find_one({
+            "user_id": tg_id,
+            "target_language": mongo_word["target_language"],
+            "native_language": mongo_word["native_language"],
+            "canonical_word": mongo_word["canonical_word"],
+        })
+        if not existing:
+            # Also check legacy record without languages
+            existing = words_col.find_one({
+                "user_id": tg_id,
+                "canonical_word": mongo_word["canonical_word"],
+            })
         if existing:
             words_col.update_one({"_id": existing["_id"]}, {"$set": mongo_word})
         else:

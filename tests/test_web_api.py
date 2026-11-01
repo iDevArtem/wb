@@ -61,3 +61,22 @@ async def test_web_routes(monkeypatch):
         # 2. Test Auth with invalid initData
         bad_auth = await client.post("/api/auth/telegram", json={"init_data": "invalid_data"})
         assert bad_auth.status_code in (400, 401)
+
+
+@pytest.mark.asyncio
+async def test_web_tts_route(monkeypatch):
+    import io
+    from bot.services.tts_service import tts_service
+
+    captured_lang = []
+    async def mock_generate_audio(text, target_lang="en"):
+        captured_lang.append(target_lang)
+        return io.BytesIO(b"dummy_mp3_bytes")
+
+    monkeypatch.setattr(tts_service, "generate_audio", mock_generate_audio)
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        resp = await client.get("/api/tts/Guten%20Tag?target_lang=de")
+        assert resp.status_code == 200
+        assert resp.content == b"dummy_mp3_bytes"
+        assert captured_lang == ["de"]

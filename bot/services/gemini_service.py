@@ -55,11 +55,11 @@ class WordAnalysis(BaseModel):
     )
     transcription_uk: str | None = Field(
         default=None,
-        description="IPA phonetic transcription for dialect 1 (e.g. British English) if applicable",
+        description="IPA phonetic transcription for dialect or regional variant 1 (e.g. British English, Castilian Spanish, High German) if applicable",
     )
     transcription_us: str | None = Field(
         default=None,
-        description="IPA phonetic transcription for dialect 2 (e.g. American English) if applicable",
+        description="IPA phonetic transcription for dialect or regional variant 2 (e.g. American English, Latin American Spanish) if applicable",
     )
     translation: str = Field(
         ...,
@@ -130,14 +130,14 @@ Your task is to analyze user input (text or audio) and output a clean, accurate 
 Rules:
 1. If the input is in {native_lang} or a related language, translate it into the most natural, commonly used canonical {target_lang} word or set expression.
 2. If the input is in {target_lang} with typos (e.g. "necesary", "definately"), fix the spelling in `canonical_word`, and put the original typo in `corrected_from`. If no typo, `corrected_from` must be null.
-3. If the input is an inflected form (e.g. past tense 'demonstrated' or plural 'cats'):
-   - Set `canonical_word` to the exact inflected form the user entered (or its corrected spelling), and set `translation` to match this exact form (e.g. 'demonstrated' -> 'продемонстрировал(и)', 'cats' -> 'коты').
-   - Set `lemma` to its base dictionary headword (e.g. 'demonstrate', 'cat').
+3. If the input is an inflected form (e.g. past tense or plural form):
+   - Set `canonical_word` to the exact inflected form the user entered (or its corrected spelling), and set `translation` to match this exact form in {native_lang}.
+   - Set `lemma` to its base dictionary headword (e.g. infinitive without particle, singular noun).
 4. Phonetics: Provide strict IPA with stress marks if applicable for {target_lang}.
-5. Provide a short, precise {native_lang} translation in `translation` (max 1-3 words). Also provide the translated part of speech in `pos_native` (e.g. "существительное"). Do not add any explanations in these fields.
+5. Provide a short, precise {native_lang} translation in `translation` (max 1-3 words). Also provide the translated part of speech in `pos_native` (translated into {native_lang}). Do not add any explanations in these fields.
 6. `level`: Determine the CEFR level (A1, A2, B1, B2, C1, C2) of the word.
 7. `definition`: Provide one short, simple explanation of the meaning in {target_lang}. Provide its translation in `definition_native`.
-8. `grammar_notes`: Provide a minimal list of crucial grammar facts. Example: for English nouns include `[C]` or `[U]`, for verbs include `[intransitive]`. Provide translations of these notes in `grammar_notes_native`.
+8. `grammar_notes`: Provide a minimal list of crucial grammar facts relevant to {target_lang}. Example: countability for English nouns ([C] or [U]), gender/article for German/Romance nouns, or transitivity for verbs. Provide translations of these notes in `grammar_notes_native`.
 9. `forms`: Provide 2-4 key grammatical forms of this word with clear labels and native translations.
    - For verbs in {target_lang}: provide key forms/tenses (e.g. Present/Base, Past Simple, Future or V1/V2/V3) with translation of each form into {native_lang}.
    - For nouns: provide Singular and Plural forms (with articles if relevant for {target_lang}).

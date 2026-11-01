@@ -341,8 +341,8 @@ async def cb_my_dictionaries(callback: CallbackQuery, user: User) -> None:
     else:
         text = "📚 <b>" + t(user.native_language, "Твои словари:") + "</b>\n<i>" + t(user.native_language, "Выбери словарь, чтобы сделать его активным:") + "</i>"
         for res in results:
-            native = res["_id"].get("native_language", "ru")
-            target = res["_id"].get("target_language", "en")
+            native = res["_id"].get("native_language") or "ru"
+            target = res["_id"].get("target_language") or "en"
             count = res["count"]
             
             prefix = "✅ " if (native == user.native_language and target == user.target_language) else ""

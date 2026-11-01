@@ -61,6 +61,53 @@ def test_is_answer_correct_listening_translation():
     )
 
 
+def test_normalize_multilingual_articles_and_infinitives():
+    # German
+    assert SRSService.normalize_text("das Haus", target_lang="de") == "haus"
+    assert SRSService.normalize_text("der Tisch", target_lang="de") == "tisch"
+    assert SRSService.normalize_text("die Katze", target_lang="de") == "katze"
+    assert SRSService.normalize_text("ein Buch", target_lang="de") == "buch"
+    assert SRSService.normalize_text("zu machen", target_lang="de") == "machen"
+
+    # Spanish
+    assert SRSService.normalize_text("el perro", target_lang="es") == "perro"
+    assert SRSService.normalize_text("la casa", target_lang="es") == "casa"
+    assert SRSService.normalize_text("una manzana", target_lang="es") == "manzana"
+
+    # French
+    assert SRSService.normalize_text("la pomme", target_lang="fr") == "pomme"
+    assert SRSService.normalize_text("le chat", target_lang="fr") == "chat"
+    assert SRSService.normalize_text("l'eau", target_lang="fr") == "eau"
+
+    # Italian
+    assert SRSService.normalize_text("il libro", target_lang="it") == "libro"
+    assert SRSService.normalize_text("la mela", target_lang="it") == "mela"
+
+
+def test_is_answer_correct_multilingual():
+    # German answer with article typed by user
+    assert SRSService.is_answer_correct(
+        user_input="das Auto",
+        canonical_word="Auto",
+        lemma="Auto",
+        target_lang="de",
+    )
+    # German verb with 'zu'
+    assert SRSService.is_answer_correct(
+        user_input="zu schlafen",
+        canonical_word="schlafen",
+        lemma="schlafen",
+        target_lang="de",
+    )
+    # Spanish noun with article
+    assert SRSService.is_answer_correct(
+        user_input="la casa",
+        canonical_word="casa",
+        lemma="casa",
+        target_lang="es",
+    )
+
+
 def test_hints_generation():
     hint1 = SRSService.get_attempt_1_hint("serendipity")
     assert "s" in hint1

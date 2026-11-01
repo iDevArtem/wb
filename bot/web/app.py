@@ -33,7 +33,7 @@ async def lifespan(app: FastAPI):
 
 def create_app() -> FastAPI:
     app = FastAPI(
-        title="English Bot WebApp & Dashboard",
+        title="Vocab AI Bot WebApp & Dashboard",
         version="1.0.0",
         docs_url="/api/docs",
         redoc_url="/api/redoc",
@@ -68,7 +68,7 @@ def create_app() -> FastAPI:
                         "Expires": "0",
                     }
                 )
-            return {"status": "ok", "message": "English Bot Web Dashboard API is running."}
+            return {"status": "ok", "message": "Vocab AI Web Dashboard API is running."}
 
     return app
 

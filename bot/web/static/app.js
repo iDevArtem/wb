@@ -1,4 +1,4 @@
-// English Tutor Mini App Frontend Controller
+// Vocab AI Tutor Mini App Frontend Controller
 
 const tg = window.Telegram?.WebApp;
 
@@ -251,7 +251,8 @@ function playPronunciation(word, btnEl) {
   document.querySelectorAll(".audio-btn").forEach((b) => b.classList.remove("playing"));
   if (btnEl) btnEl.classList.add("playing");
 
-  const audioUrl = `/api/tts/${encodeURIComponent(word)}`;
+  const targetLang = state.user?.target_language || "en";
+  const audioUrl = `/api/tts/${encodeURIComponent(word)}?target_lang=${encodeURIComponent(targetLang)}`;
   const audio = new Audio(audioUrl);
   currentAudio = audio;
 
@@ -264,7 +265,7 @@ function playPronunciation(word, btnEl) {
     // Fallback to Web Speech API
     if ("speechSynthesis" in window) {
       const utterance = new SpeechSynthesisUtterance(word);
-      utterance.lang = "en-US";
+      utterance.lang = targetLang;
       window.speechSynthesis.speak(utterance);
     }
   };
@@ -274,7 +275,7 @@ function playPronunciation(word, btnEl) {
     if (btnEl) btnEl.classList.remove("playing");
     if ("speechSynthesis" in window) {
       const utterance = new SpeechSynthesisUtterance(word);
-      utterance.lang = "en-US";
+      utterance.lang = targetLang;
       window.speechSynthesis.speak(utterance);
     }
   });

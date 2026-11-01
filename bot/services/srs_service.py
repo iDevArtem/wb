@@ -13,6 +13,21 @@ class SRSResult:
     next_review_at: datetime
 
 
+LANGUAGE_ARTICLES: dict[str, tuple[str, ...]] = {
+    "en": ("a ", "an ", "the "),
+    "de": ("der ", "die ", "das ", "ein ", "eine ", "einen ", "einem ", "einer ", "eines "),
+    "es": ("el ", "la ", "los ", "las ", "un ", "una ", "unos ", "unas "),
+    "fr": ("le ", "la ", "les ", "un ", "une ", "des ", "l'", "d'"),
+    "it": ("il ", "lo ", "la ", "i ", "gli ", "le ", "un ", "uno ", "una ", "un'", "l'"),
+    "pt": ("o ", "a ", "os ", "as ", "um ", "uma ", "uns ", "umas "),
+}
+
+LANGUAGE_INFINITIVES: dict[str, tuple[str, ...]] = {
+    "en": ("to ",),
+    "de": ("zu ",),
+}
+
+
 class SRSService:
     @staticmethod
     def calculate_sm2(
@@ -61,14 +76,14 @@ class SRSService:
         )
 
     @staticmethod
-    def normalize_text(text: str) -> str:
+    def normalize_text(text: str, target_lang: str | None = None) -> str:
         """
         Normalize input text by:
         - Converting to lowercase
         - Stripping leading and trailing whitespace
         - Stripping common punctuation marks
-        - Removing leading grammatical articles ('a', 'an', 'the')
-        - Removing leading infinitive particle 'to' for verbs
+        - Removing leading grammatical articles according to target language
+        - Removing leading infinitive particles (e.g. 'to ' in English, 'zu ' in German)
         - Collapsing extra internal spaces
         """
         if not text:
@@ -88,14 +103,19 @@ class SRSService:
         cleaned = " ".join(cleaned.split())
 
         # Strip leading articles
-        for article in ("a ", "an ", "the "):
+        lang_key = target_lang.lower().split("-")[0] if target_lang else "en"
+        articles = LANGUAGE_ARTICLES.get(lang_key, LANGUAGE_ARTICLES["en"])
+        for article in articles:
             if cleaned.startswith(article):
                 cleaned = cleaned[len(article):].strip()
                 break
 
-        # Strip leading infinitive particle 'to '
-        if cleaned.startswith("to "):
-            cleaned = cleaned[3:].strip()
+        # Strip leading infinitive particle
+        infinitives = LANGUAGE_INFINITIVES.get(lang_key, LANGUAGE_INFINITIVES.get("en", ()))
+        for inf in infinitives:
+            if cleaned.startswith(inf):
+                cleaned = cleaned[len(inf):].strip()
+                break
 
         return cleaned
 
@@ -108,26 +128,29 @@ class SRSService:
         translation: str | None = None,
         allow_translation: bool = False,
         only_translation: bool = False,
+        target_lang: str | None = None,
+        native_lang: str | None = None,
     ) -> bool:
         """
         Check if user's answer matches canonical word, lemma, or translation.
         If only_translation=True, only matches against native translation.
         """
-        norm_user = cls.normalize_text(user_input)
-        if not norm_user:
+        norm_user_target = cls.normalize_text(user_input, target_lang=target_lang)
+        if not norm_user_target:
             return False
 
         if not only_translation:
-            norm_canonical = cls.normalize_text(canonical_word)
-            norm_lemma = cls.normalize_text(lemma)
+            norm_canonical = cls.normalize_text(canonical_word, target_lang=target_lang)
+            norm_lemma = cls.normalize_text(lemma, target_lang=target_lang)
 
-            if norm_user == norm_canonical or norm_user == norm_lemma:
+            if norm_user_target == norm_canonical or norm_user_target == norm_lemma:
                 return True
 
         if (allow_translation or only_translation) and translation:
+            norm_user_native = cls.normalize_text(user_input, target_lang=native_lang)
             # Check against comma-separated translations
-            translations = [cls.normalize_text(t) for t in re.split(r"[,;/]", translation)]
-            if norm_user in translations or cls.normalize_text(translation) == norm_user:
+            translations = [cls.normalize_text(t, target_lang=native_lang) for t in re.split(r"[,;/]", translation)]
+            if norm_user_native in translations or cls.normalize_text(translation, target_lang=native_lang) == norm_user_native:
                 return True
 
         return False

@@ -153,7 +153,44 @@ async def add_temp_message(state: FSMContext, msg_id: int):
     temp_ids.append(msg_id)
     await state.update_data(temp_msg_ids=temp_ids)
 
+BACKUP_DISTRACTORS_BY_LANG: dict[str, list[str]] = {
+    "ru": [
+        "достижение", "исследование", "возможность", "препятствие", "намерение",
+        "решение", "соглашение", "развитие", "внимание", "ответственность",
+        "впечатление", "сравнение", "отношение", "улучшение", "вдохновение",
+    ],
+    "uk": [
+        "досягнення", "дослідження", "можливість", "перешкода", "намір",
+        "рішення", "угода", "розвиток", "увага", "відповідальність",
+        "враження", "порівняння", "ставлення", "покращення", "натхнення",
+    ],
+    "en": [
+        "achievement", "research", "opportunity", "obstacle", "intention",
+        "decision", "agreement", "development", "attention", "responsibility",
+        "impression", "comparison", "attitude", "improvement", "inspiration",
+    ],
+    "de": [
+        "Leistung", "Forschung", "Gelegenheit", "Hindernis", "Absicht",
+        "Entscheidung", "Vereinbarung", "Entwicklung", "Aufmerksamkeit", "Verantwortung",
+        "Eindruck", "Vergleich", "Haltung", "Verbesserung", "Inspiration",
+    ],
+    "es": [
+        "logro", "investigación", "oportunidad", "obstáculo", "intención",
+        "decisión", "acuerdo", "desarrollo", "atención", "responsabilidad",
+        "impresión", "comparación", "actitud", "mejora", "inspiración",
+    ],
+    "fr": [
+        "réussite", "recherche", "opportunité", "obstacle", "intention",
+        "décision", "accord", "développement", "attention", "responsabilité",
+        "impression", "comparaison", "attitude", "amélioration", "inspiration",
+    ],
+}
+
+
 def get_backup_distractors(lang: str) -> list[str]:
+    lang_prefix = (lang or "ru").lower().split("-")[0]
+    if lang_prefix in BACKUP_DISTRACTORS_BY_LANG:
+        return BACKUP_DISTRACTORS_BY_LANG[lang_prefix]
     return [
         t(lang, "достижение"), t(lang, "исследование"), t(lang, "возможность"), t(lang, "препятствие"),
         t(lang, "намерение"), t(lang, "решение"), t(lang, "соглашение"), t(lang, "развитие"), t(lang, "внимание"),
@@ -736,6 +773,8 @@ async def handle_quiz_text_answer(
         translation=translation,
         allow_translation=(mode == "listening"),
         only_translation=(mode == "listening"),
+        target_lang=user.target_language,
+        native_lang=user.native_language,
     )
 
     if is_correct:

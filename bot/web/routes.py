@@ -59,6 +59,8 @@ async def auth_telegram(req: TelegramAuthRequest) -> AuthResponse:
     # Upsert user in database
     existing_user = await db.users.find_one({"tg_id": tg_id})
     if not existing_user:
+        lang_code = user_info.get("language_code")
+        native_lang = lang_code.split('-')[0] if lang_code else "uk"
         user_doc = {
             "tg_id": tg_id,
             "username": user_info.get("username"),
@@ -70,6 +72,8 @@ async def auth_telegram(req: TelegramAuthRequest) -> AuthResponse:
             "last_activity_date": None,
             "last_notified_at": None,
             "is_active": True,
+            "native_language": native_lang,
+            "target_language": "en",
             "created_at": now,
             "updated_at": now,
         }
@@ -308,24 +312,18 @@ async def get_word_detail(
 
 
 @router.get("/tts/{word}")
-async def get_word_tts(word: str) -> Response:
-    """Generates and streams high quality MP3 pronunciation audio using Microsoft Edge TTS."""
+async def get_word_tts(word: str, target_lang: str = "en") -> Response:
+    """Generates and streams high quality MP3 pronunciation audio using TTSService (Edge-TTS / Gemini fallback)."""
     clean_word = word.strip()
     if not clean_word or len(clean_word) > 100:
         raise HTTPException(status_code=400, detail="Word length invalid")
 
     try:
-        import edge_tts
+        from bot.services.tts_service import tts_service
 
-        communicate = edge_tts.Communicate(clean_word, settings.tts_voice)
-        audio_chunks = []
-        async for chunk in communicate.stream():
-            if chunk["type"] == "audio":
-                audio_chunks.append(chunk["data"])
-
-        audio_bytes = b"".join(audio_chunks)
+        audio_io = await tts_service.generate_audio(clean_word, target_lang=target_lang)
         return Response(
-            content=audio_bytes,
+            content=audio_io.getvalue(),
             media_type="audio/mpeg",
             headers={
                 "Cache-Control": "public, max-age=86400",
@@ -333,5 +331,5 @@ async def get_word_tts(word: str) -> Response:
             },
         )
     except Exception as exc:
-        logger.error("TTS generation failed for '%s': %s", clean_word, exc)
+        logger.error("TTS generation failed for '%s' (lang: %s): %s", clean_word, target_lang, exc)
         raise HTTPException(status_code=500, detail="TTS generation failed")

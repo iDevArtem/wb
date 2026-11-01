@@ -1,3 +1,4 @@
+import pytest
 from datetime import date, datetime, timezone
 from bson import ObjectId
 from bot.models.base import MongoBaseModel, PyObjectId, utc_now
@@ -97,3 +98,21 @@ def test_word_query_by_id():
     assert q2["target_language"] == "en"
     assert q2["native_language"] == "ru"
     assert q2["_id"] == "non_object_id_string"
+
+
+@pytest.mark.asyncio
+async def test_legacy_backfill(monkeypatch):
+    from unittest.mock import AsyncMock
+    mock_words = AsyncMock()
+    mock_users = AsyncMock()
+    mock_client = AsyncMock()
+
+    monkeypatch.setattr("bot.core.database.get_words_collection", lambda: mock_words)
+    monkeypatch.setattr("bot.core.database.get_users_collection", lambda: mock_users)
+    monkeypatch.setattr("bot.core.database.get_mongo_client", lambda: mock_client)
+
+    from bot.core.database import init_db
+    await init_db()
+
+    assert mock_words.update_many.await_count >= 2
+    assert mock_users.update_many.await_count >= 2
