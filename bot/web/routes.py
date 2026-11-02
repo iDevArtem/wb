@@ -275,7 +275,12 @@ async def get_word_detail(
     except Exception:
         raise HTTPException(status_code=400, detail="Invalid word ID format")
 
-    doc = await db.words.find_one({"_id": obj_id, "user_id": current_user.id})
+    doc = await db.words.find_one({
+        "_id": obj_id,
+        "user_id": current_user.id,
+        "native_language": current_user.native_language,
+        "target_language": current_user.target_language,
+    })
     if not doc:
         raise HTTPException(status_code=404, detail="Word not found")
 

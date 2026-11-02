@@ -199,8 +199,27 @@ def get_backup_distractors(lang: str) -> list[str]:
     ]
 
 
-def _word_query_by_id(word_id_str: str, user_id: int) -> dict:
+def _word_query_by_id(
+    word_id_str: str,
+    user_or_id: User | int,
+    target_language: str | None = None,
+    native_language: str | None = None,
+) -> dict:
+    if isinstance(user_or_id, User):
+        user_id = user_or_id.id
+        target_lang = target_language or user_or_id.target_language
+        native_lang = native_language or user_or_id.native_language
+    else:
+        user_id = user_or_id
+        target_lang = target_language
+        native_lang = native_language
+
     query: dict = {"user_id": user_id}
+    if target_lang:
+        query["target_language"] = target_lang
+    if native_lang:
+        query["native_language"] = native_lang
+
     if ObjectId.is_valid(word_id_str):
         query["_id"] = ObjectId(word_id_str)
     else:
@@ -252,7 +271,7 @@ async def start_quiz_session(
     words_col = get_words_collection()
 
     if only_word_id is not None:
-        query = _word_query_by_id(str(only_word_id), user.id)
+        query = _word_query_by_id(str(only_word_id), user)
         doc = await words_col.find_one(query, {"_id": 1})
         word_ids = [str(doc["_id"])] if doc else []
     elif allow_all:
@@ -362,7 +381,7 @@ async def present_next_word(
 
     current_word_id = queue[0]
     words_col = get_words_collection()
-    query = _word_query_by_id(str(current_word_id), user.id)
+    query = _word_query_by_id(str(current_word_id), user)
     doc = await words_col.find_one(query)
 
     if not doc:
@@ -615,7 +634,7 @@ async def handle_mc_choice(
     attempts_left = data.get("attempts_left", 3)
 
     words_col = get_words_collection()
-    query = _word_query_by_id(str(word_id), user.id)
+    query = _word_query_by_id(str(word_id), user)
     doc = await words_col.find_one(query)
     word = Word.model_validate(doc) if doc else None
 
@@ -636,7 +655,7 @@ async def handle_mc_choice(
             for idx, opt in enumerate(options):
                 prompt_text += f'<tg-button-row><tg-button type="callback_data" data="quiz_mc:{idx}">{html.escape(opt)}</tg-button></tg-button-row>'
             
-                rich_msg = InputRichMessage(html=prompt_text)
+            rich_msg = InputRichMessage(html=prompt_text)
             await update_main_quiz_message(callback.bot, callback.message.chat.id, state, rich_message=rich_msg, reply_markup=get_quiz_control_keyboard(user.native_language))
         else:
             await on_quiz_failure(callback.message, user, word, state)
@@ -673,7 +692,7 @@ async def handle_quiz_voice_answer(
     attempts_left = data.get("attempts_left", 3)
 
     words_col = get_words_collection()
-    query = _word_query_by_id(str(word_id), user.id)
+    query = _word_query_by_id(str(word_id), user)
     doc = await words_col.find_one(query)
     word = Word.model_validate(doc) if doc else None
 
@@ -761,7 +780,7 @@ async def handle_quiz_text_answer(
     attempts_left = data.get("attempts_left", 3)
 
     words_col = get_words_collection()
-    query = _word_query_by_id(str(word_id), user.id)
+    query = _word_query_by_id(str(word_id), user)
     doc = await words_col.find_one(query)
     word = Word.model_validate(doc) if doc else None
 
@@ -926,7 +945,7 @@ async def on_quiz_success(
         word.next_review_at = srs_res.next_review_at
 
         words_col = get_words_collection()
-        query = _word_query_by_id(str(word.id), word.user_id)
+        query = _word_query_by_id(str(word.id), word.user_id, word.target_language, word.native_language)
         await words_col.update_one(
             query,
             {"$set": {
@@ -1001,7 +1020,7 @@ async def on_quiz_failure(
         word.next_review_at = srs_res.next_review_at
 
         words_col = get_words_collection()
-        query = _word_query_by_id(str(word.id), word.user_id)
+        query = _word_query_by_id(str(word.id), word.user_id, word.target_language, word.native_language)
         await words_col.update_one(
             query,
             {"$set": {
@@ -1079,7 +1098,7 @@ async def cb_quiz_skip(
     data = await state.get_data()
     word_id = data.get("current_word_id")
     words_col = get_words_collection()
-    query = _word_query_by_id(str(word_id), user.id)
+    query = _word_query_by_id(str(word_id), user)
     doc = await words_col.find_one(query)
     word = Word.model_validate(doc) if doc else None
     await on_quiz_failure(callback.message, user, word, state)
@@ -1148,7 +1167,7 @@ async def cb_quiz_resume(
     current_word_id = data.get("current_word_id")
     if current_word_id:
         words_col = get_words_collection()
-        query = _word_query_by_id(str(current_word_id), user.id)
+        query = _word_query_by_id(str(current_word_id), user)
         doc = await words_col.find_one(query)
         if doc:
             word = Word.model_validate(doc)

@@ -26,7 +26,10 @@ class UserMiddleware(BaseMiddleware):
         users_col = get_users_collection()
         user_doc = await users_col.find_one({"tg_id": event_user.id})
 
-        if user_doc is None:
+        is_new_user = user_doc is None
+        needs_save = False
+
+        if is_new_user:
             lang_code = getattr(event_user, "language_code", None)
             native_lang = lang_code.split('-')[0] if lang_code else "uk"
 
@@ -38,6 +41,12 @@ class UserMiddleware(BaseMiddleware):
                 streak=1,
                 native_language=native_lang,
             )
+            try:
+                tz = ZoneInfo(user.timezone)
+            except Exception:
+                tz = timezone.utc
+            user.last_activity_date = datetime.now(tz).date()
+
             result = await users_col.insert_one(user.to_mongo())
             user.mongo_id = str(result.inserted_id)
             logger.info("Registered new user in MongoDB: tg_id=%s, username=%s", user.tg_id, user.username)
@@ -46,36 +55,41 @@ class UserMiddleware(BaseMiddleware):
             # Sync metadata
             if event_user.username and user.username != event_user.username:
                 user.username = event_user.username
+                needs_save = True
             if event_user.first_name and user.first_name != event_user.first_name:
                 user.first_name = event_user.first_name
+                needs_save = True
 
-        # Calculate streak based on user's timezone
-        try:
-            tz = ZoneInfo(user.timezone)
-        except Exception:
-            tz = timezone.utc
+            # Calculate streak based on user's timezone
+            try:
+                tz = ZoneInfo(user.timezone)
+            except Exception:
+                tz = timezone.utc
 
-        now_local = datetime.now(tz).date()
+            now_local = datetime.now(tz).date()
 
-        if user.last_activity_date is None:
-            user.streak = 1
-            user.last_activity_date = now_local
-        elif user.last_activity_date == now_local:
-            pass  # Already counted today
-        elif user.last_activity_date == now_local - timedelta(days=1):
-            user.streak += 1
-            user.last_activity_date = now_local
-        else:
-            # Streak broken
-            user.streak = 1
-            user.last_activity_date = now_local
+            if user.last_activity_date is None:
+                user.streak = 1
+                user.last_activity_date = now_local
+                needs_save = True
+            elif user.last_activity_date == now_local:
+                pass  # Already counted today
+            elif user.last_activity_date == now_local - timedelta(days=1):
+                user.streak += 1
+                user.last_activity_date = now_local
+                needs_save = True
+            else:
+                # Streak broken
+                user.streak = 1
+                user.last_activity_date = now_local
+                needs_save = True
 
-        user.updated_at = datetime.now(timezone.utc)
-        await users_col.update_one(
-            {"tg_id": user.tg_id},
-            {"$set": user.to_mongo()},
-            upsert=True,
-        )
+            if needs_save:
+                user.updated_at = datetime.now(timezone.utc)
+                await users_col.update_one(
+                    {"tg_id": user.tg_id},
+                    {"$set": user.to_mongo()},
+                )
 
         data["user"] = user
         return await handler(event, data)

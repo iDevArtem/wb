@@ -245,5 +245,15 @@
   "Осталось 2 попытки. Введи перевод:": "2 Versuche übrig. Gib die Übersetzung ein:",
   "Осталось 2 попытки. Напиши слово на изучаемом языке:": "2 Versuche übrig. Schreibe das Wort in der Lernsprache:",
   "Осталась последняя попытка. Напиши перевод:": "Letzter Versuch. Gib die Übersetzung ein:",
-  "Осталась последняя попытка. Напиши слово на изучаемом языке:": "Letzter Versuch. Schreibe das Wort in der Lernsprache:"
+  "Осталась последняя попытка. Напиши слово на изучаемом языке:": "Letzter Versuch. Schreibe das Wort in der Lernsprache:",
+  "✏️ Ввести вручную (код IANA)": "✏️ Manuell eingeben (IANA-Code)",
+  "🌐 Открыть веб-словарь (Mini App)": "🌐 Web-Wörterbuch öffnen (Mini App)",
+  "🧠 Повторить слова (/quiz)": "🧠 Wörter wiederholen (/quiz)",
+  "Закончи предыдущий квиз или сбрось его, чтобы начать заново.": "Beende das vorherige Quiz oder setze es zurück, um von vorne zu beginnen.",
+  "Квиз сброшен. Начинаем заново!": "Quiz zurückgesetzt. Wir fangen von vorne an!",
+  "⏱ Сессия завершена из-за неактивности.": "⏱ Sitzung wegen Inaktivität beendet.",
+  "▶️ Продолжить": "▶️ Fortsetzen",
+  "⚠️ У тебя уже идет квиз!": "⚠️ Du hast bereits ein aktives Quiz!",
+  "⚠️ Этот квиз уже недействителен.": "⚠️ Dieses Quiz ist nicht mehr gültig.",
+  "🔄 Сбросить": "🔄 Zurücksetzen"
 }

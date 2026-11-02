@@ -38,6 +38,11 @@ async def main() -> None:
             "GEMINI_API_KEY is empty! Gemini analysis and voice recognition will fail without a valid key."
         )
 
+    if settings.jwt_secret == "english_learning_bot_secret_jwt_key_2026":
+        logger.warning(
+            "JWT_SECRET is using the default fallback secret! For production environments, configure a unique random JWT_SECRET in .env."
+        )
+
     # Initialize MongoDB connection and indexes
     await init_db()
 

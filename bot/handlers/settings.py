@@ -139,7 +139,7 @@ async def cb_save_timezone(
 
 
 @router.callback_query(lambda c: c.data == "manual_tz")
-async def cb_manual_tz(callback: CallbackQuery, state: FSMContext) -> None:
+async def cb_manual_tz(callback: CallbackQuery, user: User, state: FSMContext) -> None:
     await callback.answer()
     await state.set_state(SettingsState.waiting_for_custom_tz)
     if callback.message:
@@ -265,14 +265,14 @@ async def cb_save_target(callback: CallbackQuery, user: User) -> None:
         await cb_open_settings(callback, user)
 
 @router.callback_query(lambda c: c.data == "manual_native")
-async def cb_manual_native(callback: CallbackQuery, state: FSMContext) -> None:
+async def cb_manual_native(callback: CallbackQuery, user: User, state: FSMContext) -> None:
     await callback.answer()
     await state.set_state(SettingsState.waiting_for_custom_native)
     if callback.message:
         await callback.message.answer(t(user.native_language, "✏️ Введи код языка (например, ru, en, es):"))
 
 @router.callback_query(lambda c: c.data == "manual_target")
-async def cb_manual_target(callback: CallbackQuery, state: FSMContext) -> None:
+async def cb_manual_target(callback: CallbackQuery, user: User, state: FSMContext) -> None:
     await callback.answer()
     await state.set_state(SettingsState.waiting_for_custom_target)
     if callback.message:

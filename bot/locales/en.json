@@ -252,5 +252,8 @@
   "Осталось 2 попытки. Введи перевод:": "2 attempts left. Enter the translation:",
   "Осталось 2 попытки. Напиши слово на изучаемом языке:": "2 attempts left. Write the word in the target language:",
   "Осталась последняя попытка. Напиши перевод:": "Last attempt left. Enter the translation:",
-  "Осталась последняя попытка. Напиши слово на изучаемом языке:": "Last attempt left. Write the word in the target language:"
+  "Осталась последняя попытка. Напиши слово на изучаемом языке:": "Last attempt left. Write the word in the target language:",
+  "✏️ Ввести вручную (код IANA)": "✏️ Enter manually (IANA code)",
+  "🌐 Открыть веб-словарь (Mini App)": "🌐 Open Web Dictionary (Mini App)",
+  "🧠 Повторить слова (/quiz)": "🧠 Review words (/quiz)"
 }

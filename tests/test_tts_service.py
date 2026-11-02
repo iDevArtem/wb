@@ -129,3 +129,19 @@ async def test_gemini_tts_fallback_to_edge_on_failure():
                 assert isinstance(result, io.BytesIO)
                 assert result.getvalue() == b"fake-edge-fallback-audio"
 
+
+def test_tts_cache_lru_eviction():
+    service = TTSService(max_cache_size=2)
+    service._save_to_cache("k1", b"v1")
+    service._save_to_cache("k2", b"v2")
+    assert "k1" in service._cache
+    assert "k2" in service._cache
+
+    # Adding a 3rd item should evict k1
+    service._save_to_cache("k3", b"v3")
+    assert len(service._cache) == 2
+    assert "k1" not in service._cache
+    assert "k2" in service._cache
+    assert "k3" in service._cache
+
+

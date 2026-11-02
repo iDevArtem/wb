@@ -19,9 +19,19 @@ LANGUAGE_VOICE_MAP = {
 }
 
 class TTSService:
-    def __init__(self, voice: str | None = None):
+    def __init__(self, voice: str | None = None, max_cache_size: int = 1000):
         self.default_voice = voice or settings.tts_voice
         self._cache: dict[str, bytes] = {}
+        self._max_cache_size = max_cache_size
+
+    def _save_to_cache(self, key: str, data: bytes) -> None:
+        if len(self._cache) >= self._max_cache_size:
+            try:
+                first_key = next(iter(self._cache))
+                del self._cache[first_key]
+            except (StopIteration, KeyError):
+                pass
+        self._cache[key] = data
 
     def get_voice_for_language(self, target_lang: str) -> str:
         lang_prefix = target_lang.lower().split("-")[0]
@@ -64,7 +74,9 @@ class TTSService:
         
         if cache_key in self._cache:
             logger.debug("Returning cached TTS audio for '%s'", clean_text)
-            return io.BytesIO(self._cache[cache_key])
+            audio_bytes = self._cache.pop(cache_key)
+            self._cache[cache_key] = audio_bytes
+            return io.BytesIO(audio_bytes)
 
         is_gemini_primary = settings.tts_engine == "gemini"
         primary_name = "Gemini" if is_gemini_primary else "Edge-TTS"
@@ -76,7 +88,7 @@ class TTSService:
         last_primary_err: Exception | None = None
         try:
             audio_bytes = await primary_func(clean_text)
-            self._cache[cache_key] = audio_bytes
+            self._save_to_cache(cache_key, audio_bytes)
             return io.BytesIO(audio_bytes)
         except Exception as primary_err:
             last_primary_err = primary_err
@@ -87,7 +99,7 @@ class TTSService:
 
         try:
             audio_bytes = await fallback_func(clean_text)
-            self._cache[cache_key] = audio_bytes
+            self._save_to_cache(cache_key, audio_bytes)
             return io.BytesIO(audio_bytes)
         except Exception as fallback_err:
             logger.error(

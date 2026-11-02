@@ -65,6 +65,13 @@ async def init_db() -> None:
         ("target_language", ASCENDING),
         ("native_language", ASCENDING),
     ])
+    await words_col.create_index([
+        ("user_id", ASCENDING),
+        ("target_language", ASCENDING),
+        ("native_language", ASCENDING),
+        ("is_archived", ASCENDING),
+        ("next_review_at", ASCENDING),
+    ])
 
     # Backfill legacy documents missing multilingual fields (originally Russian-English)
     try:
