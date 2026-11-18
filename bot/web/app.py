@@ -52,6 +52,10 @@ def create_app() -> FastAPI:
     # Include REST API
     app.include_router(api_router)
 
+    @app.get("/health", tags=["Health"])
+    async def health_check():
+        return {"status": "ok"}
+
     # Static assets
     if STATIC_DIR.exists():
         app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")

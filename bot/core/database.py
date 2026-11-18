@@ -41,13 +41,18 @@ def get_words_collection() -> AsyncCollection:
 async def init_db() -> None:
     """Initialize MongoDB connection and create required indexes."""
     client = get_mongo_client()
-    logger.info("Connecting to MongoDB at %s...", settings.mongodb_url)
+    logger.info("Connecting to MongoDB at %s (database: %s)...", settings.mongodb_url, settings.mongodb_db_name)
     try:
-        await client.admin.command("ping")
+        # Ping target database (compatible with authSource=admin & scoped credentials)
+        await client[settings.mongodb_db_name].command("ping")
         logger.info("Connected to MongoDB successfully.")
-    except Exception as e:
-        logger.error("Failed to ping MongoDB: %s", e)
-        raise
+    except Exception:
+        try:
+            await client.admin.command("ping")
+            logger.info("Connected to MongoDB successfully (via admin ping).")
+        except Exception as e:
+            logger.error("Failed to ping MongoDB: %s", e)
+            raise
 
     users_col = get_users_collection()
     words_col = get_words_collection()

@@ -1,4 +1,4 @@
-from pydantic import Field, field_validator
+from pydantic import AliasChoices, Field, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 DEFAULT_MODELS_POOL: list[str] = [
@@ -26,10 +26,14 @@ class Settings(BaseSettings):
     )
     mongodb_url: str = Field(
         default="mongodb://localhost:27017",
+        validation_alias=AliasChoices("MONGODB_URL", "MONGO_URL", "MONGODB_URI"),
         description="MongoDB connection string (AsyncMongoClient)",
     )
     mongodb_db_name: str = Field(
         default="english_bot",
+        validation_alias=AliasChoices(
+            "MONGODB_DB_NAME", "MONGO_INITDB_DATABASE", "MONGO_DATABASE", "DATABASE_NAME"
+        ),
         description="MongoDB database name",
     )
     default_timezone: str = Field(default="UTC", description="Default user timezone")
@@ -50,6 +54,18 @@ class Settings(BaseSettings):
         env_file_encoding="utf-8",
         extra="ignore",
     )
+
+    @model_validator(mode="after")
+    def resolve_db_name(self) -> "Settings":
+        if self.mongodb_url:
+            try:
+                from pymongo.uri_parser import parse_uri
+                parsed_db = parse_uri(self.mongodb_url).get("database")
+                if parsed_db:
+                    self.mongodb_db_name = parsed_db
+            except Exception:
+                pass
+        return self
 
     @field_validator("gemini_models_pool", mode="after")
     @classmethod

@@ -69,7 +69,7 @@ Production-ready асинхронный Telegram-бот для персонал�
 | LLM & STT | **Google Gemini API** (`google-genai` SDK, модель `gemini-3.7-flash` / пул резервных моделей) |
 | WebApp | **FastAPI** + нативный JavaScript Telegram WebApp |
 | Тестирование | **pytest**, **pytest-asyncio** |
-| Контейнеризация | **Docker**, **Docker Compose** |
+| Контейнеризация | **Docker (автономный Dockerfile для Coolify)** |
 
 ---
 
@@ -108,7 +108,6 @@ Production-ready асинхронный Telegram-бот для персонал�
 │   └── migrate_sqlite_to_mongo.py # Скрипт миграции из SQLite в MongoDB
 ├── tests/                        # Набор unit-тестов
 ├── Dockerfile                    # Продакшн Dockerfile
-├── docker-compose.yml            # Сервисы бота и MongoDB
 ├── requirements.txt              # Зависимости с зафиксированными версиями
 └── pytest.ini                    # Конфигурация тестов
 ```
@@ -144,20 +143,41 @@ python main.py
 
 ---
 
-## 🐳 Запуск через Docker Compose
+## 🐳 Локальный запуск в Docker
 
-Для продакшн-развертывания с автоматическим перезапуском и сохранением базы данных в томе:
+Для проверки сборки Dockerfile локально:
 
 ```bash
-# 1. Убедитесь, что .env заполнен
+# 1. Заполните .env файл
 cp .env.example .env
 
-# 2. Сборка и запуск контейнера в фоне
-docker compose up -d --build
+# 2. Сборка Docker-образа
+docker build -t vocab-bot .
 
-# 3. Просмотр логов
-docker compose logs -f
+# 3. Запуск контейнера (требуется доступ к MongoDB)
+docker run --env-file .env -p 8000:8000 vocab-bot
 ```
+
+---
+
+## 🚀 Деплой в продакшн через Coolify
+
+Проект подготовлен для нативного деплоя в **Coolify** (сборка напрямую из GitHub через `Dockerfile`):
+
+1. **Создайте базу данных MongoDB в Coolify:**
+   - Resource: `Database` -> `MongoDB` (образ `mongo:8.3` или `mongo:7`).
+   - Имя базы: `english_bot`.
+   - Скопируйте сгенерированную строку подключения (Internal URL).
+2. **Создайте приложение (Application):**
+   - Source: подключите ваш GitHub репозиторий.
+   - Build Pack: `Dockerfile`.
+   - Port: `8000`.
+   - Healthcheck Path: `/health`.
+3. **Настройте переменные окружения (Environment Variables):**
+   - Укажите `BOT_TOKEN`, `GEMINI_API_KEY`, `MONGODB_URL` (из шага 1 с `?authSource=admin&directConnection=true`), `MONGODB_DB_NAME=english_bot`, `WEBAPP_URL=https://<your-domain>`, `JWT_SECRET`.
+4. **Домен и SSL:**
+   - В поле Domains укажите ваш домен (например `https://wb.qper.link`), Coolify автоматически настроит Traefik и бесплатный SSL-сертификат Let's Encrypt.
+5. **Нажмите Deploy.**
 
 ---
 

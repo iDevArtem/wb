@@ -101,3 +101,21 @@ async def test_handle_custom_tz_input_valid(mock_user, mock_fsm_context):
         mock_fsm_context.clear.assert_awaited_once()
         msg.answer.assert_awaited_once()
         assert "Europe/Berlin" in msg.answer.call_args[0][0]
+
+
+def test_coolify_mongodb_settings():
+    from bot.core.config import Settings
+
+    # Test auto extraction of db name from connection URL
+    s1 = Settings(mongodb_url="mongodb://root:secret@mongo-coolify:27017/english_bot?authSource=admin&directConnection=true")
+    assert s1.mongodb_db_name == "english_bot"
+    assert s1.mongodb_url == "mongodb://root:secret@mongo-coolify:27017/english_bot?authSource=admin&directConnection=true"
+
+    # Test custom db name in URL overrides default
+    s2 = Settings(mongodb_url="mongodb://root:secret@mongo-coolify:27017/custom_vocab?authSource=admin")
+    assert s2.mongodb_db_name == "custom_vocab"
+
+    # Test fallback to default when no db in URL
+    s3 = Settings(mongodb_url="mongodb://root:secret@mongo-coolify:27017/?authSource=admin")
+    assert s3.mongodb_db_name == "english_bot"
+

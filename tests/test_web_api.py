@@ -58,6 +58,11 @@ async def test_web_routes(monkeypatch):
         resp = await client.get("/")
         assert resp.status_code == 200
 
+        # Healthcheck endpoint
+        health_resp = await client.get("/health")
+        assert health_resp.status_code == 200
+        assert health_resp.json() == {"status": "ok"}
+
         # 2. Test Auth with invalid initData
         bad_auth = await client.post("/api/auth/telegram", json={"init_data": "invalid_data"})
         assert bad_auth.status_code in (400, 401)
