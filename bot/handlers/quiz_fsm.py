@@ -20,6 +20,7 @@ from bot.keyboards.inline import (
     get_quiz_next_keyboard,
     get_quiz_options_keyboard,
     get_quiz_conflict_keyboard,
+    get_quiz_skip_confirm_keyboard,
 )
 from bot.models.base import utc_now
 from bot.models.user import User
@@ -1086,6 +1087,26 @@ async def on_quiz_failure(
             await present_next_word(message, user, state)
 
 
+async def _edit_quiz_reply_markup(message: Any, reply_markup: Any) -> None:
+    """Safely update inline reply markup on the active quiz card."""
+    if not message:
+        return
+    try:
+        await message.edit_reply_markup(reply_markup=reply_markup)
+    except TelegramBadRequest as e:
+        if "message is not modified" not in str(e).lower():
+            logger.warning("Failed to update quiz skip keyboard: %s", e)
+
+
+def _matching_skip_word_id(callback_data: str | None, state_data: dict[str, Any]) -> str | None:
+    """Return active word_id only if it matches the word_id encoded in skip confirmation callback data."""
+    current_word_id = str(state_data.get("current_word_id") or "")
+    expected_word_id = callback_data.split(":", 1)[1] if callback_data and ":" in callback_data else ""
+    if not current_word_id or expected_word_id != current_word_id:
+        return None
+    return current_word_id
+
+
 @router.callback_query(lambda c: c.data == "quiz_skip")
 async def cb_quiz_skip(
     callback: CallbackQuery,
@@ -1094,11 +1115,58 @@ async def cb_quiz_skip(
 ) -> None:
     if not await _is_valid_quiz_callback(callback, user, state):
         return
-    await callback.answer(t(user.native_language, "Слово пропущено"))
     data = await state.get_data()
-    word_id = data.get("current_word_id")
+    word_id = str(data.get("current_word_id") or "")
+    if not word_id:
+        await callback.answer()
+        return
+
+    await state.update_data(last_quiz_action_at=_quiz_now_iso())
+    await _edit_quiz_reply_markup(
+        callback.message,
+        get_quiz_skip_confirm_keyboard(user.native_language, word_id),
+    )
+    await callback.answer()
+
+
+@router.callback_query(lambda c: c.data and c.data.startswith("quiz_skip_cancel:"))
+async def cb_quiz_skip_cancel(
+    callback: CallbackQuery,
+    user: User,
+    state: FSMContext,
+) -> None:
+    if not await _is_valid_quiz_callback(callback, user, state):
+        return
+    data = await state.get_data()
+    if not _matching_skip_word_id(callback.data, data):
+        await callback.answer()
+        return
+
+    await state.update_data(last_quiz_action_at=_quiz_now_iso())
+    await _edit_quiz_reply_markup(
+        callback.message,
+        get_quiz_control_keyboard(user.native_language),
+    )
+    await callback.answer()
+
+
+@router.callback_query(lambda c: c.data and c.data.startswith("quiz_skip_confirm:"))
+async def cb_quiz_skip_confirm(
+    callback: CallbackQuery,
+    user: User,
+    state: FSMContext,
+) -> None:
+    if not await _is_valid_quiz_callback(callback, user, state):
+        return
+    data = await state.get_data()
+    word_id = _matching_skip_word_id(callback.data, data)
+    if not word_id:
+        await callback.answer()
+        return
+
+    await callback.answer(t(user.native_language, "Слово пропущено"))
     words_col = get_words_collection()
-    query = _word_query_by_id(str(word_id), user)
+    query = _word_query_by_id(word_id, user)
     doc = await words_col.find_one(query)
     word = Word.model_validate(doc) if doc else None
     await on_quiz_failure(callback.message, user, word, state)

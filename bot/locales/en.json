@@ -255,5 +255,7 @@
   "Осталась последняя попытка. Напиши слово на изучаемом языке:": "Last attempt left. Write the word in the target language:",
   "✏️ Ввести вручную (код IANA)": "✏️ Enter manually (IANA code)",
   "🌐 Открыть веб-словарь (Mini App)": "🌐 Open Web Dictionary (Mini App)",
-  "🧠 Повторить слова (/quiz)": "🧠 Review words (/quiz)"
+  "🧠 Повторить слова (/quiz)": "🧠 Review words (/quiz)",
+  "↩️ Назад": "↩️ Back",
+  "✅ Подтвердить": "✅ Confirm"
 }

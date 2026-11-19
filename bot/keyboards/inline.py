@@ -73,6 +73,25 @@ def get_quiz_control_keyboard(lang: str = "ru") -> InlineKeyboardMarkup:
     return builder.as_markup()
 
 
+def get_quiz_skip_confirm_keyboard(lang: str = "ru", word_id: int | str = "") -> InlineKeyboardMarkup:
+    """
+    Confirmation buttons shown after tapping Skip during a quiz.
+    Back is placed on the left (where Skip was) to prevent accidental double-tap skips.
+    """
+    builder = InlineKeyboardBuilder()
+    builder.row(
+        InlineKeyboardButton(
+            text=t(lang, "↩️ Назад"),
+            callback_data=f"quiz_skip_cancel:{word_id}",
+        ),
+        InlineKeyboardButton(
+            text=t(lang, "✅ Подтвердить"),
+            callback_data=f"quiz_skip_confirm:{word_id}",
+        ),
+    )
+    return builder.as_markup()
+
+
 def get_quiz_next_keyboard(lang: str = "ru") -> InlineKeyboardMarkup:
     """
     Buttons shown after word quiz resolution (success or 3 attempts exhausted).
