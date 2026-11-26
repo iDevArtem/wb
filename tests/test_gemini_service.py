@@ -8,6 +8,7 @@ from bot.services.gemini_service import (
     GeminiServiceError,
     GeminiQuotaExhaustedError,
     WordAnalysis,
+    get_word_analysis_prompt,
     is_rate_limit_error,
     is_model_unavailable_error,
     is_transient_server_error,
@@ -299,4 +300,126 @@ async def test_gemini_tts_synthesis():
 
     audio = await service.synthesize_speech_audio("flabbergasted", voice_name="Kore")
     assert audio == b"fake_pcm_audio_stream"
+
+
+def test_word_analysis_prompt_requires_full_translation_without_word_cap():
+    prompt = get_word_analysis_prompt(native_lang="ru", target_lang="en").lower()
+
+    assert "max 1-3 words" not in prompt
+    assert "entire" in prompt
+    assert "omit" in prompt or "truncate" in prompt
+
+    translation_desc = (WordAnalysis.model_fields["translation"].description or "").lower()
+    assert "entire" in translation_desc or "complete" in translation_desc
+
+
+def test_word_analysis_prompt_preserves_original_text_spelling_only():
+    prompt = get_word_analysis_prompt(native_lang="ru", target_lang="en").lower()
+
+    assert "contraction" in prompt
+    assert "punctuation" in prompt
+    assert "grammar" in prompt
+    assert "word order" in prompt
+    assert "spelling" in prompt
+    assert "multi-word" in prompt or "sentences" in prompt
+
+    canonical_desc = (WordAnalysis.model_fields["canonical_word"].description or "").lower()
+    assert "spelling" in canonical_desc
+    assert "exact" in canonical_desc or "verbatim" in canonical_desc
+
+
+@pytest.mark.asyncio
+async def test_analyze_voice_does_not_instruct_normalization():
+    mock_client = MagicMock()
+    mock_models = MagicMock()
+    mock_client.aio.models = mock_models
+
+    valid_json = (
+        '{"canonical_word": "I\'m not doing it!", "lemma": "I\'m not doing it!", "pos": "sentence", '
+        '"transcription": "/aɪm nɑːt ˈduːɪŋ ɪt/", "translation": "Я не буду этого делать!", '
+        '"corrected_from": null, "level": "A2", "definition": "Refusal to do something.", '
+        '"grammar_notes": [], "examples": [{"target": "a", "native": "b"}]}'
+    )
+    resp = MagicMock()
+    resp.text = valid_json
+    mock_models.generate_content = AsyncMock(return_value=resp)
+
+    service = GeminiService(api_key="test_key", models_pool=["gemini-3.7-flash"])
+    service._clients = [mock_client]
+
+    await service.analyze_voice(b"fake-ogg-bytes", native_lang="ru", target_lang="en")
+
+    call_kwargs = mock_models.generate_content.call_args.kwargs
+    instruction_text = call_kwargs["contents"][1].lower()
+    assert "normalize" not in instruction_text
+
+
+@pytest.mark.asyncio
+async def test_analyze_text_clears_noop_corrected_from():
+    mock_client = MagicMock()
+    mock_models = MagicMock()
+    mock_client.aio.models = mock_models
+
+    valid_json = (
+        '{"canonical_word": "I\'m not doing it!", "lemma": "I\'m not doing it!", "pos": "sentence", '
+        '"transcription": "/aɪm nɑːt ˈduːɪŋ ɪt/", "translation": "Я не буду этого делать!", '
+        '"corrected_from": "  I\'m not doing it!  ", "level": "A2", "definition": "Refusal.", '
+        '"grammar_notes": [], "examples": [{"target": "a", "native": "b"}]}'
+    )
+    resp = MagicMock()
+    resp.text = valid_json
+    mock_models.generate_content = AsyncMock(return_value=resp)
+
+    service = GeminiService(api_key="test_key", models_pool=["gemini-3.7-flash"])
+    service._clients = [mock_client]
+
+    result = await service.analyze_text("I'm not doing it!")
+    assert result.corrected_from is None
+
+
+@pytest.mark.asyncio
+async def test_analyze_voice_clears_noop_corrected_from():
+    mock_client = MagicMock()
+    mock_models = MagicMock()
+    mock_client.aio.models = mock_models
+
+    valid_json = (
+        '{"canonical_word": "I\'m not doing it!", "lemma": "I\'m not doing it!", "pos": "sentence", '
+        '"transcription": "/aɪm nɑːt ˈduːɪŋ ɪt/", "translation": "Я не буду этого делать!", '
+        '"corrected_from": "I\'m not doing it!", "level": "A2", "definition": "Refusal.", '
+        '"grammar_notes": [], "examples": [{"target": "a", "native": "b"}]}'
+    )
+    resp = MagicMock()
+    resp.text = valid_json
+    mock_models.generate_content = AsyncMock(return_value=resp)
+
+    service = GeminiService(api_key="test_key", models_pool=["gemini-3.7-flash"])
+    service._clients = [mock_client]
+
+    result = await service.analyze_voice(b"fake-ogg-bytes")
+    assert result.corrected_from is None
+
+
+@pytest.mark.asyncio
+async def test_analyze_text_preserves_real_spelling_corrected_from():
+    mock_client = MagicMock()
+    mock_models = MagicMock()
+    mock_client.aio.models = mock_models
+
+    valid_json = (
+        '{"canonical_word": "I\'m not doing it!", "lemma": "I\'m not doing it!", "pos": "sentence", '
+        '"transcription": "/aɪm nɑːt ˈduːɪŋ ɪt/", "translation": "Я не буду этого делать!", '
+        '"corrected_from": "I\'m not doign it!", "level": "A2", "definition": "Refusal.", '
+        '"grammar_notes": [], "examples": [{"target": "a", "native": "b"}]}'
+    )
+    resp = MagicMock()
+    resp.text = valid_json
+    mock_models.generate_content = AsyncMock(return_value=resp)
+
+    service = GeminiService(api_key="test_key", models_pool=["gemini-3.7-flash"])
+    service._clients = [mock_client]
+
+    result = await service.analyze_text("I'm not doign it!")
+    assert result.corrected_from == "I'm not doign it!"
+
 

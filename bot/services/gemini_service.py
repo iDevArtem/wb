@@ -39,15 +39,15 @@ class WordFormItem(BaseModel):
 class WordAnalysis(BaseModel):
     canonical_word: str = Field(
         ...,
-        description="Canonical target language word or phrase (e.g., 'necessary', 'go', or the specific entered form like 'demonstrated')",
+        description="Exact target language word, phrase, or sentence as entered by the user with ONLY spelling typos fixed (never rephrase, expand contractions, or alter grammar/punctuation); or a complete, natural target-language translation if the input was in the native language.",
     )
     lemma: str = Field(
         ...,
-        description="Dictionary base lemma (infinitive without 'to', singular noun, etc.)",
+        description="Dictionary base lemma for a single inflected word (infinitive without 'to', singular noun, etc.). For multi-word phrases or sentences, set equal to canonical_word.",
     )
     pos: str = Field(
         ...,
-        description="Part of speech (noun, verb, adjective, adverb, idiom, phrasal verb)",
+        description="Part of speech or expression type (noun, verb, adjective, adverb, idiom, phrasal verb, phrase, sentence)",
     )
     transcription: str = Field(
         ...,
@@ -63,11 +63,11 @@ class WordAnalysis(BaseModel):
     )
     translation: str = Field(
         ...,
-        description="Accurate, natural translation into the native language",
+        description="Complete, accurate, natural translation of the ENTIRE input into the native language without omitting or truncating any words, clauses, or sentences.",
     )
     corrected_from: str | None = Field(
         default=None,
-        description="Original typo string if spelling was corrected, else null",
+        description="Original user text ONLY if a genuine spelling typo was corrected in canonical_word, else null",
     )
     level: str | None = Field(
         default=None,
@@ -128,23 +128,38 @@ You are an expert bilingual lexicographer, {target_lang} tutor, and linguistics 
 Your task is to analyze user input (text or audio) and output a clean, accurate structured JSON.
 
 Rules:
-1. If the input is in {native_lang} or a related language, translate it into the most natural, commonly used canonical {target_lang} word or set expression.
-2. If the input is in {target_lang} with typos (e.g. "necesary", "definately"), fix the spelling in `canonical_word`, and put the original typo in `corrected_from`. If no typo, `corrected_from` must be null.
-3. If the input is an inflected form (e.g. past tense or plural form):
-   - Set `canonical_word` to the exact inflected form the user entered (or its corrected spelling), and set `translation` to match this exact form in {native_lang}.
-   - Set `lemma` to its base dictionary headword (e.g. infinitive without particle, singular noun).
+1. If the input is in {native_lang} or another non-{target_lang} language, translate the ENTIRE input completely and naturally into {target_lang} in `canonical_word` (do not omit any words, clauses, or sentences). Set `corrected_from` to null.
+2. If the input is already in {target_lang}:
+   - Preserve the user's original wording verbatim in `canonical_word`.
+   - Fix ONLY clear spelling typos (e.g. "necesary" -> "necessary", "definately" -> "definitely", "doign" -> "doing").
+   - NEVER rephrase, substitute synonyms, expand or collapse contractions (keep "I'm", "don't", "won't", etc. as written), change verb tense/form, alter word order, "correct" grammar/style, or change punctuation.
+   - Put the original input in `corrected_from` ONLY if a spelling typo was actually fixed; otherwise `corrected_from` MUST be null.
+3. Inflected words vs. multi-word phrases and sentences:
+   - If the input is a single inflected word (e.g. past tense or plural form): keep the exact inflected form in `canonical_word` (only fixing spelling typos), match that exact form in `translation`, and put its base dictionary headword (e.g. infinitive without particle, singular noun) in `lemma`.
+   - If the input is a multi-word phrase or one or more sentences: keep the exact text in `canonical_word` (only fixing spelling typos) and set `lemma` equal to `canonical_word` (do not reduce a sentence to a single word).
 4. Phonetics: Provide strict IPA with stress marks if applicable for {target_lang}.
-5. Provide a short, precise {native_lang} translation in `translation` (max 1-3 words). Also provide the translated part of speech in `pos_native` (translated into {native_lang}). Do not add any explanations in these fields.
-6. `level`: Determine the CEFR level (A1, A2, B1, B2, C1, C2) of the word.
+5. Translation & part of speech:
+   - Provide a complete, accurate, natural {native_lang} translation of the ENTIRE input in `translation`.
+   - For a single word or short idiom, keep `translation` concise (without extra commentary).
+   - For phrases, clauses, or multiple sentences, translate EVERY part and EVERY sentence completely — NEVER truncate, summarize, or omit any part of the input.
+   - Also provide the translated part of speech or expression type (e.g. phrase/sentence) in `pos_native` (translated into {native_lang}). Do not add any explanations in these fields.
+6. `level`: Determine the CEFR level (A1, A2, B1, B2, C1, C2) of the word or expression.
 7. `definition`: Provide one short, simple explanation of the meaning in {target_lang}. Provide its translation in `definition_native`.
 8. `grammar_notes`: Provide a minimal list of crucial grammar facts relevant to {target_lang}. Example: countability for English nouns ([C] or [U]), gender/article for German/Romance nouns, or transitivity for verbs. Provide translations of these notes in `grammar_notes_native`.
 9. `forms`: Provide 2-4 key grammatical forms of this word with clear labels and native translations.
    - For verbs in {target_lang}: provide key forms/tenses (e.g. Present/Base, Past Simple, Future or V1/V2/V3) with translation of each form into {native_lang}.
    - For nouns: provide Singular and Plural forms (with articles if relevant for {target_lang}).
    - For adjectives: provide Positive/Base, Comparative, Superlative degrees.
-   - For adverbs, prepositions, particles or invariant words: leave `forms` as an empty list [].
-10. `examples`: Provide 5 diverse example sentences using the word, and their translations into the native language.
+   - For adverbs, prepositions, particles, invariant words, or full sentences: leave `forms` as an empty list [].
+10. `examples`: Provide 5 diverse example sentences using the word or expression, and their translations into {native_lang}.
 """
+
+
+def _sanitize_word_analysis(analysis: WordAnalysis) -> WordAnalysis:
+    if analysis.corrected_from is not None:
+        if analysis.corrected_from.strip() == analysis.canonical_word.strip():
+            analysis.corrected_from = None
+    return analysis
 
 def get_voice_quiz_prompt(native_lang: str, target_lang: str) -> str:
     return f"""
@@ -324,7 +339,10 @@ class GeminiService:
         Analyze a text input (native translation, target language with typos,
         or inflected word forms) and return a structured WordAnalysis.
         """
-        prompt = f"Analyze the following word or phrase: \"{text.strip()}\""
+        prompt = (
+            f"Analyze the following user input verbatim (keep exact wording and contractions, "
+            f"fix only spelling typos, and translate the entire input completely): \"{text.strip()}\""
+        )
         config = types.GenerateContentConfig(
             response_mime_type="application/json",
             response_schema=WordAnalysis,
@@ -338,7 +356,7 @@ class GeminiService:
         if not response.text:
             raise GeminiServiceError("Gemini API returned an empty response")
 
-        return WordAnalysis.model_validate_json(response.text)
+        return _sanitize_word_analysis(WordAnalysis.model_validate_json(response.text))
 
     async def analyze_voice(self, audio_bytes: bytes, native_lang: str = "ru", target_lang: str = "en", mime_type: str = "audio/ogg") -> WordAnalysis:
         """
@@ -347,9 +365,9 @@ class GeminiService:
         """
         audio_part = types.Part.from_bytes(data=audio_bytes, mime_type=mime_type)
         instruction = (
-            f"Listen to this audio recording. The speaker is saying a word or phrase in {target_lang} or "
-            f"{native_lang}. Recognize the word accurately, normalize it according to the "
-            "system instructions, and return the structured WordAnalysis."
+            f"Listen to this audio recording. The speaker is saying a word, phrase, or sentence in {target_lang} or "
+            f"{native_lang}. Transcribe what the speaker said faithfully word-for-word (keeping contractions and phrasing), "
+            "follow the system instructions, and return the structured WordAnalysis."
         )
         config = types.GenerateContentConfig(
             response_mime_type="application/json",
@@ -367,7 +385,7 @@ class GeminiService:
         if not response.text:
             raise GeminiServiceError("Gemini API returned an empty response for voice message")
 
-        return WordAnalysis.model_validate_json(response.text)
+        return _sanitize_word_analysis(WordAnalysis.model_validate_json(response.text))
 
     async def evaluate_quiz_voice(
         self,
