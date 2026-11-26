@@ -9,7 +9,12 @@ from bot.core.config import settings
 from bot.core.database import get_database, get_users_collection, get_words_collection
 from bot.models.user import User
 from bot.models.word import Word
-from bot.web.auth import create_access_token, get_current_user, validate_telegram_init_data
+from bot.web.auth import (
+    create_access_token,
+    get_current_user,
+    validate_telegram_init_data,
+    verify_webapp_launch_token,
+)
 
 logger = logging.getLogger("bot.web.routes")
 
@@ -18,6 +23,10 @@ router = APIRouter(prefix="/api", tags=["API"])
 
 class TelegramAuthRequest(BaseModel):
     init_data: str = Field(..., description="Raw Telegram.WebApp.initData string")
+
+
+class LaunchTokenAuthRequest(BaseModel):
+    token: str = Field(..., description="HMAC-signed WebApp launch token from ReplyKeyboard button")
 
 
 class AuthResponse(BaseModel):
@@ -91,6 +100,38 @@ async def auth_telegram(req: TelegramAuthRequest) -> AuthResponse:
         existing_user.update(update_fields)
         user_obj = User(**existing_user)
 
+    token = create_access_token(tg_id=tg_id, username=user_obj.username)
+    return AuthResponse(
+        token=token,
+        user={
+            "id": user_obj.id,
+            "tg_id": user_obj.tg_id,
+            "username": user_obj.username,
+            "first_name": user_obj.first_name,
+            "streak": user_obj.streak,
+            "timezone": user_obj.timezone,
+            "native_language": user_obj.native_language,
+            "target_language": user_obj.target_language,
+        },
+    )
+
+
+@router.post("/auth/launch", response_model=AuthResponse)
+async def auth_launch(req: LaunchTokenAuthRequest) -> AuthResponse:
+    """
+    Authenticates user via HMAC-signed launch token embedded in the persistent
+    ReplyKeyboardMarkup WebApp button (where Telegram omits initData).
+    """
+    tg_id = verify_webapp_launch_token(req.token)
+    db = get_database()
+    user_doc = await db.users.find_one({"tg_id": tg_id})
+    if not user_doc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found in database",
+        )
+
+    user_obj = User(**user_doc)
     token = create_access_token(tg_id=tg_id, username=user_obj.username)
     return AuthResponse(
         token=token,

@@ -18,17 +18,21 @@ STATIC_DIR = Path(__file__).parent / "static"
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Initialize DB connection when running uvicorn independently
+    # Initialize DB only when running uvicorn independently; when embedded in main.py
+    # the DB is already initialized and owned (and closed) by the bot process.
+    owns_db = False
     try:
-        await init_db()
-        logger.info("MongoDB initialized for WebApp.")
+        owns_db = await init_db()
+        if owns_db:
+            logger.info("MongoDB initialized for WebApp.")
     except Exception as exc:
         logger.warning("DB init in lifespan warning: %s", exc)
     yield
-    try:
-        await close_db()
-    except Exception:
-        pass
+    if owns_db:
+        try:
+            await close_db()
+        except Exception:
+            pass
 
 
 def create_app() -> FastAPI:

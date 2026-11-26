@@ -4,6 +4,14 @@ const tg = window.Telegram?.WebApp;
 
 const urlParams = new URLSearchParams(window.location.search);
 const initialFilter = urlParams.get('filter') || "all";
+const launchToken = urlParams.get('k') || "";
+if (launchToken && window.history && window.history.replaceState) {
+  const cleanParams = new URLSearchParams(window.location.search);
+  cleanParams.delete("k");
+  const cleanSearch = cleanParams.toString();
+  const cleanUrl = `${window.location.pathname}${cleanSearch ? `?${cleanSearch}` : ""}${window.location.hash}`;
+  window.history.replaceState({}, document.title, cleanUrl);
+}
 
 const state = {
   token: localStorage.getItem("english_bot_token") || "",
@@ -57,7 +65,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 async function authenticateAndLoad() {
   setLoading(true);
 
-  // 1. Try Telegram WebApp initData
+  // 1. Try Telegram WebApp initData (Inline button / MenuButtonWebApp)
   if (tg && tg.initData && tg.initData.length > 0) {
     try {
       const resp = await fetch("/api/auth/telegram", {
@@ -76,6 +84,26 @@ async function authenticateAndLoad() {
       }
     } catch (err) {
       console.error("Auth network error", err);
+    }
+  } else if (launchToken) {
+    // 1b. Signed launch token from ReplyKeyboardMarkup 📖 button (Telegram omits initData)
+    try {
+      const resp = await fetch("/api/auth/launch", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ token: launchToken }),
+      });
+
+      if (resp.ok) {
+        const data = await resp.json();
+        state.token = data.token;
+        state.user = data.user;
+        localStorage.setItem("english_bot_token", data.token);
+      } else {
+        console.error("Launch token auth failed", await resp.text());
+      }
+    } catch (err) {
+      console.error("Launch token network error", err);
     }
   }
 
@@ -393,7 +421,7 @@ function openFullWordModal(word) {
   if (!el.fullWordModal || !el.fullWordBody) return;
   
   const rep = word.repetition || 0;
-  const ef = (word.easiness_factor || 2.5).toFixed(2);
+  const ef = (word.ease_factor ?? word.easiness_factor ?? 2.5).toFixed(2);
   const interval = word.interval || 1;
   const created = new Date(word.created_at).toLocaleDateString('ru-RU');
 

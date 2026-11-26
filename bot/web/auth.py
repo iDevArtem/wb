@@ -28,6 +28,59 @@ def _base64url_decode(data: str) -> bytes:
     return base64.urlsafe_b64decode(data + padding)
 
 
+def _webapp_launch_key() -> bytes:
+    return f"{settings.jwt_secret}:webapp_launch".encode("utf-8")
+
+
+def create_webapp_launch_token(tg_id: int) -> str:
+    """
+    Creates an HMAC-SHA256 signed launch token (`<tg_id>.<sig>`) for Telegram
+    ReplyKeyboardMarkup WebApp buttons, where Telegram does not pass initData.
+    """
+    payload = str(tg_id)
+    sig = hmac.new(_webapp_launch_key(), payload.encode("utf-8"), hashlib.sha256).digest()
+    return f"{payload}.{_base64url_encode(sig)}"
+
+
+def verify_webapp_launch_token(token: str) -> int:
+    """Verifies a signed WebApp launch token and returns tg_id."""
+    if not token or "." not in token:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid launch token format",
+        )
+    parts = token.split(".", 1)
+    tg_id_str, received_sig_b64 = parts
+    try:
+        tg_id = int(tg_id_str)
+    except ValueError:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid launch token subject",
+        )
+
+    expected_sig = hmac.new(
+        _webapp_launch_key(),
+        tg_id_str.encode("utf-8"),
+        hashlib.sha256,
+    ).digest()
+    try:
+        received_sig = _base64url_decode(received_sig_b64)
+    except Exception:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid launch token signature encoding",
+        )
+
+    if not hmac.compare_digest(expected_sig, received_sig):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid launch token signature",
+        )
+
+    return tg_id
+
+
 def validate_telegram_init_data(init_data_raw: str) -> dict:
     """
     Validates Telegram WebApp initData query string using HMAC-SHA256.

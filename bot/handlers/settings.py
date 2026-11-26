@@ -251,7 +251,7 @@ async def cb_save_native(callback: CallbackQuery, user: User) -> None:
     if callback.message:
         await callback.message.answer(
             f"✅ {t(user.native_language, 'Язык интерфейса обновлен!')}",
-            reply_markup=get_main_menu_keyboard(user.native_language)
+            reply_markup=get_main_menu_keyboard(user.native_language, user.tg_id)
         )
         await cb_open_settings(callback, user)
 
@@ -288,7 +288,7 @@ async def handle_custom_native_input(message: Message, user: User, state: FSMCon
     # Send a message to refresh the reply keyboard
     await message.answer(
         f"✅ {t(user.native_language, 'Язык интерфейса обновлен!')}",
-        reply_markup=get_main_menu_keyboard(user.native_language)
+        reply_markup=get_main_menu_keyboard(user.native_language, user.tg_id)
     )
     # And then show settings menu inline
     await message.answer(

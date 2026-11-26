@@ -1,4 +1,6 @@
+import asyncio
 import logging
+import re
 from pymongo import ASCENDING, AsyncMongoClient
 from pymongo.asynchronous.collection import AsyncCollection
 from pymongo.asynchronous.database import AsyncDatabase
@@ -8,6 +10,15 @@ from bot.core.config import settings
 logger = logging.getLogger(__name__)
 
 _mongo_client: AsyncMongoClient | None = None
+_initialized_client: AsyncMongoClient | None = None
+_init_lock: asyncio.Lock | None = None
+
+_CREDENTIALS_RE = re.compile(r"^(?P<scheme>[a-z+]+://)(?P<user>[^:@/]+):[^@/]*@", re.IGNORECASE)
+
+
+def mask_mongodb_url(url: str) -> str:
+    """Hide the password part of a MongoDB connection string for safe logging."""
+    return _CREDENTIALS_RE.sub(r"\g<scheme>\g<user>:***@", url or "")
 
 
 def get_mongo_client() -> AsyncMongoClient:
@@ -38,10 +49,31 @@ def get_words_collection() -> AsyncCollection:
     return get_db()["words"]
 
 
-async def init_db() -> None:
-    """Initialize MongoDB connection and create required indexes."""
-    client = get_mongo_client()
-    logger.info("Connecting to MongoDB at %s (database: %s)...", settings.mongodb_url, settings.mongodb_db_name)
+async def init_db() -> bool:
+    """Initialize MongoDB connection and create required indexes.
+
+    Idempotent: returns True if this call performed initialization,
+    False if the current client was already initialized.
+    """
+    global _init_lock, _initialized_client
+    if _init_lock is None:
+        _init_lock = asyncio.Lock()
+    async with _init_lock:
+        client = get_mongo_client()
+        if _initialized_client is client:
+            logger.debug("MongoDB already initialized, skipping.")
+            return False
+        await _init_db(client)
+        _initialized_client = client
+        return True
+
+
+async def _init_db(client: AsyncMongoClient) -> None:
+    logger.info(
+        "Connecting to MongoDB at %s (database: %s)...",
+        mask_mongodb_url(settings.mongodb_url),
+        settings.mongodb_db_name,
+    )
     try:
         # Ping target database (compatible with authSource=admin & scoped credentials)
         await client[settings.mongodb_db_name].command("ping")
@@ -104,7 +136,8 @@ async def init_db() -> None:
 
 async def close_db() -> None:
     """Close MongoDB connection."""
-    global _mongo_client
+    global _mongo_client, _initialized_client
+    _initialized_client = None
     if _mongo_client is not None:
         logger.info("Closing MongoDB connection...")
         await _mongo_client.close()

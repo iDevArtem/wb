@@ -16,6 +16,7 @@ from bot.core.database import get_words_collection
 from bot.keyboards.reply import get_main_menu_keyboard
 from bot.keyboards.inline import (
     get_archive_item_keyboard,
+    get_start_keyboard,
     get_words_pagination_keyboard,
     get_setup_language_keyboard,
 )
@@ -96,7 +97,7 @@ async def finalize_setup(message_obj: Message, user: User, target_code: str, sta
     await message_obj.answer(
         text, 
         parse_mode="HTML", 
-        reply_markup=get_main_menu_keyboard(user.native_language)
+        reply_markup=get_main_menu_keyboard(user.native_language, user.tg_id)
     )
 
 
@@ -120,7 +121,21 @@ async def cmd_help(message: Message, user: User) -> None:
         t(user.native_language, "— Напоминания приходят только в удобное для тебя время (по умолчанию с 10:00 до 21:00).") + "\n" +
         t(user.native_language, "— Настрой свой часовой пояс в /settings.")
     )
-    await message.answer(text, parse_mode="HTML", reply_markup=get_main_menu_keyboard(user.native_language))
+    await message.answer(text, parse_mode="HTML", reply_markup=get_main_menu_keyboard(user.native_language, user.tg_id))
+
+
+@router.message(Command("words"))
+async def cmd_words(message: Message, user: User) -> None:
+    await message.answer(
+        "📖 <b>" + t(user.native_language, "📖 Мой словарь") + "</b>",
+        parse_mode="HTML",
+        reply_markup=get_main_menu_keyboard(user.native_language, user.tg_id),
+    )
+    if settings.webapp_url:
+        await message.answer(
+            t(user.native_language, "📖 Открыть мой веб-словарь"),
+            reply_markup=get_start_keyboard(user.native_language),
+        )
 
 
 @router.message(TranslatedText("📊 Статистика"))
@@ -163,7 +178,11 @@ async def cmd_stats(message: Message, user: User) -> None:
         f"🌙 <b>{t(user.native_language, 'Тихие часы:')}</b>\xa0{user.quiet_hours_start}:00 — {user.quiet_hours_end}:00\n\n" +
         (t(user.native_language, "💡 <i>Есть слова для повторения! Напиши /quiz, чтобы освежить память.</i>") if due_words > 0 else t(user.native_language, "🎉 <i>Все слова на сегодня повторены! Отличная работа!</i>"))
     )
-    await message.answer(text, parse_mode="HTML")
+    await message.answer(
+        text,
+        parse_mode="HTML",
+        reply_markup=get_main_menu_keyboard(user.native_language, user.tg_id),
+    )
 
 
 

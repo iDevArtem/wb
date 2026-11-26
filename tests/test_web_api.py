@@ -85,3 +85,93 @@ async def test_web_tts_route(monkeypatch):
         assert resp.status_code == 200
         assert resp.content == b"dummy_mp3_bytes"
         assert captured_lang == ["de"]
+
+
+def test_webapp_launch_token_roundtrip_and_tamper_rejection():
+    from fastapi import HTTPException
+    from bot.web.auth import create_webapp_launch_token, verify_webapp_launch_token
+
+    settings.jwt_secret = "test_secret_key"
+    token = create_webapp_launch_token(tg_id=424242)
+    assert isinstance(token, str)
+    assert verify_webapp_launch_token(token) == 424242
+
+    # Tampered tg_id must be rejected
+    _, sig = token.split(".", 1)
+    with pytest.raises(HTTPException) as exc_info:
+        verify_webapp_launch_token(f"999999.{sig}")
+    assert exc_info.value.status_code == 401
+
+    # Tampered signature must be rejected
+    with pytest.raises(HTTPException) as exc_info:
+        verify_webapp_launch_token(f"424242.{sig[:-1]}A")
+    assert exc_info.value.status_code == 401
+
+    # Malformed token must be rejected
+    with pytest.raises(HTTPException) as exc_info:
+        verify_webapp_launch_token("not-a-valid-token")
+    assert exc_info.value.status_code == 401
+
+
+@pytest.mark.asyncio
+async def test_auth_launch_endpoint(monkeypatch):
+    from unittest.mock import AsyncMock, MagicMock
+    from bot.web.auth import create_webapp_launch_token, verify_access_token
+    import bot.web.routes as routes_module
+
+    settings.jwt_secret = "test_secret_key"
+
+    fake_user_doc = {
+        "tg_id": 777001,
+        "username": "alice",
+        "first_name": "Alice",
+        "streak": 5,
+        "timezone": "UTC",
+        "native_language": "ru",
+        "target_language": "en",
+    }
+
+    fake_db = MagicMock()
+    fake_db.users = MagicMock()
+    fake_db.users.find_one = AsyncMock(side_effect=lambda q: fake_user_doc if q.get("tg_id") == 777001 else None)
+    monkeypatch.setattr(routes_module, "get_database", lambda: fake_db)
+
+    valid_token = create_webapp_launch_token(tg_id=777001)
+    unknown_user_token = create_webapp_launch_token(tg_id=888999)
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        # Valid token for existing user returns JWT + user profile
+        resp = await client.post("/api/auth/launch", json={"token": valid_token})
+        assert resp.status_code == 200
+        body = resp.json()
+        assert verify_access_token(body["token"]) == 777001
+        assert body["user"]["tg_id"] == 777001
+        assert body["user"]["first_name"] == "Alice"
+
+        # Invalid token returns 401
+        bad_resp = await client.post("/api/auth/launch", json={"token": "777001.bad_sig"})
+        assert bad_resp.status_code == 401
+
+        # Valid token for non-existent user returns 404
+        missing_resp = await client.post("/api/auth/launch", json={"token": unknown_user_token})
+        assert missing_resp.status_code == 404
+
+
+def test_main_menu_keyboard_includes_signed_launch_token():
+    from urllib.parse import parse_qs, urlparse
+    from bot.keyboards.reply import get_main_menu_keyboard
+    from bot.web.auth import verify_webapp_launch_token
+
+    settings.jwt_secret = "test_secret_key"
+    settings.webapp_url = "https://wb.qper.link"
+
+    kb = get_main_menu_keyboard("ru", tg_id=555123)
+    buttons = [btn for row in kb.keyboard for btn in row]
+    book_btn = next(btn for btn in buttons if btn.text == "📖")
+    assert book_btn.web_app is not None
+
+    parsed = urlparse(book_btn.web_app.url)
+    qs = parse_qs(parsed.query)
+    assert qs.get("filter") == ["all"]
+    assert "k" in qs and len(qs["k"]) == 1
+    assert verify_webapp_launch_token(qs["k"][0]) == 555123

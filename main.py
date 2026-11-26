@@ -16,6 +16,7 @@ import uvicorn
 
 from bot.core.config import settings
 from bot.core.database import close_db, init_db
+from bot.core.telegram_session import ResilientAiohttpSession
 from bot.handlers.common import router as common_router
 from bot.handlers.quiz_fsm import router as quiz_router
 from bot.handlers.settings import router as settings_router
@@ -45,6 +46,7 @@ async def configure_bot_commands(bot: Bot, request_timeout: int = 15) -> bool:
     try:
         bot_commands = [
             BotCommand(command="start", description="🚀"),
+            BotCommand(command="words", description="📖"),
             BotCommand(command="settings", description="⚙️"),
             BotCommand(command="help", description="❓"),
         ]
@@ -134,6 +136,9 @@ async def main() -> None:
     bot = Bot(
         token=settings.bot_token,
         default=DefaultBotProperties(parse_mode=ParseMode.HTML),
+        session=ResilientAiohttpSession(
+            force_ipv4=getattr(settings, "telegram_force_ipv4", True),
+        ),
     )
     dp = Dispatcher()
 

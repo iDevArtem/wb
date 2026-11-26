@@ -41,6 +41,7 @@ class Settings(BaseSettings):
     tts_voice: str = Field(default="en-US-AriaNeural", description="edge-tts voice identifier")
     gemini_tts_voice: str = Field(default="Kore", description="Gemini TTS voice preset: Kore, Puck, Fenrir, Aoede, Charon, Enceladus")
     gemini_tts_model: str = Field(default="gemini-2.5-flash-preview-tts", description="Gemini TTS model name")
+    telegram_force_ipv4: bool = Field(default=True, description="Force IPv4 for Telegram Bot API connections")
     log_level: str = Field(default="INFO", description="Logging level")
     webapp_url: str = Field(default="https://wb.qper.link", description="Base URL of the WebApp / Dashboard")
     web_host: str = Field(default="0.0.0.0", description="Web server host")

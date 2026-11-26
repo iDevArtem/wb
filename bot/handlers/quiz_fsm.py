@@ -15,6 +15,7 @@ from aiogram.exceptions import TelegramBadRequest
 from bson import ObjectId
 
 from bot.core.database import get_words_collection, get_users_collection
+from bot.core.telegram_session import call_with_retry
 from bot.keyboards.inline import (
     get_quiz_control_keyboard,
     get_quiz_next_keyboard,
@@ -124,14 +125,34 @@ async def clean_temp_messages(bot: Bot, chat_id: int, state: FSMContext):
             pass
     await state.update_data(temp_msg_ids=[])
 
+MEDIA_RETRY_DELAY = 0.5
+
+
+async def _is_still_current(state: FSMContext, word_id: str, attempts_left: int | None = None) -> bool:
+    """True if the quiz is still on the same word (and attempt), so a delayed fallback won't overwrite a newer card."""
+    data = await state.get_data()
+    if str(data.get("current_word_id") or "") != str(word_id):
+        return False
+    if attempts_left is not None and data.get("attempts_left") != attempts_left:
+        return False
+    return True
+
+
 async def update_main_quiz_message(bot: Bot, chat_id: int, state: FSMContext, text: str | None = None, reply_markup=None, rich_message=None):
     data = await state.get_data()
     quiz_msg_id = data.get("quiz_msg_id")
-    
+    has_media = bool(rich_message is not None and getattr(rich_message, "media", None))
+
+    async def _call(func, *args, **kwargs):
+        # Media uploads get a short timeout + one retry on a fresh connection
+        if has_media:
+            return await call_with_retry(func, *args, delay=MEDIA_RETRY_DELAY, **kwargs)
+        return await func(*args, **kwargs)
+
     if quiz_msg_id:
         try:
             if rich_message:
-                await bot.edit_message_text(text=None, chat_id=chat_id, message_id=quiz_msg_id, reply_markup=reply_markup, rich_message=rich_message)
+                await _call(bot.edit_message_text, text=None, chat_id=chat_id, message_id=quiz_msg_id, reply_markup=reply_markup, rich_message=rich_message)
             else:
                 await bot.edit_message_text(text, chat_id=chat_id, message_id=quiz_msg_id, reply_markup=reply_markup, parse_mode="HTML")
             return
@@ -139,11 +160,11 @@ async def update_main_quiz_message(bot: Bot, chat_id: int, state: FSMContext, te
             err = str(e).lower()
             if "message is not modified" in err:
                 return
-            # If not modified, just return. If not found or other, we will send new below.
-            
+            # If not found or other, we will send new below.
+
     # Send new
     if rich_message:
-        msg = await bot.send_rich_message(chat_id, rich_message, reply_markup=reply_markup)
+        msg = await _call(bot.send_rich_message, chat_id, rich_message, reply_markup=reply_markup)
     else:
         msg = await bot.send_message(chat_id, text, reply_markup=reply_markup, parse_mode="HTML")
     await state.update_data(quiz_msg_id=msg.message_id)
@@ -492,6 +513,8 @@ async def _deliver_quiz_question(
             await update_main_quiz_message(message.bot, message.chat.id, state, rich_message=rich_msg, reply_markup=get_quiz_control_keyboard(user.native_language))
         except Exception as e:
             logger.exception("Failed to deliver listening rich message for word '%s': %s", word.canonical_word, e)
+            if not await _is_still_current(state, str(word.id)):
+                return
             fallback_text = (
                 "🎧 <b>" + t(user.native_language, 'Режим: Аудирование (Listening)') + "</b>\n\n" +
                 "⚠️ <i>" + t(user.native_language, 'Озвучка временно недоступна.') + "</i>\n\n" +
@@ -530,6 +553,8 @@ async def _deliver_quiz_question(
             await update_main_quiz_message(message.bot, message.chat.id, state, rich_message=rich_msg, reply_markup=get_quiz_control_keyboard(user.native_language))
         except Exception as e:
             logger.exception("Failed to deliver dictation rich message for word '%s': %s", word.canonical_word, e)
+            if not await _is_still_current(state, str(word.id)):
+                return
             fallback_text = (
                 "👂 <b>" + t(user.native_language, 'Режим: Диктант на слух (Dictation)') + "</b>\n\n" +
                 "⚠️ <i>" + t(user.native_language, 'Озвучка временно недоступна.') + "</i>\n\n" +
@@ -846,7 +871,8 @@ async def handle_quiz_text_answer(
                     await update_main_quiz_message(message.bot, message.chat.id, state, rich_message=rich_msg, reply_markup=get_quiz_control_keyboard(user.native_language))
                 except Exception as e:
                     logger.exception("Failed to update rich quiz message for %s hint 1: %s", mode, e)
-                    await update_main_quiz_message(message.bot, message.chat.id, state, f"{hint_text}\n\n{instruction_text}", reply_markup=get_quiz_control_keyboard(user.native_language))
+                    if await _is_still_current(state, word_id, attempts_left):
+                        await update_main_quiz_message(message.bot, message.chat.id, state, f"{hint_text}\n\n{instruction_text}", reply_markup=get_quiz_control_keyboard(user.native_language))
             else:
                 await update_main_quiz_message(message.bot, message.chat.id, state, f"{hint_text}\n\n{instruction_text}", reply_markup=get_quiz_control_keyboard(user.native_language))
 
@@ -893,7 +919,8 @@ async def handle_quiz_text_answer(
                     await update_main_quiz_message(message.bot, message.chat.id, state, rich_message=rich_msg, reply_markup=get_quiz_control_keyboard(user.native_language))
                 except Exception as e:
                     logger.exception("Failed to update rich quiz message for %s hint 2: %s", mode, e)
-                    await update_main_quiz_message(message.bot, message.chat.id, state, f"{hint_text}\n\n{instruction_text}", reply_markup=get_quiz_control_keyboard(user.native_language))
+                    if await _is_still_current(state, word_id, attempts_left):
+                        await update_main_quiz_message(message.bot, message.chat.id, state, f"{hint_text}\n\n{instruction_text}", reply_markup=get_quiz_control_keyboard(user.native_language))
             else:
                 await update_main_quiz_message(message.bot, message.chat.id, state, f"{hint_text}\n\n{instruction_text}", reply_markup=get_quiz_control_keyboard(user.native_language))
 
